@@ -11,7 +11,7 @@ on:
 
 jobs:
   linters:
-    name: Lint commit messages
+    name: Lint Kubernetes manifests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
