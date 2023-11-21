@@ -1,0 +1,4 @@
+checkmake
+helm
+golangci-lint
+norwoodj/tap/helm-docs

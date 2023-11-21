@@ -1,0 +1,37 @@
+good first issue:
+  name: good first issue
+  color: 7057ff
+  description: Denotes an issue ready for a new contributor, according to the "help wanted" guidelines.
+help wanted:
+  name: help wanted
+  color: 006b75
+  description: Denotes an issue that needs help from a contributor. Must meet "help wanted" guidelines.
+
+area/api:
+  name: area/api
+  color: 0052cc
+  description: Indicates an issue on api area.
+area/dependency:
+  name: area/dependency
+  color: 0052cc
+  description: Issues or PRs related to dependency changes
+area/example:
+  name: area/example
+  color: 0052cc
+
+kind/bug:
+  name: kind/bug
+  color: e11d21
+  description: Categorizes issue or PR as related to a bug.
+kind/documentation:
+  name: kind/documentation
+  color: c7def8
+  description: Categorizes issue or PR as related to documentation.
+kind/feature:
+  name: kind/feature
+  color: c7def8
+  description: Categorizes issue or PR as related to a new feature.
+kind/support:
+  name: kind/support
+  color: d455d0
+  description: Categorizes issue or PR as a support question.

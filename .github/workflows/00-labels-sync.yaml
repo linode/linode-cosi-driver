@@ -1,0 +1,33 @@
+# This workflow is used to declaratively sync labels.
+# It is supposed to be run on push to main.
+
+name: Sync labels
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/labels.yml
+
+env:
+  OWNER: shanduur
+  REPO: ${{ github.event.repository.name }}
+
+permissions: write-all
+
+jobs:
+  sync:
+    name: Sync labels
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+    - uses: actions/setup-go@v4
+      with:
+        go-version: '1.20'
+    - run: go install github.com/shanduur/labeler/cmd/labeler@main
+    - run: labeler upload --owner ${{ env.OWNER }} --repo ${{ env.REPO }} ./.github/labels.yml
+      env:
+        LABELER_TOKEN: ${{ secrets.GITHUB_TOKEN }}
