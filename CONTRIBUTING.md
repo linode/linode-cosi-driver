@@ -6,8 +6,8 @@
   - [Issues](#issues)
     - [Reporting an Issue](#reporting-an-issue)
     - [Issue Lifecycle](#issue-lifecycle)
+  - [Pull Requests](#pull-requests)
   - [Developing](#developing)
-  - [Developing](#developing-1)
     - [Go Environment and Go Modules](#go-environment-and-go-modules)
     - [Code Linting with golangci-lint](#code-linting-with-golangci-lint)
       - [Installing golangci-lint via Homebrew (macOS)](#installing-golangci-lint-via-homebrew-macos)
@@ -52,7 +52,10 @@ lets us merge or address your contributions quickly.
    the issue tracker clean. The issue is still indexed and available for
    future viewers, or can be re-opened if necessary.
 
-## Developing
+## Pull Requests
+
+Pull requests must always be opened from a fork of `linode-cosi-driver`, even if you have
+commit rights to the repository so that all contributors follow the same process.
 
 ## Developing
 

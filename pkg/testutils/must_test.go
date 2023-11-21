@@ -18,7 +18,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/linode/linode-cosi-driver/internal/testutils"
+	"github.com/linode/linode-cosi-driver/pkg/testutils"
 )
 
 func TestDo(t *testing.T) {
