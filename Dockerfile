@@ -21,7 +21,11 @@ ARG TOOLCHAIN_VERSION=1.21
 # First stage: building the driver executable.
 FROM docker.io/library/golang:${TOOLCHAIN_VERSION} as builder
 
+# Set the working directory.
 WORKDIR /work
+
+# Prepare dir so it can be copied over to runtime layer.
+RUN mkdir -p /var/lib/cosi
 
 # Copy the Go Modules manifests.
 COPY go.mod go.mod
@@ -50,10 +54,17 @@ RUN make build
 # Second stage: building final environment for running the executable.
 FROM gcr.io/distroless/static-debian11:latest AS runtime
 
-COPY --from=builder /work/bin/linode-cosi-driver /usr/bin/linode-cosi-driver
+# Copy the executable.
+COPY --from=builder --chown=65532:65532 /work/bin/linode-cosi-driver /usr/bin/linode-cosi-driver
+
+# Copy the volume directory with correct permissions, so driver can bind a socket there.
+COPY --from=builder --chown=65532:65532 /var/lib/cosi /var/lib/cosi
 
 # Set volume mount point for app socket.
 VOLUME [ "/var/lib/cosi" ]
+
+# Set the final UID:GID to non-root user.
+USER 65532:65532
 
 # Disable healthcheck.
 HEALTHCHECK NONE
