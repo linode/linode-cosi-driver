@@ -84,3 +84,9 @@ linters-settings:
   paralleltest:
     # Ignore missing calls to `t.Parallel()` and only report incorrect uses of it.
     ignore-missing: false
+
+  sloglint:
+    # Enforce using key-value pairs only (incompatible with attr-only).
+    kv-only: true
+    # Enforce a single key naming convention.
+    key-naming-case: snake
