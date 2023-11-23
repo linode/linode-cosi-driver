@@ -1,0 +1,8 @@
+apiVersion: objectstorage.k8s.io/v1alpha1
+kind: BucketAccessClass
+metadata:
+  name: example-accessclass
+driverName: objectstorage.cosi.linode.com
+authenticationType: Key
+parameters:
+  permissions: Full # ReadOnly
