@@ -1,4 +1,4 @@
-# Copyright 2023 Linode, LLC
+# Copyright 2023 Akamai Technologies, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -72,7 +72,7 @@ HEALTHCHECK NONE
 # Add labels
 LABEL name="linode-cosi-driver"
 LABEL description="COSI Driver for Linode Object Storage"
-LABEL vendor="Linode, LLC"
+LABEL vendor="Akamai Technologies, Inc."
 LABEL license="Apache-2.0"
 LABEL maintainers="Linode COSI Driver Authors"
 
