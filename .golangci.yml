@@ -1,0 +1,92 @@
+run:
+  # Timeout for analysis, e.g. 30s, 5m.
+  timeout: 5m
+
+  # Include test files.
+  tests: true
+
+issues:
+  # Set to 0 to not skip any issues.
+  max-issues-per-linter: 0
+
+  # Set to 0 to not skip any issues.
+  max-same-issues: 0
+
+output:
+  # Sort results by: filepath, then line, then column.
+  sort-results: true
+
+  # Make issues output unique by line.
+  uniq-by-line: false
+
+linters:
+  # Enable specific linter
+  enable:
+    # Detect context.Context contained in structs.
+    - containedctx
+    # Check whether a function uses a non-inherited context.
+    - contextcheck
+    # Find declarations and assignments with too many blank identifiers.
+    - dogsled
+    # Check for unchecked errors.
+    - errcheck
+    # Find code that will cause problems with the error wrapping scheme.
+    - errorlint
+    # Find exporting pointers for loop variables.
+    - exportloopref
+    # Inspects source code for security problems.
+    - gosec
+    # Check that compiler directives are valid.
+    - gocheckcompilerdirectives
+    # Calculate cognitive complexities of functions.
+    - gocognit
+    # Find repeated strings that could be replaced by a constant.
+    - goconst
+    # Provides functionalities missing from other linters.
+    - gocritic
+    # Calculates cyclomatic complexity of a function.
+    - gocyclo
+    # Check if comments end with a dot.
+    - godot
+    # A stricter replacement for gofmt.
+    - gofumpt
+    # GO Magic Number Detector.
+    - gomnd
+    # Simplify the code.
+    - gosimple
+    # Check for correctness of programs.
+    - govet
+    # Detect ineffectual assignments.
+    - ineffassign
+    # Correct commonly misspelled English words in source files.
+    - misspell
+    # Finds the code that returns nil even if it checks that the error is not nil.
+    - nilerr
+    # Checks that there is no simultaneous return of nil error and an invalid value.
+    - nilnil
+    # Find incorrect usages of t.Parallel().
+    - paralleltest
+    # Reports direct reads from proto message fields when getters should be used.
+    - protogetter
+    # Drop-in replacement of golint.
+    - revive
+    # Ensure consistent code style when using log/slog.
+    - sloglint
+    # Find bugs and performance issues statically.
+    - staticcheck
+    # Checks Go code for unused constants, variables, functions and types.
+    - unused
+    # Empty lines linter.
+    - wsl
+
+# Setting of specific linters.
+linters-settings:
+  paralleltest:
+    # Ignore missing calls to `t.Parallel()` and only report incorrect uses of it.
+    ignore-missing: false
+
+  sloglint:
+    # Enforce using key-value pairs only (incompatible with attr-only).
+    kv-only: true
+    # Enforce a single key naming convention.
+    key-naming-case: snake
