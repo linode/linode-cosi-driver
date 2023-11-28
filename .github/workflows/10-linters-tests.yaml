@@ -80,6 +80,8 @@ jobs:
           push: false
           load: true
           tags: ${{ env.IMAGE }}:${{ github.sha }}
+          build-args: |
+            VERSION=${{ github.sha }}
           target: runtime
       - name: Scan image using Grype
         uses: anchore/scan-action@v3

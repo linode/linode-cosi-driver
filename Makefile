@@ -18,8 +18,9 @@ SHELL := /usr/bin/env bash -o errexit -o pipefail -o nounset
 GO ?= go
 ENGINE ?= docker
 
-VERSION ?= $(shell git rev-parse HEAD)
+VERSION ?= $(shell git tag | tail -n 1 | grep '' || echo 'v0.0.0')$(shell git diff --quiet || git rev-parse HEAD | sed 's/\(.\{6\}\).*/-\1/')
 TOOLCHAIN_VERSION := $(shell sed -En 's/^go (.*)$$/\1/p' go.mod)
+MODULE_NAME := $(shell sed -En 's/^module (.*)$$/\1/p' go.mod)
 
 REGISTRY := docker.io
 IMAGE := linode/linode-cosi-driver
@@ -28,8 +29,8 @@ CONTAINERFILE ?= Dockerfile
 OCI_TAGS += --tag=${REGISTRY}/${IMAGE}:${VERSION}
 OCI_BUILDARGS += --build-arg=VERSION=${VERSION}
 
-LDFLAGS ?=
 GOFLAGS ?=
+LDFLAGS += -X ${MODULE_NAME}/pkg/version.Version=${VERSION}
 GO_SETTINGS += CGO_ENABLED=0
 
 .PHONY: all
