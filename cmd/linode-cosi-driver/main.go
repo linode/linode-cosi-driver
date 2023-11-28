@@ -31,9 +31,12 @@ import (
 	"github.com/linode/linode-cosi-driver/pkg/endpoint"
 	"github.com/linode/linode-cosi-driver/pkg/envflag"
 	"github.com/linode/linode-cosi-driver/pkg/grpc/handlers"
-	"github.com/linode/linode-cosi-driver/pkg/grpc/logger"
+	grpclogger "github.com/linode/linode-cosi-driver/pkg/grpc/logger"
+	"github.com/linode/linode-cosi-driver/pkg/linodeclient"
+	restylogger "github.com/linode/linode-cosi-driver/pkg/resty/logger"
 	"github.com/linode/linode-cosi-driver/pkg/servers/identity"
 	"github.com/linode/linode-cosi-driver/pkg/servers/provisioner"
+	"github.com/linode/linode-cosi-driver/pkg/version"
 	"google.golang.org/grpc"
 	cosi "sigs.k8s.io/container-object-storage-interface-spec"
 )
@@ -59,7 +62,7 @@ func main() {
 	}
 }
 
-func realMain(ctx context.Context, cosiEndpoint, _, _ string) error {
+func realMain(ctx context.Context, cosiEndpoint, linodeToken, linodeURL string) error {
 	ctx, stop := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
@@ -69,8 +72,18 @@ func realMain(ctx context.Context, cosiEndpoint, _, _ string) error {
 		return fmt.Errorf("failed to create identity server: %w", err)
 	}
 
+	// initialize Linode client
+	uaPrefix := fmt.Sprintf("LinodeCOSI/%s", version.Version)
+
+	client, err := linodeclient.NewLinodeClient(linodeToken, uaPrefix, linodeURL)
+	if err != nil {
+		return fmt.Errorf("unable to create new client: %w", err)
+	}
+
+	client.SetLogger(restylogger.Wrap(log))
+
 	// create provisioner server
-	prvSrv, err := provisioner.New(log)
+	prvSrv, err := provisioner.New(log, client)
 	if err != nil {
 		return fmt.Errorf("failed to create provisioner server: %w", err)
 	}
@@ -100,7 +113,7 @@ func realMain(ctx context.Context, cosiEndpoint, _, _ string) error {
 
 	go shutdown(ctx, &wg, srv)
 
-	slog.Info("starting server", "endpoint", endpointURL)
+	slog.Info("starting server", "endpoint", endpointURL, "version", version.Version)
 
 	err = srv.Serve(lis)
 	if err != nil {
@@ -115,7 +128,7 @@ func realMain(ctx context.Context, cosiEndpoint, _, _ string) error {
 func grpcServer(ctx context.Context, identity cosi.IdentityServer, provisioner cosi.ProvisionerServer) (*grpc.Server, error) {
 	server := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
-			logging.UnaryServerInterceptor(logger.Wrap(log)),
+			logging.UnaryServerInterceptor(grpclogger.Wrap(log)),
 			recovery.UnaryServerInterceptor(recovery.WithRecoveryHandler(handlers.PanicRecovery(ctx, log))),
 		),
 	)

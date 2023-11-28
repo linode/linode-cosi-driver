@@ -12,31 +12,45 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package linodeclient
 
 import (
-	"context"
 	"errors"
-	"os"
 	"testing"
-	"time"
-
-	"github.com/linode/linode-cosi-driver/pkg/testutils"
 )
 
-func TestRealMain(t *testing.T) {
+func TestNewLinodeClient(t *testing.T) {
 	t.Parallel()
 
 	for _, tc := range []struct {
 		testName      string // required
-		cosi          string // required
 		token         string
 		url           string
+		userAgent     string
 		expectedError error
 	}{
 		{
 			testName: "simple",
-			cosi:     "cosi.sock",
+		},
+		{
+			testName:  "with user agent",
+			userAgent: "test_UA",
+		},
+		{
+			testName: "with token",
+			token:    "test_TOKEN",
+		},
+		{
+			testName: "with URL",
+			url:      "https://example.com",
+		},
+		{
+			testName: "with URL with version",
+			url:      "https://example.com/v4",
+		},
+		{
+			testName: "with URL without scheme",
+			url:      "example.com/v4",
 		},
 	} {
 		tc := tc
@@ -44,13 +58,7 @@ func TestRealMain(t *testing.T) {
 		t.Run(tc.testName, func(t *testing.T) {
 			t.Parallel()
 
-			ctx, cancel := testutils.ContextFromTimeout(context.Background(), t, time.Second)
-			defer cancel()
-
-			tmp := testutils.MustMkdirTemp()
-			defer os.RemoveAll(tmp)
-
-			err := realMain(ctx, "unix://"+tmp+tc.cosi, tc.token, tc.url)
+			_, err := NewLinodeClient(tc.token, tc.userAgent, tc.url)
 			if !errors.Is(err, tc.expectedError) {
 				t.Errorf("expected error: %v, but got: %v", tc.expectedError, err)
 			}

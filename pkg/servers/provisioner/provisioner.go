@@ -19,6 +19,7 @@ import (
 	"log/slog"
 	"sync"
 
+	"github.com/linode/linode-cosi-driver/pkg/linodeclient"
 	cosi "sigs.k8s.io/container-object-storage-interface-spec"
 )
 
@@ -26,15 +27,18 @@ import (
 type Server struct {
 	log  *slog.Logger
 	once sync.Once
+
+	client linodeclient.LinodeClient
 }
 
 // Interface guards.
 var _ cosi.ProvisionerServer = (*Server)(nil)
 
 // New returns provisioner.Server with default values.
-func New(logger *slog.Logger) (*Server, error) {
+func New(logger *slog.Logger, client linodeclient.LinodeClient) (*Server, error) {
 	return &Server{
-		log: logger,
+		log:    logger,
+		client: client,
 	}, nil
 }
 
