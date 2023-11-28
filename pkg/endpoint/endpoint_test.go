@@ -20,7 +20,7 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/linode/linode-cosi-driver/internal/testutils"
+	"github.com/linode/linode-cosi-driver/pkg/testutils"
 )
 
 func TestEndpointListener(t *testing.T) {

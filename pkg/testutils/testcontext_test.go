@@ -19,7 +19,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/linode/linode-cosi-driver/internal/testutils"
+	"github.com/linode/linode-cosi-driver/pkg/testutils"
 )
 
 var DefaultTimeout = time.Second * 30
