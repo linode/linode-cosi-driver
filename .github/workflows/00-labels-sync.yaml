@@ -15,7 +15,7 @@ jobs:
     name: Sync labels
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: shanduur/declarative-labels-sync-action@main
         with:
           owner: linode
