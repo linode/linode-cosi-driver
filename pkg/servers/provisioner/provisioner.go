@@ -57,6 +57,14 @@ func (s *Server) init() {
 func (s *Server) DriverCreateBucket(_ context.Context, _ *cosi.DriverCreateBucketRequest) (*cosi.DriverCreateBucketResponse, error) {
 	s.once.Do(s.init)
 
+	// get bucket
+	// bucket exists:
+	//    compare actual with expected
+	//    return as in 2
+	// bucket not exists:
+	//    create bucket
+	//    return as in 1
+
 	panic("FIXME: unimplemented")
 }
 
@@ -66,6 +74,11 @@ func (s *Server) DriverCreateBucket(_ context.Context, _ *cosi.DriverCreateBucke
 // If the bucket has already been deleted, then no error should be returned.
 func (s *Server) DriverDeleteBucket(_ context.Context, _ *cosi.DriverDeleteBucketRequest) (*cosi.DriverDeleteBucketResponse, error) {
 	s.once.Do(s.init)
+
+	// delete bucket
+	// bucket not found: success
+	// bucket deleted: success
+	// error: return error
 
 	panic("FIXME: unimplemented")
 }

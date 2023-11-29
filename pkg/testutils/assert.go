@@ -16,27 +16,29 @@ package testutils
 
 import (
 	"os"
-	"path"
 	"testing"
 )
 
-func TestMustMkdriTemp(t *testing.T) {
-	t.Parallel()
-
-	AssertNotPanics(t, func() {
-		dir := MustMkdirTemp()
-		defer os.RemoveAll(dir)
-		AssertDirExists(t, dir)
-	})
+func AssertNotPanics(t *testing.T, f func()) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf("expected no panic, but got one: %v", r)
+		}
+	}()
+	f()
 }
 
-func TestMustMkUnixTemp(t *testing.T) {
-	t.Parallel()
+func AssertPanics(t *testing.T, f func()) {
+	defer func() {
+		if r := recover(); r == nil {
+			t.Error("expected a panic, but got none")
+		}
+	}()
+	f()
+}
 
-	AssertNotPanics(t, func() {
-		sock := MustMkUnixTemp("test.sock")
-		tp, _ := path.Split(sock.Path)
-		defer os.RemoveAll(tp)
-		AssertDirExists(t, tp)
-	})
+func AssertDirExists(t *testing.T, dir string) {
+	if stat, err := os.Stat(dir); os.IsNotExist(err) || !stat.IsDir() {
+		t.Errorf("expected directory %s to exist, but it doesn't", dir)
+	}
 }

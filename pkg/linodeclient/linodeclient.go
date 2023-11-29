@@ -44,7 +44,7 @@ func NewLinodeClient(token, ua, apiURL string) (*linodego.Client, error) {
 	linodeClient.SetToken(token)
 
 	if apiURL != "" {
-		host, version, err := getAPIURLComponents(apiURL)
+		host, version, err := GetAPIURLComponents(apiURL)
 		if err != nil {
 			return nil, err
 		}
@@ -59,10 +59,10 @@ func NewLinodeClient(token, ua, apiURL string) (*linodego.Client, error) {
 	return &linodeClient, nil
 }
 
-// getAPIURLComponents returns the API URL components (base URL, api version) given an input URL.
+// GetAPIURLComponents returns the API URL components (base URL, api version) given an input URL.
 // This is necessary due to some recent changes with how linodego handles
 // client.SetBaseURL(...) and client.SetAPIVersion(...)
-func getAPIURLComponents(apiURL string) (string, string, error) {
+func GetAPIURLComponents(apiURL string) (string, string, error) {
 	u, err := url.Parse(apiURL)
 	if err != nil {
 		return "", "", err
