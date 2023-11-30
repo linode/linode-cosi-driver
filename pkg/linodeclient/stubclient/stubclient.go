@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"net/http"
 
 	"github.com/linode/linodego"
 )
@@ -82,17 +83,17 @@ func (c *Client) CreateObjectStorageBucket(ctx context.Context, opt linodego.Obj
 
 	key := fmt.Sprintf("%s/%s", opt.Cluster, opt.Label)
 
-	_, ok := c.objectStorageBuckets[key]
+	obj, ok := c.objectStorageBuckets[key]
 	if ok {
-		// FIXME: if duplicate found, what should be returned? Need to check in the API.
-		return nil, ErrUnexpectedError
+		return obj, nil
 	}
 
-	// FIXME: what should be done with ACL?
-	obj := &linodego.ObjectStorageBucket{
+	obj = &linodego.ObjectStorageBucket{
 		Label:   opt.Label,
 		Cluster: opt.Cluster,
 	}
+
+	// stub discards ACL and cors settings
 
 	c.objectStorageBuckets[key] = obj
 
@@ -117,8 +118,9 @@ func (c *Client) GetObjectStorageBucket(ctx context.Context, clusterID, label st
 		return obj, nil
 	}
 
-	// FIXME: if not found, what should be returned? Need to check in the API.
-	return nil, ErrUnexpectedError
+	return nil, &linodego.Error{
+		Code: http.StatusNotFound,
+	}
 }
 
 // DeleteObjectStorageBucket is a stub function that stubs the behavior of DeleteObjectStorageBucket call from linodego.Client.
@@ -134,14 +136,19 @@ func (c *Client) DeleteObjectStorageBucket(ctx context.Context, clusterID, label
 
 	key := fmt.Sprintf("%s/%s", clusterID, label)
 
-	_, ok := c.objectStorageBuckets[key]
-	if ok {
+	bucket, ok := c.objectStorageBuckets[key]
+	if ok && bucket.Objects == 0 && bucket.Size == 0 {
 		delete(c.objectStorageBuckets, key)
 		return nil
+	} else if ok && (bucket.Objects != 0 || bucket.Size > 0) {
+		return &linodego.Error{
+			Code: http.StatusBadRequest,
+		}
 	}
 
-	// FIXME: if not found, what should be returned? Need to check in the API.
-	return nil
+	return &linodego.Error{
+		Code: http.StatusNotFound,
+	}
 }
 
 // CreateObjectStorageKey is a stub function that stubs the behavior of CreateObjectStorageKey call from linodego.Client.
@@ -160,7 +167,6 @@ func (c *Client) CreateObjectStorageKey(ctx context.Context, opt linodego.Object
 		limited = true
 	}
 
-	// FIXME: what should be done with ACL?
 	obj := &linodego.ObjectStorageKey{
 		Label:        opt.Label,
 		AccessKey:    TestAccessKey,
@@ -208,8 +214,7 @@ func (c *Client) ListObjectStorageKeys(ctx context.Context, opt *linodego.ListOp
 
 	// check for out-of-bounds
 	if startIndex >= len(list) {
-		// FIXME: what do we do in case of out-of-bounds?
-		return nil, ErrUnexpectedError
+		return nil, nil
 	}
 
 	// adjust endIndex if it exceeds the length of the slice
@@ -219,7 +224,7 @@ func (c *Client) ListObjectStorageKeys(ctx context.Context, opt *linodego.ListOp
 
 	// fail if start index is larger than end index
 	if startIndex > endIndex {
-		return nil, ErrUnexpectedError
+		return nil, nil
 	}
 
 	// return the specified page
@@ -242,8 +247,9 @@ func (c *Client) GetObjectStorageKey(ctx context.Context, id int) (*linodego.Obj
 		return obj, nil
 	}
 
-	// FIXME: if not found, what should be returned? Need to check in the API.
-	return nil, ErrUnexpectedError
+	return nil, &linodego.Error{
+		Code: http.StatusNotFound,
+	}
 }
 
 // DeleteObjectStorageKey is a stub function that stubs the behavior of DeleteObjectStorageKey call from linodego.Client.
@@ -263,6 +269,7 @@ func (c *Client) DeleteObjectStorageKey(ctx context.Context, id int) error {
 		return nil
 	}
 
-	// FIXME: if not found, what should be returned? Need to check in the API.
-	return nil
+	return &linodego.Error{
+		Code: http.StatusNotFound,
+	}
 }

@@ -3,7 +3,7 @@ module github.com/linode/linode-cosi-driver
 go 1.21
 
 require (
-	github.com/go-resty/resty/v2 v2.10.0
+	github.com/go-resty/resty/v2 v2.9.1
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.0.1
 	github.com/linode/linodego v1.25.0
 	google.golang.org/grpc v1.59.0
