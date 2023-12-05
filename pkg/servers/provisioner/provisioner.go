@@ -28,14 +28,14 @@ type Server struct {
 	log  *slog.Logger
 	once sync.Once
 
-	client linodeclient.LinodeClient
+	client linodeclient.Client
 }
 
 // Interface guards.
 var _ cosi.ProvisionerServer = (*Server)(nil)
 
 // New returns provisioner.Server with default values.
-func New(logger *slog.Logger, client linodeclient.LinodeClient) (*Server, error) {
+func New(logger *slog.Logger, client linodeclient.Client) (*Server, error) {
 	return &Server{
 		log:    logger,
 		client: client,

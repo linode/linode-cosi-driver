@@ -31,7 +31,7 @@ func TestDriverCreateBucket(t *testing.T) {
 
 	for _, tc := range []struct {
 		testName         string
-		client           linodeclient.LinodeClient
+		client           linodeclient.Client
 		request          *cosi.DriverCreateBucketRequest
 		expectedResponse *cosi.DriverCreateBucketResponse
 		expectedError    error
@@ -55,7 +55,7 @@ func TestDriverCreateBucket(t *testing.T) {
 			}
 
 			if !reflect.DeepEqual(tc.expectedResponse, actual) {
-				t.Errorf("expected response to be deeply equal to: %v, but got: %v",
+				t.Errorf("expected response to be deeply equal\n> expected: %#+v,\n> got: %#+v",
 					tc.expectedResponse,
 					actual)
 			}
@@ -68,7 +68,7 @@ func TestDriverDeleteBucket(t *testing.T) {
 
 	for _, tc := range []struct {
 		testName      string
-		client        linodeclient.LinodeClient
+		client        linodeclient.Client
 		request       *cosi.DriverDeleteBucketRequest
 		expectedError error
 	}{} {
@@ -98,7 +98,7 @@ func TestDriverGrantBucketAccess(t *testing.T) {
 
 	for _, tc := range []struct {
 		testName         string
-		client           linodeclient.LinodeClient
+		client           linodeclient.Client
 		request          *cosi.DriverGrantBucketAccessRequest
 		expectedResponse *cosi.DriverGrantBucketAccessResponse
 		expectedError    error
@@ -122,7 +122,7 @@ func TestDriverGrantBucketAccess(t *testing.T) {
 			}
 
 			if !reflect.DeepEqual(tc.expectedResponse, actual) {
-				t.Errorf("expected response to be deeply equal to: %v, but got: %v",
+				t.Errorf("expected response to be deeply equal\n> expected: %#+v,\n> got: %#+v",
 					tc.expectedResponse,
 					actual)
 			}
@@ -136,7 +136,7 @@ func TestDriverRevokeBucketAccess(t *testing.T) {
 	for _, tc := range []struct {
 		testName      string
 		request       *cosi.DriverRevokeBucketAccessRequest
-		client        linodeclient.LinodeClient
+		client        linodeclient.Client
 		expectedError error
 	}{} {
 		tc := tc

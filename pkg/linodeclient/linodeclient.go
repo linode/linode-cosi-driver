@@ -23,11 +23,14 @@ import (
 	"github.com/linode/linodego"
 )
 
-// LinodeClient defines a subset of all Linode Client methods required by COSI.
-type LinodeClient interface {
+// Client defines a subset of all Linode Client methods required by COSI.
+type Client interface {
 	CreateObjectStorageBucket(context.Context, linodego.ObjectStorageBucketCreateOptions) (*linodego.ObjectStorageBucket, error)
 	GetObjectStorageBucket(context.Context, string, string) (*linodego.ObjectStorageBucket, error)
 	DeleteObjectStorageBucket(context.Context, string, string) error
+
+	GetObjectStorageBucketAccess(context.Context, string, string) (*linodego.ObjectStorageBucketAccess, error)
+	UpdateObjectStorageBucketAccess(context.Context, string, string, linodego.ObjectStorageBucketUpdateAccessOptions) error
 
 	CreateObjectStorageKey(context.Context, linodego.ObjectStorageKeyCreateOptions) (*linodego.ObjectStorageKey, error)
 	ListObjectStorageKeys(context.Context, *linodego.ListOptions) ([]linodego.ObjectStorageKey, error)

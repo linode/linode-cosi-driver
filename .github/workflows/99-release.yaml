@@ -11,6 +11,7 @@ on:
 
 env:
   REGISTRY: docker.io
+  IMAGE: linode/linode-cosi-driver
 
 jobs:
   docker:
