@@ -36,15 +36,13 @@ COPY go.sum go.sum
 RUN go mod download
 
 # Copy the go source.
+COPY Makefile Makefile
 COPY cmd/ cmd/
 COPY pkg/ pkg/
-COPY Makefile Makefile
-
-# Explicitly set the version, so the make won't try to get it (and fail).
-ENV VERSION="builder"
 
 # Build.
-RUN make build
+ARG VERSION="unknown"
+RUN make build VERSION=${VERSION}
 
 #########################################################################################
 # Runtime

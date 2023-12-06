@@ -12,31 +12,35 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package testutils
+package logger
 
 import (
-	"os"
-	"path"
-	"testing"
+	"fmt"
+	"log/slog"
+
+	"github.com/go-resty/resty/v2"
 )
 
-func TestMustMkdriTemp(t *testing.T) {
-	t.Parallel()
-
-	AssertNotPanics(t, func() {
-		dir := MustMkdirTemp()
-		defer os.RemoveAll(dir)
-		AssertDirExists(t, dir)
-	})
+type Logger struct {
+	loggerImpl *slog.Logger
 }
 
-func TestMustMkUnixTemp(t *testing.T) {
-	t.Parallel()
+var _ resty.Logger = (*Logger)(nil)
 
-	AssertNotPanics(t, func() {
-		sock := MustMkUnixTemp("test.sock")
-		tp, _ := path.Split(sock.Path)
-		defer os.RemoveAll(tp)
-		AssertDirExists(t, tp)
-	})
+func Wrap(logger *slog.Logger) *Logger {
+	return &Logger{
+		loggerImpl: logger,
+	}
+}
+
+func (l *Logger) Errorf(format string, v ...interface{}) {
+	l.loggerImpl.Error(fmt.Sprintf(format, v...))
+}
+
+func (l *Logger) Warnf(format string, v ...interface{}) {
+	l.loggerImpl.Warn(fmt.Sprintf(format, v...))
+}
+
+func (l *Logger) Debugf(format string, v ...interface{}) {
+	l.loggerImpl.Debug(fmt.Sprintf(format, v...))
 }

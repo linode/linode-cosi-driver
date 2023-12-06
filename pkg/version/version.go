@@ -12,31 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package testutils
+package version
 
-import (
-	"os"
-	"path"
-	"testing"
-)
-
-func TestMustMkdriTemp(t *testing.T) {
-	t.Parallel()
-
-	AssertNotPanics(t, func() {
-		dir := MustMkdirTemp()
-		defer os.RemoveAll(dir)
-		AssertDirExists(t, dir)
-	})
-}
-
-func TestMustMkUnixTemp(t *testing.T) {
-	t.Parallel()
-
-	AssertNotPanics(t, func() {
-		sock := MustMkUnixTemp("test.sock")
-		tp, _ := path.Split(sock.Path)
-		defer os.RemoveAll(tp)
-		AssertDirExists(t, tp)
-	})
-}
+var Version string

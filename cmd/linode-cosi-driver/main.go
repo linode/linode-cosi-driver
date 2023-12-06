@@ -31,9 +31,12 @@ import (
 	"github.com/linode/linode-cosi-driver/pkg/endpoint"
 	"github.com/linode/linode-cosi-driver/pkg/envflag"
 	"github.com/linode/linode-cosi-driver/pkg/grpc/handlers"
-	"github.com/linode/linode-cosi-driver/pkg/grpc/logger"
+	grpclogger "github.com/linode/linode-cosi-driver/pkg/grpc/logger"
+	"github.com/linode/linode-cosi-driver/pkg/linodeclient"
+	restylogger "github.com/linode/linode-cosi-driver/pkg/resty/logger"
 	"github.com/linode/linode-cosi-driver/pkg/servers/identity"
 	"github.com/linode/linode-cosi-driver/pkg/servers/provisioner"
+	"github.com/linode/linode-cosi-driver/pkg/version"
 	"google.golang.org/grpc"
 	cosi "sigs.k8s.io/container-object-storage-interface-spec"
 )
@@ -46,21 +49,38 @@ const (
 )
 
 func main() {
-	linodeToken := envflag.String("LINODE_TOKEN", "")
-	linodeURL := envflag.String("LINODE_API_URL", "")
-	cosiEndpoint := envflag.String("COSI_ENDPOINT", "unix:///var/lib/cosi/cosi.sock")
+	var (
+		linodeToken      = envflag.String("LINODE_TOKEN", "")
+		linodeURL        = envflag.String("LINODE_API_URL", "")
+		linodeAPIVersion = envflag.String("LINODE_API_VERSION", "")
+		cosiEndpoint     = envflag.String("COSI_ENDPOINT", "unix:///var/lib/cosi/cosi.sock")
+	)
 
 	// TODO: any logger settup must be done here, before first log call.
 	log = slog.Default()
 
-	if err := realMain(context.Background(), cosiEndpoint, linodeToken, linodeURL); err != nil {
+	if err := realMain(context.Background(),
+		cosiEndpoint,
+		linodeToken,
+		linodeURL,
+		linodeAPIVersion,
+	); err != nil {
 		slog.Error("critical failure", "error", err)
 		os.Exit(1)
 	}
 }
 
-func realMain(ctx context.Context, cosiEndpoint, _, _ string) error {
-	ctx, stop := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+func realMain(ctx context.Context,
+	cosiEndpoint string,
+	linodeToken string,
+	linodeURL string,
+	linodeAPIVersion string,
+) error {
+	ctx, stop := signal.NotifyContext(ctx,
+		os.Interrupt,
+		syscall.SIGINT,
+		syscall.SIGTERM,
+	)
 	defer stop()
 
 	// create identity server
@@ -69,8 +89,20 @@ func realMain(ctx context.Context, cosiEndpoint, _, _ string) error {
 		return fmt.Errorf("failed to create identity server: %w", err)
 	}
 
+	// initialize Linode client
+	client, err := linodeclient.NewLinodeClient(
+		linodeToken,
+		fmt.Sprintf("LinodeCOSI/%s", version.Version),
+		linodeURL,
+		linodeAPIVersion)
+	if err != nil {
+		return fmt.Errorf("unable to create new client: %w", err)
+	}
+
+	client.SetLogger(restylogger.Wrap(log))
+
 	// create provisioner server
-	prvSrv, err := provisioner.New(log)
+	prvSrv, err := provisioner.New(log, client)
 	if err != nil {
 		return fmt.Errorf("failed to create provisioner server: %w", err)
 	}
@@ -100,7 +132,9 @@ func realMain(ctx context.Context, cosiEndpoint, _, _ string) error {
 
 	go shutdown(ctx, &wg, srv)
 
-	slog.Info("starting server", "endpoint", endpointURL)
+	slog.Info("starting server",
+		"endpoint", endpointURL,
+		"version", version.Version)
 
 	err = srv.Serve(lis)
 	if err != nil {
@@ -115,7 +149,7 @@ func realMain(ctx context.Context, cosiEndpoint, _, _ string) error {
 func grpcServer(ctx context.Context, identity cosi.IdentityServer, provisioner cosi.ProvisionerServer) (*grpc.Server, error) {
 	server := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
-			logging.UnaryServerInterceptor(logger.Wrap(log)),
+			logging.UnaryServerInterceptor(grpclogger.Wrap(log)),
 			recovery.UnaryServerInterceptor(recovery.WithRecoveryHandler(handlers.PanicRecovery(ctx, log))),
 		),
 	)
