@@ -16,9 +16,8 @@ package linodeclient
 
 import (
 	"context"
-	"fmt"
 	"net/url"
-	"strings"
+	"regexp"
 
 	"github.com/linode/linodego"
 )
@@ -41,49 +40,37 @@ type Client interface {
 // NewLinodeClient takes token, userAgent prefix, and API URL and after initial validation
 // returns new linodego Client. The client uses linodego built-in http client
 // which supports setting root CA cert.
-func NewLinodeClient(token, ua, apiURL string) (*linodego.Client, error) {
+func NewLinodeClient(token, ua, apiURL, apiVersion string) (*linodego.Client, error) {
 	linodeClient := linodego.NewClient(nil)
 	linodeClient.SetUserAgent(ua)
 	linodeClient.SetToken(token)
 
-	if apiURL != "" {
-		host, version, err := GetAPIURLComponents(apiURL)
-		if err != nil {
-			return nil, err
-		}
-
-		linodeClient.SetBaseURL(host)
-
-		if version != "" {
-			linodeClient.SetAPIVersion(version)
-		}
-	}
-
-	return &linodeClient, nil
-}
-
-// GetAPIURLComponents returns the API URL components (base URL, api version) given an input URL.
-// This is necessary due to some recent changes with how linodego handles
-// client.SetBaseURL(...) and client.SetAPIVersion(...)
-func GetAPIURLComponents(apiURL string) (string, string, error) {
-	u, err := url.Parse(apiURL)
+	// Validate apiURL
+	parsedURL, err := url.Parse(apiURL)
 	if err != nil {
-		return "", "", err
+		return nil, err
 	}
 
-	// in case of missing scheme force https to prevent panic in the SetBaseURL
-	if u.Scheme == "" {
-		u.Scheme = "https://"
+	validatedURL := &url.URL{
+		Host:   parsedURL.Host,
+		Scheme: parsedURL.Scheme,
 	}
+
+	linodeClient.SetBaseURL(validatedURL.String())
 
 	version := ""
-	host := fmt.Sprintf("%s://%s", u.Scheme, u.Host)
+	matches := regexp.MustCompile(`/v\d+`).FindAllString(parsedURL.Path, -1)
 
-	if strings.ReplaceAll(u.Path, "/", "") == "" {
-		pathSegments := strings.Split(u.Path, "/")
-		// The API version will be the last path value
-		version = pathSegments[len(pathSegments)-1]
+	if len(matches) > 0 {
+		version = matches[len(matches)-1]
 	}
 
-	return host, version, nil
+	// If version segment is present, and apiVersion is present, use the apiVersion in linodeClient.SetAPIVersion(version)
+	if apiVersion != "" {
+		version = apiVersion
+	}
+
+	linodeClient.SetAPIVersion(version)
+
+	return &linodeClient, nil
 }

@@ -49,21 +49,38 @@ const (
 )
 
 func main() {
-	linodeToken := envflag.String("LINODE_TOKEN", "")
-	linodeURL := envflag.String("LINODE_API_URL", "")
-	cosiEndpoint := envflag.String("COSI_ENDPOINT", "unix:///var/lib/cosi/cosi.sock")
+	var (
+		linodeToken      = envflag.String("LINODE_TOKEN", "")
+		linodeURL        = envflag.String("LINODE_API_URL", "")
+		linodeAPIVersion = envflag.String("LINODE_API_VERSION", "")
+		cosiEndpoint     = envflag.String("COSI_ENDPOINT", "unix:///var/lib/cosi/cosi.sock")
+	)
 
 	// TODO: any logger settup must be done here, before first log call.
 	log = slog.Default()
 
-	if err := realMain(context.Background(), cosiEndpoint, linodeToken, linodeURL); err != nil {
+	if err := realMain(context.Background(),
+		cosiEndpoint,
+		linodeToken,
+		linodeURL,
+		linodeAPIVersion,
+	); err != nil {
 		slog.Error("critical failure", "error", err)
 		os.Exit(1)
 	}
 }
 
-func realMain(ctx context.Context, cosiEndpoint, linodeToken, linodeURL string) error {
-	ctx, stop := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+func realMain(ctx context.Context,
+	cosiEndpoint string,
+	linodeToken string,
+	linodeURL string,
+	linodeAPIVersion string,
+) error {
+	ctx, stop := signal.NotifyContext(ctx,
+		os.Interrupt,
+		syscall.SIGINT,
+		syscall.SIGTERM,
+	)
 	defer stop()
 
 	// create identity server
@@ -73,9 +90,11 @@ func realMain(ctx context.Context, cosiEndpoint, linodeToken, linodeURL string) 
 	}
 
 	// initialize Linode client
-	uaPrefix := fmt.Sprintf("LinodeCOSI/%s", version.Version)
-
-	client, err := linodeclient.NewLinodeClient(linodeToken, uaPrefix, linodeURL)
+	client, err := linodeclient.NewLinodeClient(
+		linodeToken,
+		fmt.Sprintf("LinodeCOSI/%s", version.Version),
+		linodeURL,
+		linodeAPIVersion)
 	if err != nil {
 		return fmt.Errorf("unable to create new client: %w", err)
 	}
@@ -113,7 +132,9 @@ func realMain(ctx context.Context, cosiEndpoint, linodeToken, linodeURL string) 
 
 	go shutdown(ctx, &wg, srv)
 
-	slog.Info("starting server", "endpoint", endpointURL, "version", version.Version)
+	slog.Info("starting server",
+		"endpoint", endpointURL,
+		"version", version.Version)
 
 	err = srv.Serve(lis)
 	if err != nil {

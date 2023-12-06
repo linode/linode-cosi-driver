@@ -32,6 +32,7 @@ func TestRealMain(t *testing.T) {
 		cosi          string // required
 		token         string
 		url           string
+		version       string
 		expectedError error
 	}{
 		{
@@ -50,7 +51,7 @@ func TestRealMain(t *testing.T) {
 			tmp := testutils.MustMkdirTemp()
 			defer os.RemoveAll(tmp)
 
-			err := realMain(ctx, "unix://"+tmp+tc.cosi, tc.token, tc.url)
+			err := realMain(ctx, "unix://"+tmp+tc.cosi, tc.token, tc.url, tc.version)
 			if !errors.Is(err, tc.expectedError) {
 				t.Errorf("expected error: %v, but got: %v", tc.expectedError, err)
 			}

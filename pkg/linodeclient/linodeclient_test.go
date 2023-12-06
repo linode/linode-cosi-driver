@@ -26,6 +26,7 @@ func TestNewLinodeClient(t *testing.T) {
 		testName      string // required
 		token         string
 		url           string
+		version       string
 		userAgent     string
 		expectedError error
 	}{
@@ -49,7 +50,21 @@ func TestNewLinodeClient(t *testing.T) {
 			url:      "https://example.com/v4",
 		},
 		{
+			testName: "with URL and API version",
+			url:      "https://example.com",
+			version:  "v4",
+		},
+		{
+			testName: "with URL with version and API version",
+			url:      "https://example.com/v4",
+			version:  "v4",
+		},
+		{
 			testName: "with URL without scheme",
+			url:      "example.com",
+		},
+		{
+			testName: "with URL without scheme with version",
 			url:      "example.com/v4",
 		},
 	} {
@@ -58,7 +73,7 @@ func TestNewLinodeClient(t *testing.T) {
 		t.Run(tc.testName, func(t *testing.T) {
 			t.Parallel()
 
-			_, err := NewLinodeClient(tc.token, tc.userAgent, tc.url)
+			_, err := NewLinodeClient(tc.token, tc.userAgent, tc.url, tc.version)
 			if !errors.Is(err, tc.expectedError) {
 				t.Errorf("expected error: %v, but got: %v", tc.expectedError, err)
 			}
