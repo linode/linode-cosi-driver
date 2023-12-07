@@ -33,10 +33,12 @@ import (
 	"github.com/linode/linode-cosi-driver/pkg/grpc/handlers"
 	grpclogger "github.com/linode/linode-cosi-driver/pkg/grpc/logger"
 	"github.com/linode/linode-cosi-driver/pkg/linodeclient"
+	"github.com/linode/linode-cosi-driver/pkg/linodeclient/tracedclient"
 	restylogger "github.com/linode/linode-cosi-driver/pkg/resty/logger"
 	"github.com/linode/linode-cosi-driver/pkg/servers/identity"
 	"github.com/linode/linode-cosi-driver/pkg/servers/provisioner"
 	"github.com/linode/linode-cosi-driver/pkg/version"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 	cosi "sigs.k8s.io/container-object-storage-interface-spec"
 )
@@ -102,7 +104,10 @@ func realMain(ctx context.Context,
 	client.SetLogger(restylogger.Wrap(log))
 
 	// create provisioner server
-	prvSrv, err := provisioner.New(log, client)
+	prvSrv, err := provisioner.New(
+		log,
+		tracedclient.NewClientWithTracing(client, os.Getenv("HOSTNAME")),
+	)
 	if err != nil {
 		return fmt.Errorf("failed to create provisioner server: %w", err)
 	}
@@ -147,7 +152,9 @@ func realMain(ctx context.Context,
 }
 
 func grpcServer(ctx context.Context, identity cosi.IdentityServer, provisioner cosi.ProvisionerServer) (*grpc.Server, error) {
+	otelgrpc.NewServerHandler()
 	server := grpc.NewServer(
+		grpc.StatsHandler(otelgrpc.NewServerHandler()),
 		grpc.ChainUnaryInterceptor(
 			logging.UnaryServerInterceptor(grpclogger.Wrap(log)),
 			recovery.UnaryServerInterceptor(recovery.WithRecoveryHandler(handlers.PanicRecovery(ctx, log))),

@@ -33,11 +33,17 @@ GOFLAGS ?=
 LDFLAGS += -X ${MODULE_NAME}/pkg/version.Version=${VERSION}
 GO_SETTINGS += CGO_ENABLED=0
 
+_GOBIN := $(shell go env GOPATH)/bin
+
 .PHONY: all
 all: test build image # Run all targets.
 
+.PHONY: generate
+generate: ${_GOBIN}/gowrap # Generate additional code.
+	${GO} generate ./...
+
 .PHONY: build
-build: clean # Build the binary.
+build: clean generate # Build the binary.
 	${GO_SETTINGS} ${GO} build \
 		${GOFLAGS} \
 		-ldflags="${LDFLAGS}" \
@@ -74,3 +80,6 @@ clean-image: # Attempt to remove the old container image builds.
 .PHONY: help
 help: # Show help for each of the Makefile recipes.
 	@grep -E '^[a-zA-Z0-9 -]+:.*#'  Makefile | while read -r l; do printf "\033[1;32m$$(echo $$l | cut -f 1 -d':')\033[00m:$$(echo $$l | cut -f 2- -d'#')\n"; done
+
+${_GOBIN}/gowrap:
+	${GO} install github.com/hexdigest/gowrap/cmd/gowrap@latest
