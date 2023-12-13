@@ -9,7 +9,7 @@ A Helm chart for Kubernetes
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | affinity | object | `{}` | Node affinity rules for pod assignment. |
-| apiToken | string | `""` | Linode API token. |
+| apiToken | string | `""` | Linode API token. This field is **required** unless secret is created before deployment (see `secret.ref` value). |
 | driver.image.pullPolicy | string | `"IfNotPresent"` | Driver container image pull policy. |
 | driver.image.repository | string | `"docker.io/linode/linode-cosi-driver"` | Driver container image repository. |
 | driver.image.tag | string | `""` | Overrides the image tag whose default is the chart appVersion. |
@@ -27,6 +27,7 @@ A Helm chart for Kubernetes
 | replicaCount | int | `1` | Number of pod replicas. |
 | resources | object | `{}` | Specify CPU and memory resource limits if needed. |
 | secret.annotations | object | `{}` | Annotations to add to the secret. |
+| secret.ref | string | `""` | Name of existing secret. If not set, a new secret is created. |
 | securityContext.readOnlyRootFilesystem | bool | `true` | Container runs with a read-only root filesystem. |
 | sidecar.image.pullPolicy | string | `"IfNotPresent"` | Sidecar container image pull policy. |
 | sidecar.image.repository | string | `"gcr.io/k8s-staging-sig-storage/objectstorage-sidecar/objectstorage-sidecar"` | Sidecar container image repository. |

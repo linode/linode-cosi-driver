@@ -5,7 +5,7 @@
 # -- Number of pod replicas.
 replicaCount: 1
 
-# -- Linode API token.
+# -- Linode API token. This field is **required** unless secret is created before deployment (see `secret.ref` value).
 apiToken: ""
 
 # -- Linode API URL, leave empty for default.
@@ -57,6 +57,9 @@ rbac:
   name: ""
 
 secret:
+  # -- Name of existing secret. If not set, a new secret is created.
+  ref: ""
+
   # -- Annotations to add to the secret.
   annotations: {}
 

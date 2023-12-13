@@ -53,7 +53,7 @@ spec:
           {{- end }}
           envFrom:
             - secretRef:
-                name: {{ include "linode-cosi-driver.name" . }}
+                name: {{ include "linode-cosi-driver.secretName" . }}
           volumeMounts:
             - name: cosi-socket-dir
               mountPath: /var/lib/cosi

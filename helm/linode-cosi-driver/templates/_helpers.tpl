@@ -31,7 +31,7 @@ Create chart name and version as used by the chart label.
 {{- end }}
 
 {{/*
-Common labels
+Common labels.
 */}}
 {{- define "linode-cosi-driver.labels" -}}
 helm.sh/chart: {{ include "linode-cosi-driver.chart" . }}
@@ -43,7 +43,7 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end }}
 
 {{/*
-Selector labels
+Selector labels.
 */}}
 {{- define "linode-cosi-driver.selectorLabels" -}}
 app.kubernetes.io/name: {{ include "linode-cosi-driver.name" . }}
@@ -51,15 +51,15 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
-Create the name of the service account to use
+Create the name of the service account to use.
 */}}
 {{- define "linode-cosi-driver.rbacName" -}}
   {{- default (include "linode-cosi-driver.fullname" .) .Values.rbac.name }}
 {{- end }}
 
 {{/*
-# COSI driver sidecar log level
-# Values are set to the integer value, higher value means more verbose logging
+# COSI provisioner sidecar log level.
+# Values are set to the integer value, higher value means more verbose logging.
 # Possible values: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
 # Default value: 4
 */}}
@@ -76,15 +76,22 @@ Create the name of the service account to use
 {{- end }}
 
 {{/*
-Create the full name of driver image from repository and tag
+Create the full name of driver image from repository and tag.
 */}}
 {{- define "linode-cosi-driver.driverImageName" }}
   {{- .Values.driver.image.repository }}:{{ default .Chart.AppVersion .Values.driver.image.tag }}
 {{- end }}
 
 {{/*
-Create the full name of driver sidecar image from repository and tag
+Create the full name of provisioner sidecar image from repository and tag.
 */}}
 {{- define "linode-cosi-driver.provisionerSidecarImageName" }}
   {{- .Values.sidecar.image.repository }}:{{ .Values.sidecar.image.tag }}
+{{- end }}
+
+{{/*
+Create the full name of driver sidecar image from repository and tag.
+*/}}
+{{- define "linode-cosi-driver.secretName" }}
+  {{- default (include "linode-cosi-driver.name" .) .Values.secret.ref }}
 {{- end }}
