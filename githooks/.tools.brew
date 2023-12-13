@@ -1,4 +1,5 @@
 checkmake
-helm
 golangci-lint
+helm
+kube-linter
 norwoodj/tap/helm-docs

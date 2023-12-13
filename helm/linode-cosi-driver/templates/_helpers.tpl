@@ -2,7 +2,7 @@
 Expand the name of the chart.
 */}}
 {{- define "linode-cosi-driver.name" -}}
-{{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
+  {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
@@ -11,23 +11,23 @@ We truncate at 63 chars because some Kubernetes name fields are limited to this 
 If release name contains chart name it will be used as a full name.
 */}}
 {{- define "linode-cosi-driver.fullname" -}}
-{{- if .Values.fullnameOverride }}
-{{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
-{{- else }}
-{{- $name := default .Chart.Name .Values.nameOverride }}
-{{- if contains $name .Release.Name }}
-{{- .Release.Name | trunc 63 | trimSuffix "-" }}
-{{- else }}
-{{- printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" }}
-{{- end }}
-{{- end }}
+  {{- if .Values.fullnameOverride }}
+    {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
+  {{- else }}
+    {{- $name := default .Chart.Name .Values.nameOverride }}
+    {{- if contains $name .Release.Name }}
+      {{- .Release.Name | trunc 63 | trimSuffix "-" }}
+    {{- else }}
+      {{- printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" }}
+    {{- end }}
+  {{- end }}
 {{- end }}
 
 {{/*
 Create chart name and version as used by the chart label.
 */}}
 {{- define "linode-cosi-driver.chart" -}}
-{{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
+  {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
@@ -53,10 +53,38 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{/*
 Create the name of the service account to use
 */}}
-{{- define "linode-cosi-driver.serviceAccountName" -}}
-{{- if .Values.serviceAccount.create }}
-{{- default (include "linode-cosi-driver.fullname" .) .Values.serviceAccount.name }}
-{{- else }}
-{{- default "default" .Values.serviceAccount.name }}
+{{- define "linode-cosi-driver.rbacName" -}}
+  {{- default (include "linode-cosi-driver.fullname" .) .Values.rbac.name }}
 {{- end }}
+
+{{/*
+# COSI driver sidecar log level
+# Values are set to the integer value, higher value means more verbose logging
+# Possible values: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
+# Default value: 4
+*/}}
+{{- define "linode-cosi-driver.provisionerSidecarVerbosity" }}
+  {{- if (kindIs "int64" .Values.sidecar.logVerbosity) }}
+    {{- if (or (ge .Values.sidecar.logVerbosity 0) (le .Values.sidecar.logVerbosity 10)) }}
+      {{- .Values.sidecar.logVerbosity }}
+    {{- else }}
+      {{- 4 }}
+    {{- end }}
+  {{- else }}
+    {{- 4 }}
+  {{- end }}
+{{- end }}
+
+{{/*
+Create the full name of driver image from repository and tag
+*/}}
+{{- define "linode-cosi-driver.driverImageName" }}
+  {{- .Values.driver.image.repository }}:{{ default .Chart.AppVersion .Values.driver.image.tag }}
+{{- end }}
+
+{{/*
+Create the full name of driver sidecar image from repository and tag
+*/}}
+{{- define "linode-cosi-driver.provisionerSidecarImageName" }}
+  {{- .Values.sidecar.image.repository }}:{{ .Values.sidecar.image.tag }}
 {{- end }}
