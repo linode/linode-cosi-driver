@@ -4,15 +4,21 @@
 - name: help wanted
   color: 006b75
   description: Denotes an issue that needs help from a contributor. Must meet "help wanted" guidelines.
+- name: do-not-merge
+  color: e11d21
+  description: Indicates that a PR should not merge.
 
 - name: area/api
   color: 0052cc
   description: Indicates an issue on api area.
 - name: area/dependency
   color: 0052cc
-  description: Issues or PRs related to dependency changes
+  description: Issues or PRs related to dependency changes.
 - name: area/example
   color: 0052cc
+- name: area/helm
+  color: 0052cc
+  description: Issues or PRs related to Helm chart.
 
 - name: kind/bug
   color: e11d21

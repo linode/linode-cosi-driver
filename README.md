@@ -18,17 +18,27 @@ Follow these steps to get started with Linode COSI Driver:
 
 1. **Prerequisites:**
     1. Install COSI Custom Resource Definitions.
-    ```
+    ```sh
     kubectl create -k github.com/kubernetes-sigs/container-object-storage-interface-api
     ```
 
     2. Install COSI Controller.
-    ```
+    ```sh
     kubectl create -k github.com/kubernetes-sigs/container-object-storage-interface-controller
     ```
 
 2. **Installation:**
-    <!-- TODO: write install instructions -->
+    1. Create new API token in [Akamai Cloud Manager](https://cloud.linode.com/profile/tokens). The token must be configured with the following permissions:
+        - **Object Storage** - Read/Write
+
+    2. Install Linode COSI Driver using Helm.
+    ```sh
+    helm install linode-cosi-driver \
+        ./helm/linode-cosi-driver/ \
+        --set=apiToken=<YOUR_LINODE_API_TOKEN> \
+        --namespace=linode-cosi-driver \
+        --create-namespace
+    ```
 
 3. **Usage:**
     <!-- TODO: write usage examples -->

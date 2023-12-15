@@ -18,3 +18,5 @@ repos:
     rev: v1.11.3
     hooks:
       - id: helm-docs
+        args:
+          - '--badge-style=flat'

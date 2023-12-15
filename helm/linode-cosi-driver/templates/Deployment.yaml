@@ -1,0 +1,90 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "linode-cosi-driver.fullname" . }}
+  labels:
+    {{- include "linode-cosi-driver.labels" . | trim | nindent 4 }}
+  {{- with .Values.podAnnotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  minReadySeconds: 30
+  progressDeadlineSeconds: 600
+  revisionHistoryLimit: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      {{- include "linode-cosi-driver.selectorLabels" . | trim | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "linode-cosi-driver.labels" . | trim | nindent 8 }}
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "linode-cosi-driver.rbacName" . }}
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: driver
+          {{- with .Values.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          image: {{ include "linode-cosi-driver.driverImageName" . }}
+          imagePullPolicy: {{ .Values.driver.image.pullPolicy }}
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          envFrom:
+            - secretRef:
+                name: {{ include "linode-cosi-driver.secretName" . }}
+          volumeMounts:
+            - name: cosi-socket-dir
+              mountPath: /var/lib/cosi
+        - name: objectstorage-provisioner-sidecar
+          image: {{ include "linode-cosi-driver.provisionerSidecarImageName" . }}
+          imagePullPolicy: {{ .Values.sidecar.image.pullPolicy }}
+          args:
+            - "-v={{ include "linode-cosi-driver.provisionerSidecarVerbosity" . }}"
+          {{- with .Values.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: cosi-socket-dir
+              mountPath: /var/lib/cosi
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      volumes:
+        - name: cosi-socket-dir
+          emptyDir: {}

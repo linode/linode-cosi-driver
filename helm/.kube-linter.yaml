@@ -30,7 +30,7 @@ checks:
     # - "no-node-affinity"
     - "no-read-only-root-fs"
     # - "no-readiness-probe"
-    # - "no-rolling-update-strategy"
+    - "no-rolling-update-strategy"
     - "non-existent-service-account"
     # - "non-isolated-pod"
     - "privilege-escalation-container"
@@ -50,21 +50,19 @@ checks:
     - "wildcard-in-rules"
     - "writable-host-mount"
 
-  # NOTE: manually exclude failing for documentation, fix them in future or
-  # comment why are they disabled.
+  # NOTE: manually exclude failing for documentation, fix them in future or comment why are they disabled.
   exclude:
-    - "access-to-secrets" # NOTE: COSI Provisioner Sidecar requires access to secrets
+    - "access-to-secrets" # NOTE: COSI Provisioner Sidecar requires access to secrets.
     - "dnsconfig-options"
     - "minimum-three-replicas"
     - "no-liveness-probe"
     - "no-node-affinity"
     - "no-readiness-probe"
-    - "no-rolling-update-strategy"
     - "non-isolated-pod"
     - "pdb-max-unavailable"
     - "pdb-min-available"
-    - "required-annotation-email"
-    - "required-label-owner"
+    - "required-annotation-email" # NOTE: annotations are on the customer side, as we do not annotate by default.
+    - "required-label-owner" # NOTE: owner label is on the customer side, as we do not add additional annotations by default.
     - "unset-cpu-requirements"
-    - "unset-memory-requirements"
-    - "use-namespace"
+    - "unset-memory-requirements" # NOTE: resources should be set during installation time IF it is required.
+    - "use-namespace" # NOTE: namespace is handled by helm.
