@@ -21,6 +21,7 @@ import (
 	"testing"
 	"time"
 
+	o11y "github.com/linode/linode-cosi-driver/pkg/observability"
 	"github.com/linode/linode-cosi-driver/pkg/testutils"
 )
 
@@ -29,15 +30,14 @@ func TestRealMain(t *testing.T) {
 
 	for _, tc := range []struct {
 		testName      string // required
-		cosi          string // required
-		token         string
-		url           string
-		version       string
+		options       []func(*mainOptions)
 		expectedError error
 	}{
 		{
 			testName: "simple",
-			cosi:     "cosi.sock",
+			options: []func(*mainOptions){
+				func(*mainOptions) { /* noop */ },
+			},
 		},
 	} {
 		tc := tc
@@ -45,13 +45,25 @@ func TestRealMain(t *testing.T) {
 		t.Run(tc.testName, func(t *testing.T) {
 			t.Parallel()
 
+			defaultOpts := mainOptions{
+				cosiEndpoint:        "cosi.sock",
+				otlpTracesProtocol:  o11y.ProtoGRPC,
+				otlpMetricsProtocol: o11y.ProtoGRPC,
+			}
+
+			for _, opt := range tc.options {
+				opt(&defaultOpts)
+			}
+
 			ctx, cancel := testutils.ContextFromTimeout(context.Background(), t, time.Second)
 			defer cancel()
 
 			tmp := testutils.MustMkdirTemp()
 			defer os.RemoveAll(tmp)
 
-			err := realMain(ctx, "unix://"+tmp+tc.cosi, tc.token, tc.url, tc.version)
+			defaultOpts.cosiEndpoint = "unix://" + tmp + defaultOpts.cosiEndpoint
+
+			err := realMain(ctx, defaultOpts)
 			if !errors.Is(err, tc.expectedError) {
 				t.Errorf("expected error: %v, but got: %v", tc.expectedError, err)
 			}

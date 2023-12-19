@@ -56,6 +56,15 @@ spec:
                 name: {{ include "linode-cosi-driver.secretName" . }}
             - configMapRef:
                 name: {{ include "linode-cosi-driver.name" . }}
+          env:
+            - name: K8S_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: K8S_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
           volumeMounts:
             - name: cosi-socket-dir
               mountPath: /var/lib/cosi

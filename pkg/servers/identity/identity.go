@@ -37,9 +37,11 @@ func New(driverName string) (*Server, error) {
 		return nil, ErrNameEmpty
 	}
 
-	return &Server{
+	srv := &Server{
 		name: driverName,
-	}, nil
+	}
+
+	return srv, srv.registerMetrics()
 }
 
 // DriverGetInfo call is meant to retrieve the unique provisioner Identity.

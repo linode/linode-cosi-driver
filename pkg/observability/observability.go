@@ -12,7 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package tracing
+package observability
 
-// TODO: https://www.komu.engineer/blogs/11/opentelemetry-and-go
-func Setup() {}
+const (
+	ProtoGRPC         = "grpc"
+	ProtoHTTPJSON     = "http/json"
+	ProtoHTTPProtobuf = "http/protobuf"
+)
+
+var OTLPProtocols = []string{ProtoGRPC, ProtoHTTPJSON, ProtoHTTPProtobuf}

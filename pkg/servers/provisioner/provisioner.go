@@ -36,10 +36,12 @@ var _ cosi.ProvisionerServer = (*Server)(nil)
 
 // New returns provisioner.Server with default values.
 func New(logger *slog.Logger, client linodeclient.Client) (*Server, error) {
-	return &Server{
+	srv := &Server{
 		log:    logger,
 		client: client,
-	}, nil
+	}
+
+	return srv, srv.registerMetrics()
 }
 
 // init exists in case someone initializes server with nil logger.

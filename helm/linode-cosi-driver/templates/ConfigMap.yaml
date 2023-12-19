@@ -9,7 +9,13 @@ metadata:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 data:
+  {{- if ne (len (keys .Values.driver.otelConfig)) 0 }}
   {{- range $key, $val := .Values.driver.otelConfig }}
   {{- $key | nindent 2 }}: {{ quote $val }}
+  {{- end }}
+  {{- else }}
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://localhost:4317"
+  OTEL_EXPORTER_OTLP_TIMEOUT: "10000"
+  OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
   {{- end }}
   COSI_LINODE_WITH_O11Y: {{ quote (include "linode-cosi-driver.observability" .) }}

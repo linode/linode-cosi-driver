@@ -38,12 +38,12 @@ _GOBIN := $(shell go env GOPATH)/bin
 .PHONY: all
 all: test build image # Run all targets.
 
-.PHONY: generate
-generate: ${_GOBIN}/gowrap # Generate additional code.
+.PHONY: codegen
+codegen: ${_GOBIN}/gowrap # Generate additional code.
 	${GO} generate ./...
 
 .PHONY: build
-build: clean generate # Build the binary.
+build: clean codegen # Build the binary.
 	${GO_SETTINGS} ${GO} build \
 		${GOFLAGS} \
 		-ldflags="${LDFLAGS}" \

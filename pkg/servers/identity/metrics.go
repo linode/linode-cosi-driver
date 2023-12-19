@@ -12,7 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package metrics
+package identity
 
-// TODO: https://www.komu.engineer/blogs/11/opentelemetry-and-go
-func Setup() {}
+import (
+	"go.opentelemetry.io/otel"
+)
+
+const meterName = "linode/linode-cosi-driver/servers/identity"
+
+// registerMetrics is the common place of registering new metrics to the server.
+// When creating new metrics from the meter1, we call something like:
+//
+//	counter, err := meter.Float64Counter("example")
+//
+// As we expect the metrics to be registered, it is important to return and handle the error.
+func (s *Server) registerMetrics() error {
+	_ = otel.Meter(meterName)
+
+	// TODO: any new metrics should be placed here.
+
+	return nil
+}

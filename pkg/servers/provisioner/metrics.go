@@ -12,41 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package envflag
+package provisioner
 
 import (
-	"os"
-	"strconv"
+	"go.opentelemetry.io/otel"
 )
 
-func String(envKey string, defaultValue string, expectedValues ...string) string {
-	val, ok := os.LookupEnv(envKey)
-	if !ok {
-		val = defaultValue
-	}
+const meterName = "linode/linode-cosi-driver/servers/provisioner"
 
-	if len(expectedValues) == 0 {
-		return val
-	}
+// registerMetrics is the common place of registering new metrics to the server.
+// When creating new metrics from the meter1, we call something like:
+//
+//	counter, err := meter.Float64Counter("example")
+//
+// As we expect the metrics to be registered, it is important to return and handle the error.
+func (s *Server) registerMetrics() error {
+	_ = otel.Meter(meterName)
 
-	for _, ev := range expectedValues {
-		if ev == val {
-			return ev
-		}
-	}
+	// TODO: any new metrics should be placed here.
 
-	return defaultValue
-}
-
-func Bool(envKey string, defaultValue bool) bool {
-	val, ok := os.LookupEnv(envKey)
-	if !ok {
-		return defaultValue
-	}
-
-	if actual, err := strconv.ParseBool(val); err == nil {
-		return actual
-	}
-
-	return defaultValue
+	return nil
 }

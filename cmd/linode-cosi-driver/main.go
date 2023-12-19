@@ -22,6 +22,7 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -34,11 +35,16 @@ import (
 	grpclogger "github.com/linode/linode-cosi-driver/pkg/grpc/logger"
 	"github.com/linode/linode-cosi-driver/pkg/linodeclient"
 	"github.com/linode/linode-cosi-driver/pkg/linodeclient/tracedclient"
+	o11y "github.com/linode/linode-cosi-driver/pkg/observability"
+	"github.com/linode/linode-cosi-driver/pkg/observability/metrics"
+	"github.com/linode/linode-cosi-driver/pkg/observability/tracing"
 	restylogger "github.com/linode/linode-cosi-driver/pkg/resty/logger"
 	"github.com/linode/linode-cosi-driver/pkg/servers/identity"
 	"github.com/linode/linode-cosi-driver/pkg/servers/provisioner"
 	"github.com/linode/linode-cosi-driver/pkg/version"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
+	"go.opentelemetry.io/otel/sdk/resource"
+	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"google.golang.org/grpc"
 	cosi "sigs.k8s.io/container-object-storage-interface-spec"
 )
@@ -46,8 +52,10 @@ import (
 var log *slog.Logger
 
 const (
-	driverName  = "objectstorage.cosi.linode.com"
-	gracePeriod = 5 * time.Second
+	driverName     = "objectstorage.cosi.linode.com"
+	gracePeriod    = 5 * time.Second
+	envK8sNodeName = "K8S_NODE_NAME"
+	envK8sPodName  = "K8S_POD_NAME"
 )
 
 func main() {
@@ -56,34 +64,57 @@ func main() {
 		linodeURL        = envflag.String("LINODE_API_URL", "")
 		linodeAPIVersion = envflag.String("LINODE_API_VERSION", "")
 		cosiEndpoint     = envflag.String("COSI_ENDPOINT", "unix:///var/lib/cosi/cosi.sock")
+
+		withObservability   = envflag.Bool("COSI_LINODE_WITH_O11Y", false)
+		otlpProtocol        = envflag.String("OTEL_EXPORTER_OTLP_PROTOCOL", o11y.ProtoGRPC, o11y.OTLPProtocols...)
+		otlpTracesProtocol  = envflag.String("OTEL_EXPORTER_OTLP_TRACES_PROTOCOL", otlpProtocol, o11y.OTLPProtocols...)
+		otlpMetricsProtocol = envflag.String("OTEL_EXPORTER_OTLP_METRICSS_PROTOCOL", otlpProtocol, o11y.OTLPProtocols...)
 	)
 
 	// TODO: any logger settup must be done here, before first log call.
 	log = slog.Default()
 
-	if err := realMain(context.Background(),
-		cosiEndpoint,
-		linodeToken,
-		linodeURL,
-		linodeAPIVersion,
+	if err := realMain(context.Background(), mainOptions{
+		cosiEndpoint:        cosiEndpoint,
+		linodeToken:         linodeToken,
+		linodeURL:           linodeURL,
+		linodeAPIVersion:    linodeAPIVersion,
+		withObservability:   withObservability,
+		otlpTracesProtocol:  otlpTracesProtocol,
+		otlpMetricsProtocol: otlpMetricsProtocol,
+	},
 	); err != nil {
 		slog.Error("critical failure", "error", err)
 		os.Exit(1)
 	}
 }
 
-func realMain(ctx context.Context,
-	cosiEndpoint string,
-	linodeToken string,
-	linodeURL string,
-	linodeAPIVersion string,
-) error {
+type mainOptions struct {
+	cosiEndpoint     string
+	linodeToken      string
+	linodeURL        string
+	linodeAPIVersion string
+
+	withObservability   bool
+	otlpTracesProtocol  string
+	otlpMetricsProtocol string
+}
+
+func realMain(ctx context.Context, opts mainOptions) error {
 	ctx, stop := signal.NotifyContext(ctx,
 		os.Interrupt,
 		syscall.SIGINT,
 		syscall.SIGTERM,
 	)
 	defer stop()
+
+	if opts.withObservability {
+		o11yShutdown := setupObservabillity(ctx,
+			opts.otlpTracesProtocol,
+			opts.otlpMetricsProtocol,
+		)
+		defer o11yShutdown()
+	}
 
 	// create identity server
 	idSrv, err := identity.New(driverName)
@@ -93,10 +124,10 @@ func realMain(ctx context.Context,
 
 	// initialize Linode client
 	client, err := linodeclient.NewLinodeClient(
-		linodeToken,
+		opts.linodeToken,
 		fmt.Sprintf("LinodeCOSI/%s", version.Version),
-		linodeURL,
-		linodeAPIVersion)
+		opts.linodeURL,
+		opts.linodeAPIVersion)
 	if err != nil {
 		return fmt.Errorf("unable to create new client: %w", err)
 	}
@@ -106,14 +137,14 @@ func realMain(ctx context.Context,
 	// create provisioner server
 	prvSrv, err := provisioner.New(
 		log,
-		tracedclient.NewClientWithTracing(client, os.Getenv("HOSTNAME")),
+		tracedclient.NewClientWithTracing(client, os.Getenv(envK8sPodName)),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create provisioner server: %w", err)
 	}
 
 	// parse endpoint
-	endpointURL, err := url.Parse(cosiEndpoint)
+	endpointURL, err := url.Parse(opts.cosiEndpoint)
 	if err != nil {
 		return fmt.Errorf("unable to parse COSI endpoint: %w", err)
 	}
@@ -151,8 +182,10 @@ func realMain(ctx context.Context,
 	return nil
 }
 
-func grpcServer(ctx context.Context, identity cosi.IdentityServer, provisioner cosi.ProvisionerServer) (*grpc.Server, error) {
-	otelgrpc.NewServerHandler()
+func grpcServer(ctx context.Context,
+	identity cosi.IdentityServer,
+	provisioner cosi.ProvisionerServer,
+) (*grpc.Server, error) {
 	server := grpc.NewServer(
 		grpc.StatsHandler(otelgrpc.NewServerHandler()),
 		grpc.ChainUnaryInterceptor(
@@ -172,7 +205,10 @@ func grpcServer(ctx context.Context, identity cosi.IdentityServer, provisioner c
 }
 
 // shutdown handles shutdown with grace period consideration.
-func shutdown(ctx context.Context, wg *sync.WaitGroup, g *grpc.Server) {
+func shutdown(ctx context.Context,
+	wg *sync.WaitGroup,
+	g *grpc.Server,
+) {
 	<-ctx.Done()
 	defer wg.Done()
 	defer slog.Info("stopped")
@@ -201,5 +237,95 @@ func shutdown(ctx context.Context, wg *sync.WaitGroup, g *grpc.Server) {
 				return
 			}
 		}
+	}
+}
+
+func setupObservabillity(ctx context.Context,
+	tracesProtocol string,
+	metricsProtocol string,
+) func() {
+	node := os.Getenv(envK8sNodeName)
+	pod := os.Getenv(envK8sPodName)
+
+	res := resource.NewWithAttributes(
+		semconv.SchemaURL,
+		semconv.ServiceName(driverName),
+		semconv.ServiceVersion(version.Version),
+		semconv.K8SPodName(pod),
+		semconv.K8SNodeName(node),
+	)
+
+	log.Info("setting up tracing",
+		"protocol", tracesProtocol)
+
+	tracingShutdown, err := tracing.Setup(ctx, res, tracesProtocol)
+	if err != nil {
+		// non critical error, just log it.
+		log.Error("failed to setup tracing",
+			"error", err,
+		)
+	}
+
+	log.Info("setting up metrics",
+		"protocol", metricsProtocol)
+
+	metricsShutdown, err := metrics.Setup(ctx, res, metricsProtocol)
+	if err != nil {
+		// non critical error, just log it.
+		log.Error("failed to setup metrics",
+			"error", err,
+		)
+	}
+
+	attrs := []any{}
+
+	for _, kv := range os.Environ() {
+		k, v, ok := strings.Cut(kv, "=")
+		if ok && strings.HasPrefix(k, "OTEL_") {
+			attrs = append(attrs, slog.String(k, v))
+		}
+	}
+
+	log.Info("opentelemetry configuration applied",
+		attrs...,
+	)
+
+	return func() {
+		timeout := 25 * time.Second // nolint:gomnd // 2.5x default OTLP timeout
+
+		ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), timeout)
+		defer cancel()
+
+		wg := &sync.WaitGroup{}
+
+		if tracingShutdown != nil {
+			wg.Add(1)
+
+			go func() {
+				defer wg.Done()
+
+				if err := tracingShutdown(ctx); err != nil {
+					log.Error("failed to shutdown tracing",
+						"error", err,
+					)
+				}
+			}()
+		}
+
+		if metricsShutdown != nil {
+			wg.Add(1)
+
+			go func() {
+				defer wg.Done()
+
+				if err := tracingShutdown(ctx); err != nil {
+					log.Error("failed to shutdown tracing",
+						"error", err,
+					)
+				}
+			}()
+		}
+
+		wg.Wait()
 	}
 }
