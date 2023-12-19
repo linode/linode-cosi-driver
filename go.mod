@@ -6,7 +6,7 @@ require (
 	github.com/go-resty/resty/v2 v2.9.1
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.0.1
 	github.com/linode/linodego v1.25.1-0.20231205171049-8990c63f4891
-	google.golang.org/grpc v1.59.0
+	google.golang.org/grpc v1.60.0
 	sigs.k8s.io/container-object-storage-interface-spec v0.1.0
 )
 
