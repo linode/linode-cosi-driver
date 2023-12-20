@@ -75,6 +75,10 @@ Create the name of the service account to use.
   {{- end }}
 {{- end }}
 
+{{- define "linode-cosi-driver.otelExporterConfigMap" }}
+  {{- required "value 'otelExporter.configMap.ref' required" .Values.otelExporter.configMap.ref }}
+{{- end }}
+
 {{/*
 Create the full name of driver image from repository and tag.
 */}}
@@ -94,4 +98,23 @@ Create the full name of driver sidecar image from repository and tag.
 */}}
 {{- define "linode-cosi-driver.secretName" }}
   {{- default (include "linode-cosi-driver.name" .) .Values.secret.ref }}
+{{- end }}
+
+{{/*
+Create the full name of otel exporter sidecar image from repository and tag.
+*/}}
+{{- define "linode-cosi-driver.otelExporterSidecarImageName" }}
+  {{- .Values.otelExporter.image.repository }}:{{ .Values.otelExporter.image.tag }}
+{{- end }}
+
+{{/*
+Controlls if the observability features should be enabled.
+*/}}
+{{- define "linode-cosi-driver.observability" }}
+  {{- $keys := keys .Values.driver.otelConfig }}
+  {{- if (.Values.otelExporter.deploySidecar) }}
+    {{- true }}
+  {{- else }}
+    {{- ne (len $keys) 0 }}
+  {{- end }}
 {{- end }}

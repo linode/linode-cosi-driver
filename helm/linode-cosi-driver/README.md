@@ -13,12 +13,19 @@ A Helm chart for Kubernetes
 | driver.image.pullPolicy | string | `"IfNotPresent"` | Driver container image pull policy. |
 | driver.image.repository | string | `"docker.io/linode/linode-cosi-driver"` | Driver container image repository. |
 | driver.image.tag | string | `""` | Overrides the image tag whose default is the chart appVersion. |
+| driver.otelConfig | object | `{}` | OpenTelemetry configuration. All values defined here conform to the OTEL specification, and are not strictly defined in the Chart values. |
 | fullnameOverride | string | `""` | Overrides the full chart name. |
 | imagePullSecrets | list | `[]` | List of Docker registry secret names to pull images. |
 | linodeApiUrl | string | `""` | Linode API URL, leave empty for default. |
 | linodeApiVersion | string | `""` | Linode API version, leave empty for default. |
 | nameOverride | string | `""` | Overrides the chart name. |
 | nodeSelector | object | `{}` | Node labels for pod assignment. |
+| otelExporter.configMap.key | string | `"agent.yaml"` | Data key in config map under which agent configuration is located. |
+| otelExporter.configMap.ref | string | `""` | Name of existing config map. It is required if deploySidecar is true. |
+| otelExporter.deploySidecar | bool | `false` |  |
+| otelExporter.image.pullPolicy | string | `"IfNotPresent"` | OTEL agent container image pull policy. |
+| otelExporter.image.repository | string | `"docker.io/otel/opentelemetry-collector"` | OTEL agent container image repository. |
+| otelExporter.image.tag | string | `"0.91.0"` | OTEL agent container image tag. |
 | podAnnotations | object | `{}` | Annotations to add to the pod. |
 | podSecurityContext.runAsNonRoot | bool | `true` | Run the pod as a non-root user. |
 | podSecurityContext.runAsUser | int | `65532` | User ID to run the pod as. |
@@ -31,7 +38,7 @@ A Helm chart for Kubernetes
 | securityContext.readOnlyRootFilesystem | bool | `true` | Container runs with a read-only root filesystem. |
 | sidecar.image.pullPolicy | string | `"IfNotPresent"` | Sidecar container image pull policy. |
 | sidecar.image.repository | string | `"gcr.io/k8s-staging-sig-storage/objectstorage-sidecar/objectstorage-sidecar"` | Sidecar container image repository. |
-| sidecar.image.tag | string | `"v20221117-v0.1.0-22-g0e67387"` | Overrides the image tag whose default is the chart appVersion. |
+| sidecar.image.tag | string | `"v20221117-v0.1.0-22-g0e67387"` | Sidecar container image tag. |
 | sidecar.logVerbosity | int | `4` | Log verbosity level for the sidecar container. |
 | tolerations | list | `[]` | Tolerations for pod assignment. |
 

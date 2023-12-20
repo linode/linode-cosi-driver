@@ -12,41 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package envflag
+package observability
 
-import (
-	"os"
-	"strconv"
+const (
+	ProtoGRPC         = "grpc"
+	ProtoHTTPJSON     = "http/json"
+	ProtoHTTPProtobuf = "http/protobuf"
 )
 
-func String(envKey string, defaultValue string, expectedValues ...string) string {
-	val, ok := os.LookupEnv(envKey)
-	if !ok {
-		val = defaultValue
-	}
-
-	if len(expectedValues) == 0 {
-		return val
-	}
-
-	for _, ev := range expectedValues {
-		if ev == val {
-			return ev
-		}
-	}
-
-	return defaultValue
-}
-
-func Bool(envKey string, defaultValue bool) bool {
-	val, ok := os.LookupEnv(envKey)
-	if !ok {
-		return defaultValue
-	}
-
-	if actual, err := strconv.ParseBool(val); err == nil {
-		return actual
-	}
-
-	return defaultValue
-}
+var OTLPProtocols = []string{ProtoGRPC, ProtoHTTPJSON, ProtoHTTPProtobuf}

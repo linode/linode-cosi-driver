@@ -19,6 +19,8 @@
 - name: area/helm
   color: 0052cc
   description: Issues or PRs related to Helm chart.
+- name: area/observability
+  color: 0052cc
 
 - name: kind/bug
   color: e11d21

@@ -25,6 +25,12 @@ driver:
     # -- Overrides the image tag whose default is the chart appVersion.
     tag: ""
 
+  # -- OpenTelemetry configuration. All values defined here conform to the OTEL specification, and are not strictly defined in the Chart values.
+  otelConfig: {}
+    # OTEL_EXPORTER_OTLP_ENDPOINT: "http://localhost:4317"
+    # OTEL_EXPORTER_OTLP_TIMEOUT: 10000
+    # OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
+
 sidecar:
   image:
     # -- Sidecar container image repository.
@@ -33,11 +39,31 @@ sidecar:
     # -- Sidecar container image pull policy.
     pullPolicy: IfNotPresent
 
-    # -- Overrides the image tag whose default is the chart appVersion.
+    # -- Sidecar container image tag.
     tag: "v20221117-v0.1.0-22-g0e67387"
 
   # -- Log verbosity level for the sidecar container.
   logVerbosity: 4
+
+otelExporter:
+  deploySidecar: false
+
+  image:
+    # -- OTEL agent container image repository.
+    repository: docker.io/otel/opentelemetry-collector
+
+    # -- OTEL agent container image tag.
+    tag: "0.91.0"
+
+    # -- OTEL agent container image pull policy.
+    pullPolicy: IfNotPresent
+
+  configMap:
+    # -- Name of existing config map. It is required if deploySidecar is true.
+    ref: ""
+
+    # -- Data key in config map under which agent configuration is located.
+    key: "agent.yaml"
 
 # -- List of Docker registry secret names to pull images.
 imagePullSecrets: []
