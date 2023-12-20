@@ -13,10 +13,8 @@ data:
       batch:
 
     exporters:
-      otlp:
+      otlp/jaeger:
         endpoint: "simplest-collector.observability:4317"
-        tls:
-          insecure: true
 
       prometheus:
         endpoint: "0.0.0.0:8080"
