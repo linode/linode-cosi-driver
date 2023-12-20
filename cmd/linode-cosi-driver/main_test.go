@@ -25,7 +25,7 @@ import (
 	"github.com/linode/linode-cosi-driver/pkg/testutils"
 )
 
-func TestRealMain(t *testing.T) {
+func TestRun(t *testing.T) {
 	t.Parallel()
 
 	for _, tc := range []struct {
@@ -63,7 +63,7 @@ func TestRealMain(t *testing.T) {
 
 			defaultOpts.cosiEndpoint = "unix://" + tmp + defaultOpts.cosiEndpoint
 
-			err := realMain(ctx, defaultOpts)
+			err := run(ctx, defaultOpts)
 			if !errors.Is(err, tc.expectedError) {
 				t.Errorf("expected error: %v, but got: %v", tc.expectedError, err)
 			}

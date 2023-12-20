@@ -74,7 +74,7 @@ func main() {
 	// TODO: any logger settup must be done here, before first log call.
 	log = slog.Default()
 
-	if err := realMain(context.Background(), mainOptions{
+	if err := run(context.Background(), mainOptions{
 		cosiEndpoint:        cosiEndpoint,
 		linodeToken:         linodeToken,
 		linodeURL:           linodeURL,
@@ -100,7 +100,7 @@ type mainOptions struct {
 	otlpMetricsProtocol string
 }
 
-func realMain(ctx context.Context, opts mainOptions) error {
+func run(ctx context.Context, opts mainOptions) error {
 	ctx, stop := signal.NotifyContext(ctx,
 		os.Interrupt,
 		syscall.SIGINT,
@@ -150,7 +150,10 @@ func realMain(ctx context.Context, opts mainOptions) error {
 	}
 
 	// create the endpoint handler
-	lis, err := endpoint.New(endpointURL).Listener(ctx)
+	ep := endpoint.New(endpointURL)
+	defer ep.Close()
+
+	lis, err := ep.Listener(ctx)
 	if err != nil {
 		return fmt.Errorf("unable to create new listener: %w", err)
 	}

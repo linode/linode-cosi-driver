@@ -64,6 +64,11 @@ func (e *Endpoint) Listener(ctx context.Context) (net.Listener, error) {
 			return
 		}
 
+		if e.address != nil && e.address.Scheme == SchemeUNIX {
+			// best effort call to remove the socket if it exists, fixes issue with restarted pod that did not exit gracefully
+			_ = os.Remove(e.address.Path)
+		}
+
 		e.listener, e.listenerError = listenConfig.Listen(ctx, e.address.Scheme, e.address.Path)
 		if e.listenerError != nil {
 			return
