@@ -21,9 +21,57 @@ import (
 	"testing"
 
 	"github.com/linode/linode-cosi-driver/pkg/linodeclient"
+	"github.com/linode/linode-cosi-driver/pkg/linodeclient/stubclient"
 	"github.com/linode/linode-cosi-driver/pkg/servers/provisioner"
 	"github.com/linode/linode-cosi-driver/pkg/testutils"
+	"github.com/linode/linodego"
 	cosi "sigs.k8s.io/container-object-storage-interface-spec"
+)
+
+const (
+	testRegion           = "test-region"
+	testBucketName       = "test-bucket"
+	testBucketID         = testRegion + "/" + testBucketName
+	testBucketAccessName = "test-bucket-access"
+	testBucketAccessID   = "1"
+)
+
+var (
+	defaultLinodegoBucket = &linodego.ObjectStorageBucket{
+		Label:   testBucketName,
+		Cluster: testRegion,
+	}
+	defaultLinodegoBucketAccess = &linodego.ObjectStorageBucketAccess{
+		ACL:         linodego.ACLPrivate,
+		CorsEnabled: provisioner.ParamCORSValueDisabled.Bool(),
+	}
+
+	defaultBucketParameters = map[string]string{
+		provisioner.ParamRegion: testRegion,
+	}
+
+	defaultBucketAccessParameters = map[string]string{
+		provisioner.ParamACL:  string(linodego.ACLPrivate),
+		provisioner.ParamCORS: string(provisioner.ParamCORSValueDisabled),
+	}
+
+	defaultBucketInfo = &cosi.Protocol{
+		Type: &cosi.Protocol_S3{
+			S3: &cosi.S3{
+				Region: testRegion,
+			},
+		},
+	}
+	defaultCredentials = map[string]*cosi.CredentialDetails{
+		provisioner.S3: {
+			Secrets: map[string]string{
+				provisioner.S3Region:                testRegion,
+				provisioner.S3Endpoint:              testRegion,
+				provisioner.S3SecretAccessKeyID:     stubclient.TestAccessKey,
+				provisioner.S3SecretAccessSecretKey: stubclient.TestSecretKey,
+			},
+		},
+	}
 )
 
 func TestDriverCreateBucket(t *testing.T) {
@@ -35,7 +83,20 @@ func TestDriverCreateBucket(t *testing.T) {
 		request          *cosi.DriverCreateBucketRequest
 		expectedResponse *cosi.DriverCreateBucketResponse
 		expectedError    error
-	}{} {
+	}{
+		{
+			testName: "base",
+			client:   stubclient.New(),
+			request: &cosi.DriverCreateBucketRequest{
+				Name:       testBucketName,
+				Parameters: defaultBucketParameters,
+			},
+			expectedResponse: &cosi.DriverCreateBucketResponse{
+				BucketId:   testBucketID,
+				BucketInfo: defaultBucketInfo,
+			},
+		},
+	} {
 		tc := tc
 
 		t.Run(tc.testName, func(t *testing.T) {
@@ -71,7 +132,15 @@ func TestDriverDeleteBucket(t *testing.T) {
 		client        linodeclient.Client
 		request       *cosi.DriverDeleteBucketRequest
 		expectedError error
-	}{} {
+	}{
+		{
+			testName: "base",
+			client:   stubclient.New(stubclient.WithBucket(defaultLinodegoBucket)),
+			request: &cosi.DriverDeleteBucketRequest{
+				BucketId: testBucketID,
+			},
+		},
+	} {
 		tc := tc
 
 		t.Run(tc.testName, func(t *testing.T) {
@@ -102,7 +171,22 @@ func TestDriverGrantBucketAccess(t *testing.T) {
 		request          *cosi.DriverGrantBucketAccessRequest
 		expectedResponse *cosi.DriverGrantBucketAccessResponse
 		expectedError    error
-	}{} {
+	}{
+		{
+			testName: "base",
+			client:   stubclient.New(stubclient.WithBucket(defaultLinodegoBucket)),
+			request: &cosi.DriverGrantBucketAccessRequest{
+				BucketId:           testBucketID,
+				Name:               testBucketAccessName,
+				AuthenticationType: cosi.AuthenticationType_Key,
+				Parameters:         defaultBucketAccessParameters,
+			},
+			expectedResponse: &cosi.DriverGrantBucketAccessResponse{
+				AccountId:   testBucketAccessID,
+				Credentials: defaultCredentials,
+			},
+		},
+	} {
 		tc := tc
 
 		t.Run(tc.testName, func(t *testing.T) {
@@ -135,10 +219,22 @@ func TestDriverRevokeBucketAccess(t *testing.T) {
 
 	for _, tc := range []struct {
 		testName      string
-		request       *cosi.DriverRevokeBucketAccessRequest
 		client        linodeclient.Client
+		request       *cosi.DriverRevokeBucketAccessRequest
 		expectedError error
-	}{} {
+	}{
+		{
+			testName: "base",
+			client: stubclient.New(
+				stubclient.WithBucket(defaultLinodegoBucket),
+				stubclient.WithBucketAccess(defaultLinodegoBucketAccess, defaultLinodegoBucket.Cluster, defaultLinodegoBucket.Label),
+			),
+			request: &cosi.DriverRevokeBucketAccessRequest{
+				BucketId:  testBucketID,
+				AccountId: testBucketAccessID,
+			},
+		},
+	} {
 		tc := tc
 
 		t.Run(tc.testName, func(t *testing.T) {
