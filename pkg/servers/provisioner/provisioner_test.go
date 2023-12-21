@@ -17,6 +17,7 @@ package provisioner_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -66,7 +67,7 @@ var (
 		provisioner.S3: {
 			Secrets: map[string]string{
 				provisioner.S3Region:                testRegion,
-				provisioner.S3Endpoint:              testRegion,
+				provisioner.S3Endpoint:              fmt.Sprintf("%s.linodeobjects.com", testBucketName),
 				provisioner.S3SecretAccessKeyID:     stubclient.TestAccessKey,
 				provisioner.S3SecretAccessSecretKey: stubclient.TestSecretKey,
 			},
@@ -96,6 +97,21 @@ func TestDriverCreateBucket(t *testing.T) {
 				BucketInfo: defaultBucketInfo,
 			},
 		},
+		{
+			testName: "bucket exists",
+			client: stubclient.New(
+				stubclient.WithBucket(defaultLinodegoBucket),
+				stubclient.WithBucketAccess(defaultLinodegoBucketAccess, defaultLinodegoBucket.Cluster, defaultLinodegoBucket.Label),
+			),
+			request: &cosi.DriverCreateBucketRequest{
+				Name:       testBucketName,
+				Parameters: defaultBucketParameters,
+			},
+			expectedResponse: &cosi.DriverCreateBucketResponse{
+				BucketId:   testBucketID,
+				BucketInfo: defaultBucketInfo,
+			},
+		},
 	} {
 		tc := tc
 
@@ -110,15 +126,18 @@ func TestDriverCreateBucket(t *testing.T) {
 				t.Fatalf("failed to create provisioner server: %v", err)
 			}
 
-			actual, err := srv.DriverCreateBucket(ctx, tc.request)
-			if !errors.Is(err, tc.expectedError) {
-				t.Errorf("expected error: %v, but got: %v", tc.expectedError, err)
-			}
+			for i := 0; i < 2; i++ { // run twice to check idempotency
+				actual, err := srv.DriverCreateBucket(ctx, tc.request)
+				if !errors.Is(err, tc.expectedError) {
+					t.Errorf("call %d: expected error: %v, but got: %v", i, tc.expectedError, err)
+				}
 
-			if !reflect.DeepEqual(tc.expectedResponse, actual) {
-				t.Errorf("expected response to be deeply equal\n> expected: %#+v,\n> got: %#+v",
-					tc.expectedResponse,
-					actual)
+				if !reflect.DeepEqual(tc.expectedResponse, actual) {
+					t.Errorf("call %d: expected response to be deeply equal\n> expected: %#+v,\n> got: %#+v",
+						i,
+						tc.expectedResponse,
+						actual)
+				}
 			}
 		})
 	}
@@ -154,9 +173,11 @@ func TestDriverDeleteBucket(t *testing.T) {
 				t.Fatalf("failed to create provisioner server: %v", err)
 			}
 
-			_, err = srv.DriverDeleteBucket(ctx, tc.request)
-			if !errors.Is(err, tc.expectedError) {
-				t.Errorf("expected error: %v, but got: %v", tc.expectedError, err)
+			for i := 0; i < 2; i++ { // run twice to check idempotency
+				_, err = srv.DriverDeleteBucket(ctx, tc.request)
+				if !errors.Is(err, tc.expectedError) {
+					t.Errorf("call %d: expected error: %v, but got: %v", i, tc.expectedError, err)
+				}
 			}
 		})
 	}
@@ -200,15 +221,18 @@ func TestDriverGrantBucketAccess(t *testing.T) {
 				t.Fatalf("failed to create provisioner server: %v", err)
 			}
 
-			actual, err := srv.DriverGrantBucketAccess(ctx, tc.request)
-			if !errors.Is(err, tc.expectedError) {
-				t.Errorf("expected error: %v, but got: %v", tc.expectedError, err)
-			}
+			for i := 0; i < 2; i++ { // run twice to check idempotency
+				actual, err := srv.DriverGrantBucketAccess(ctx, tc.request)
+				if !errors.Is(err, tc.expectedError) {
+					t.Errorf("call %d: expected error: %v, but got: %v", i, tc.expectedError, err)
+				}
 
-			if !reflect.DeepEqual(tc.expectedResponse, actual) {
-				t.Errorf("expected response to be deeply equal\n> expected: %#+v,\n> got: %#+v",
-					tc.expectedResponse,
-					actual)
+				if !reflect.DeepEqual(tc.expectedResponse, actual) {
+					t.Errorf("call %d: expected response to be deeply equal\n> expected: %#+v,\n> got: %#+v",
+						i,
+						tc.expectedResponse,
+						actual)
+				}
 			}
 		})
 	}
@@ -248,9 +272,11 @@ func TestDriverRevokeBucketAccess(t *testing.T) {
 				t.Fatalf("failed to create provisioner server: %v", err)
 			}
 
-			_, err = srv.DriverRevokeBucketAccess(ctx, tc.request)
-			if !errors.Is(err, tc.expectedError) {
-				t.Errorf("expected error: %v, but got: %v", tc.expectedError, err)
+			for i := 0; i < 2; i++ { // run twice to check idempotency
+				_, err = srv.DriverRevokeBucketAccess(ctx, tc.request)
+				if !errors.Is(err, tc.expectedError) {
+					t.Errorf("call %d: expected error: %v, but got: %v", i, tc.expectedError, err)
+				}
 			}
 		})
 	}
