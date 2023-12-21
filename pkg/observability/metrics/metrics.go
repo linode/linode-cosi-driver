@@ -22,9 +22,12 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
+	"go.opentelemetry.io/otel/metric"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
+
+const meterName = "github.com/linode/linode-cosi-driver/pkg/observability/metrics"
 
 func Setup(ctx context.Context, resource *resource.Resource, protocol string) (_ func(context.Context) error, err error) {
 	var exp sdkmetric.Exporter
@@ -63,4 +66,8 @@ func registerMetricsExporter(res *resource.Resource, exporter sdkmetric.Exporter
 	otel.SetMeterProvider(mp)
 
 	return mp.Shutdown, nil
+}
+
+func Meter() metric.Meter {
+	return otel.Meter(meterName)
 }
