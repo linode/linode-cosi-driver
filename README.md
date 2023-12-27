@@ -49,7 +49,43 @@ Follow these steps to get started with Linode COSI Driver:
     ```
 
 3. **Usage:**
-    <!-- TODO: write usage examples -->
+    1. Create Bucket Class (see the [example.BucketClass.yaml](./examples/example.BucketClass.yaml)).
+    ```sh
+    kubectl create -f ./examples/example.BucketClass.yaml
+    ```
+
+    2. Create Bucket Access Class (see the [example.BucketAccessClass.yaml](./examples/example.BucketAccessClass.yaml)).
+    ```sh
+    kubectl create -f ./examples/example.BucketAccessClass.yaml
+    ```
+
+    3. Create Bucket Claim (see the [example.BucketClaim.yaml](./examples/example.BucketClaim.yaml)).
+    ```sh
+    kubectl create -f ./examples/example.BucketClaim.yaml
+    ```
+
+    4. Create Bucket Access Class (see the [example.BucketAccess.yaml](./examples/example.BucketAccess.yaml)).
+    ```sh
+    kubectl create -f ./examples/example.BucketAccess.yaml
+    ```
+
+    5. Use the `example-secret` secret in your workload, e.g. in deployment:
+    ```yaml
+    spec:
+      template:
+        spec:
+          containers:
+            - volumeMounts:
+                - mountPath: /conf
+                  name: BucketInfo
+          volumes:
+            - name: example-secret-vol
+              secret:
+                name: example-secret
+                items:
+                  - key: BucketInfo
+                    path: BucketInfo.json
+    ```
 
 ## Testing
 
