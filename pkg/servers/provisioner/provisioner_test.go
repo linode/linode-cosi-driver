@@ -26,6 +26,8 @@ import (
 	"github.com/linode/linode-cosi-driver/pkg/servers/provisioner"
 	"github.com/linode/linode-cosi-driver/pkg/testutils"
 	"github.com/linode/linodego"
+	grpccodes "google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	cosi "sigs.k8s.io/container-object-storage-interface-spec"
 )
 
@@ -34,7 +36,7 @@ const (
 	testBucketName       = "test-bucket"
 	testBucketID         = testRegion + "/" + testBucketName
 	testBucketAccessName = "test-bucket-access"
-	testBucketAccessID   = "1"
+	testBucketAccessID   = "0"
 )
 
 var (
@@ -59,7 +61,8 @@ var (
 	defaultBucketInfo = &cosi.Protocol{
 		Type: &cosi.Protocol_S3{
 			S3: &cosi.S3{
-				Region: testRegion,
+				Region:           testRegion,
+				SignatureVersion: cosi.S3SignatureVersion_S3V4,
 			},
 		},
 	}
@@ -112,6 +115,23 @@ func TestDriverCreateBucket(t *testing.T) {
 				BucketInfo: defaultBucketInfo,
 			},
 		},
+		{
+			testName: "empty map",
+			client:   stubclient.New(),
+			request: &cosi.DriverCreateBucketRequest{
+				Name:       testBucketName,
+				Parameters: map[string]string{},
+			},
+			expectedError: status.Error(grpccodes.InvalidArgument, provisioner.ErrMissingRegion.Error()),
+		},
+		{
+			testName: "nil map",
+			client:   stubclient.New(),
+			request: &cosi.DriverCreateBucketRequest{
+				Name: testBucketName,
+			},
+			expectedError: status.Error(grpccodes.InvalidArgument, provisioner.ErrMissingRegion.Error()),
+		},
 	} {
 		tc := tc
 
@@ -129,11 +149,11 @@ func TestDriverCreateBucket(t *testing.T) {
 			for i := 0; i < 2; i++ { // run twice to check idempotency
 				actual, err := srv.DriverCreateBucket(ctx, tc.request)
 				if !errors.Is(err, tc.expectedError) {
-					t.Errorf("call %d: expected error: %v, but got: %v", i, tc.expectedError, err)
+					t.Errorf("call %d: expected error: %q, but got: %q", i, tc.expectedError, err)
 				}
 
 				if !reflect.DeepEqual(tc.expectedResponse, actual) {
-					t.Errorf("call %d: expected response to be deeply equal\n> expected: %#+v,\n> got: %#+v",
+					t.Errorf("call %d: expected credentials to be deeply equal\n> expected: %#+v,\n> got: %#+v",
 						i,
 						tc.expectedResponse,
 						actual)
@@ -176,7 +196,7 @@ func TestDriverDeleteBucket(t *testing.T) {
 			for i := 0; i < 2; i++ { // run twice to check idempotency
 				_, err = srv.DriverDeleteBucket(ctx, tc.request)
 				if !errors.Is(err, tc.expectedError) {
-					t.Errorf("call %d: expected error: %v, but got: %v", i, tc.expectedError, err)
+					t.Errorf("call %d: expected error: %q, but got: %q", i, tc.expectedError, err)
 				}
 			}
 		})
@@ -207,6 +227,36 @@ func TestDriverGrantBucketAccess(t *testing.T) {
 				Credentials: defaultCredentials,
 			},
 		},
+		{
+			testName: "IAM Auth",
+			client:   stubclient.New(stubclient.WithBucket(defaultLinodegoBucket)),
+			request: &cosi.DriverGrantBucketAccessRequest{
+				BucketId:           testBucketID,
+				Name:               testBucketAccessName,
+				AuthenticationType: cosi.AuthenticationType_IAM,
+				Parameters:         defaultBucketAccessParameters,
+			},
+			expectedError: status.Error(
+				grpccodes.InvalidArgument,
+				fmt.Errorf("%w: %s", provisioner.ErrUnsuportedAuth, cosi.AuthenticationType_IAM).Error(),
+			),
+		},
+		{
+			testName: "invalid permissions",
+			client:   stubclient.New(stubclient.WithBucket(defaultLinodegoBucket)),
+			request: &cosi.DriverGrantBucketAccessRequest{
+				BucketId:           testBucketID,
+				Name:               testBucketAccessName,
+				AuthenticationType: cosi.AuthenticationType_Key,
+				Parameters: map[string]string{
+					provisioner.ParamPermissions: "invalid",
+				},
+			},
+			expectedError: status.Error(
+				grpccodes.InvalidArgument,
+				fmt.Errorf("%w: %s", provisioner.ErrUnknownPermsissions, "invalid").Error(),
+			),
+		},
 	} {
 		tc := tc
 
@@ -224,11 +274,11 @@ func TestDriverGrantBucketAccess(t *testing.T) {
 			for i := 0; i < 2; i++ { // run twice to check idempotency
 				actual, err := srv.DriverGrantBucketAccess(ctx, tc.request)
 				if !errors.Is(err, tc.expectedError) {
-					t.Errorf("call %d: expected error: %v, but got: %v", i, tc.expectedError, err)
+					t.Errorf("call %d: expected error: %q, but got: %q", i, tc.expectedError, err)
 				}
 
 				if !reflect.DeepEqual(tc.expectedResponse, actual) {
-					t.Errorf("call %d: expected response to be deeply equal\n> expected: %#+v,\n> got: %#+v",
+					t.Errorf("call %d: expected credentials to be deeply equal\n> expected: %#+v,\n> got: %#+v",
 						i,
 						tc.expectedResponse,
 						actual)
@@ -275,7 +325,7 @@ func TestDriverRevokeBucketAccess(t *testing.T) {
 			for i := 0; i < 2; i++ { // run twice to check idempotency
 				_, err = srv.DriverRevokeBucketAccess(ctx, tc.request)
 				if !errors.Is(err, tc.expectedError) {
-					t.Errorf("call %d: expected error: %v, but got: %v", i, tc.expectedError, err)
+					t.Errorf("call %d: expected error: %q, but got: %q", i, tc.expectedError, err)
 				}
 			}
 		})

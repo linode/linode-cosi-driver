@@ -97,6 +97,12 @@ func (s *Server) DriverCreateBucket(ctx context.Context, req *cosi.DriverCreateB
 
 	log.InfoContext(ctx, "bucket creation initiated")
 
+	if cluster == "" {
+		log.ErrorContext(ctx, "missing region")
+
+		return nil, tracing.Error(span, codes.InvalidArgument, ErrMissingRegion)
+	}
+
 	bucket, err := s.client.GetObjectStorageBucket(ctx, cluster, label)
 	if err != nil && !errors.Is(err, ErrNotFound) {
 		log.ErrorContext(ctx, "failed to check if bucket exists", "error", err)
@@ -230,7 +236,7 @@ func (s *Server) DriverGrantBucketAccess(ctx context.Context, req *cosi.DriverGr
 	} else if perms != ParamPermissionsValueReadOnly && perms != ParamPermissionsValueReadWrite {
 		log.ErrorContext(ctx, "unknown permissions")
 
-		return nil, tracing.Error(span, codes.InvalidArgument, fmt.Errorf("%w: %s", ErrUnknownPermsissions, auth.String()))
+		return nil, tracing.Error(span, codes.InvalidArgument, fmt.Errorf("%w: %s", ErrUnknownPermsissions, perms))
 	}
 
 	opts := linodego.ObjectStorageKeyCreateOptions{
@@ -255,7 +261,7 @@ func (s *Server) DriverGrantBucketAccess(ctx context.Context, req *cosi.DriverGr
 	log.InfoContext(ctx, "object storage key created")
 
 	return &cosi.DriverGrantBucketAccessResponse{
-		AccountId:   key.Label,
+		AccountId:   fmt.Sprintf("%d", key.ID),
 		Credentials: credentials(cluster, label, key.AccessKey, key.SecretKey),
 	}, tracing.Error(span, codes.OK, nil)
 }
