@@ -50,3 +50,16 @@ func Bool(envKey string, defaultValue bool) bool {
 
 	return defaultValue
 }
+
+func Int(envKey string, defaultValue int) int {
+	val, ok := os.LookupEnv(envKey)
+	if !ok {
+		return defaultValue
+	}
+
+	if actual, err := strconv.Atoi(val); err == nil {
+		return actual
+	}
+
+	return defaultValue
+}
