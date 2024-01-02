@@ -1,15 +1,23 @@
-# This workflow run linters and tests.
-# It is supposed to be run on each push to main branch, as well as for each push in pull request.
+# This workflow run linters and tests, and publishes a new image if there is a release or
+# push to main. It is supposed to be run on each push to main branch, on each release, as
+# well as for each push in pull request.
 
-name: Linters
+name: Code and Image workflow
 
 on:
   pull_request:
     branches: [ '*' ]
+  push:
+    branches:
+      - "main"
+    tags:
+      - 'v*'
 
 env:
   GO_VERSION: "1.21"
-  IMAGE: linode/linode-cosi-driver
+  REGISTRY: docker.io
+  REPOSITORY: linode
+  IMAGE: linode-cosi-driver
 
 permissions:
   contents: read
@@ -23,6 +31,8 @@ jobs:
         with:
           fetch-depth: 0
       - uses: wagoid/commitlint-github-action@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
   golangci-lint:
     name: Run golangci-lint
@@ -74,24 +84,49 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Login to registry
+        if: ${{ startsWith(github.ref, 'refs/tags/v') || (github.ref == 'refs/heads/main') }}
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_TOKEN }}
+      - name: Capture latest tag if exists
+        uses: actions-ecosystem/action-get-latest-tag@v1
+        id: get-latest-tag
+        with:
+          semver_only: true
+          with_initial_version: true
+          initial_version: v0.0.0
+      - name: Set proper tags
+        id: tags
+        run: |
+          ./scripts/tags.sh \
+            "${{ env.REGISTRY }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}" \
+            "${{ github.sha }}" \
+            "${{ github.ref_name }}" \
+            "${{ steps.get-latest-tag.outputs.tag }}" \
+            "${GITHUB_OUTPUT}"
       - name: Build image
         uses: docker/build-push-action@v5
         with:
-          push: false
-          load: true
-          tags: ${{ env.IMAGE }}:${{ github.sha }}
+          push: ${{ startsWith(github.ref, 'refs/tags/v') || (github.ref == 'refs/heads/main') }}
+          load: ${{ !(startsWith(github.ref, 'refs/tags/v') || (github.ref == 'refs/heads/main')) }}
+          tags: ${{ steps.tags.outputs.all }}
           build-args: |
-            VERSION=${{ github.sha }}
+            VERSION=${{ steps.tags.outputs.version }}
           target: runtime
       - name: Scan image using Grype
+        id: grype
         uses: anchore/scan-action@v3
         with:
-          image: ${{ env.IMAGE }}:${{ github.sha }}
+          image: ${{ steps.tags.outputs.full_version }}
           output-format: table
       - name: Scan image using Trivy
+        if: ${{ (steps.grype.outcome == 'success') || (steps.grype.outcome == 'failure') }}
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: ${{ env.IMAGE }}:${{ github.sha }}
+          image-ref: ${{ steps.tags.outputs.full_version }}
           format: table
           exit-code: '1'
           severity: 'CRITICAL,HIGH,MEDIUM'
