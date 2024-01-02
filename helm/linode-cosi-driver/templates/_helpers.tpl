@@ -80,10 +80,22 @@ Create the name of the service account to use.
 {{- end }}
 
 {{/*
+Create version of the driver image.
+*/}}
+{{- define "linode-cosi-driver.version" }}
+  {{- $version := default .Chart.AppVersion .Values.driver.image.tag }}
+  {{- if hasPrefix "v" $version }}
+    {{- print $version }}
+  {{- else }}
+    {{- printf "v%s" $version }}
+  {{- end }}
+{{- end }}
+
+{{/*
 Create the full name of driver image from repository and tag.
 */}}
 {{- define "linode-cosi-driver.driverImageName" }}
-  {{- .Values.driver.image.repository }}:{{ default .Chart.AppVersion .Values.driver.image.tag }}
+  {{- .Values.driver.image.repository }}:{{ include "linode-cosi-driver.version" . }}
 {{- end }}
 
 {{/*

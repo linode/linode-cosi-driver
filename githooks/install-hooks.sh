@@ -1,4 +1,8 @@
-#!/bin/bash -aex
+#!/usr/bin/env bash
+
+set -a
+set -e
+set -x
 
 if [[ "$(uname -s)" == "Darwin" ]]; then
   if command -v brew &> /dev/null; then
