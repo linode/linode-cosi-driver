@@ -1,0 +1,10 @@
+{
+  "packages": {
+    ".": {
+      "release-type": "go"
+    },
+    "helm/linode-cosi-driver": {
+      "release-type": "helm"
+    }
+  }
+}

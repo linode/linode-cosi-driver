@@ -22,11 +22,12 @@ VERSION ?= $(shell git tag | tail -n 1 | grep '' || echo 'v0.0.0')$(shell git di
 TOOLCHAIN_VERSION := $(shell sed -En 's/^go (.*)$$/\1/p' go.mod)
 MODULE_NAME := $(shell sed -En 's/^module (.*)$$/\1/p' go.mod)
 
-REGISTRY := docker.io
-IMAGE := linode/linode-cosi-driver
+REGISTRY ?= docker.io
+REPOSITORY ?= linode
+IMAGE := linode-cosi-driver
 
 CONTAINERFILE ?= Dockerfile
-OCI_TAGS += --tag=${REGISTRY}/${IMAGE}:${VERSION}
+OCI_TAGS += --tag=${REGISTRY}/${REPOSITORY}/${IMAGE}:${VERSION}
 OCI_BUILDARGS += --build-arg=VERSION=${VERSION}
 
 GOFLAGS ?=
@@ -75,7 +76,7 @@ clean: # Clean the previous build files.
 
 .PHONY: clean-image
 clean-image: # Attempt to remove the old container image builds.
-	@-${ENGINE} image rm -f $(shell ${ENGINE} image ls -aq ${REGISTRY}/${REPOSITORY}/${NAME}:${VERSION} | xargs -n1 | sort -u | xargs)
+	@-${ENGINE} image rm -f $(shell ${ENGINE} image ls -aq ${REGISTRY}/${REPOSITORY}/${IMAGE}:${VERSION} | xargs -n1 | sort -u | xargs)
 
 .PHONY: help
 help: # Show help for each of the Makefile recipes.
