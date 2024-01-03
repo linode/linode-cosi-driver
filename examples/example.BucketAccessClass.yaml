@@ -5,4 +5,5 @@ metadata:
 driverName: objectstorage.cosi.linode.com
 authenticationType: Key
 parameters:
-  permissions: Full # ReadOnly
+  cosi.linode.com/v1/permissions: read_only
+

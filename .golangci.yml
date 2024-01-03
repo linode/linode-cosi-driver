@@ -5,6 +5,10 @@ run:
   # Include test files.
   tests: true
 
+  # List of build tags to pass to all linters.
+  build-tags:
+    - integration
+
 issues:
   # Set to 0 to not skip any issues.
   max-issues-per-linter: 0
