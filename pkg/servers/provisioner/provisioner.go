@@ -98,7 +98,7 @@ func (s *Server) DriverCreateBucket(ctx context.Context, req *cosi.DriverCreateB
 	log.InfoContext(ctx, "bucket creation initiated")
 
 	if cluster == "" {
-		log.ErrorContext(ctx, "missing region")
+		log.ErrorContext(ctx, "required parameter was not provided in the request", "error", ErrMissingRegion)
 
 		return nil, tracing.Error(span, codes.InvalidArgument, ErrMissingRegion)
 	}
