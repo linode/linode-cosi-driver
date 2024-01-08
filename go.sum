@@ -29,8 +29,8 @@ github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.0.1 h1:HcUWd006luQPljE73d5sk+
 github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.0.1/go.mod h1:w9Y7gY31krpLmrVU5ZPG9H7l9fZuRu5/3R3S3FMtVQ4=
 github.com/grpc-ecosystem/grpc-gateway/v2 v2.16.0 h1:YBftPWNWd4WwGqtY2yeZL2ef8rHAxPBD8KFhJpmcqms=
 github.com/grpc-ecosystem/grpc-gateway/v2 v2.16.0/go.mod h1:YN5jB8ie0yfIUg6VvR9Kz84aCaG7AsGZnLjhHbUqwPg=
-github.com/linode/linodego v1.26.0 h1:2tOZ3Wxn4YvGBRgZi3Vz6dab+L16XUntJ9sJxh3ZBio=
-github.com/linode/linodego v1.26.0/go.mod h1:kD7Bf1piWg/AXb9TA0ThAVwzR+GPf6r2PvbTbVk7PMA=
+github.com/linode/linodego v1.27.0 h1:ISRsasemj/bG+jAxs1k6bTTeOJcp+Xpm810SY3GoI0k=
+github.com/linode/linodego v1.27.0/go.mod h1:kD7Bf1piWg/AXb9TA0ThAVwzR+GPf6r2PvbTbVk7PMA=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/stretchr/testify v1.8.4 h1:CcVxjf3Q8PM0mHUKJCdn+eZZtm5yQwehR5yeSVQQcUk=
