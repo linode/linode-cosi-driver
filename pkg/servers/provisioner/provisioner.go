@@ -104,57 +104,60 @@ func (s *Server) DriverCreateBucket(ctx context.Context, req *cosi.DriverCreateB
 	}
 
 	bucket, err := s.client.GetObjectStorageBucket(ctx, cluster, label)
-	if err != nil && !errors.Is(err, ErrNotFound) {
-		log.ErrorContext(ctx, "failed to check if bucket exists", "error", err)
-		return nil, tracing.Error(span, codes.Internal, fmt.Errorf("failed to check if bucket exists: %w", err))
-	} else if !errors.Is(err, ErrNotFound) {
-		log.DebugContext(ctx, "bucket found, checking bucket access",
-			KeyBucketCreationTimestamp, bucket.Cluster,
-		)
+	if err != nil {
+		if !errors.Is(err, ErrNotFound) {
+			log.ErrorContext(ctx, "failed to check if bucket exists", "error", err)
+			return nil, tracing.Error(span, codes.Internal, fmt.Errorf("failed to check if bucket exists: %w", err))
+		}
 
-		access, err := s.client.GetObjectStorageBucketAccess(ctx, cluster, label)
+		opts := linodego.ObjectStorageBucketCreateOptions{
+			Cluster:     cluster,
+			Label:       label,
+			ACL:         acl,
+			CorsEnabled: cors.BoolP(),
+		}
+
+		log.InfoContext(ctx, "creating bucket")
+
+		bucket, err = s.client.CreateObjectStorageBucket(ctx, opts)
 		if err != nil {
-			log.ErrorContext(ctx, "failed to check bucket access", "error", err)
-			return nil, tracing.Error(span, codes.Internal, fmt.Errorf("failed to check bucket access: %w", err))
+			log.ErrorContext(ctx, "failed to create bucket", "error", err)
+			return nil, tracing.Error(span, codes.Internal, fmt.Errorf("failed to create bucket: %w", err))
 		}
 
-		if access.ACL != acl || access.CorsEnabled != cors.Bool() {
-			log.ErrorContext(ctx, "bucket with different parameters already exists",
-				"existing_"+KeyBucketACL, access.ACL,
-				"existing_"+KeyBucketCORS, access.CorsEnabled,
-			)
-			return nil, tracing.Error(span, codes.AlreadyExists, ErrBucketExists)
-		}
-
-		log.InfoContext(ctx, "bucket exists")
+		log.InfoContext(ctx, "bucket created")
 
 		return &cosi.DriverCreateBucketResponse{
 			BucketId:   bucket.Cluster + "/" + bucket.Label,
 			BucketInfo: bucketInfo(bucket.Cluster),
-		}, tracing.Error(span, codes.OK, nil, "bucket exists")
+		}, tracing.Error(span, codes.OK, nil, "bucket created")
 	}
 
-	opts := linodego.ObjectStorageBucketCreateOptions{
-		Cluster:     cluster,
-		Label:       label,
-		ACL:         acl,
-		CorsEnabled: cors.BoolP(),
-	}
+	log.DebugContext(ctx, "bucket found, checking bucket access",
+		KeyBucketCreationTimestamp, bucket.Cluster,
+	)
 
-	log.InfoContext(ctx, "creating bucket")
-
-	bucket, err = s.client.CreateObjectStorageBucket(ctx, opts)
+	access, err := s.client.GetObjectStorageBucketAccess(ctx, cluster, label)
 	if err != nil {
-		log.ErrorContext(ctx, "failed to create bucket", "error", err)
-		return nil, tracing.Error(span, codes.Internal, fmt.Errorf("failed to create bucket: %w", err))
+		log.ErrorContext(ctx, "failed to check bucket access", "error", err)
+		return nil, tracing.Error(span, codes.Internal, fmt.Errorf("failed to check bucket access: %w", err))
 	}
 
-	log.InfoContext(ctx, "bucket created")
+	if access.ACL != acl || access.CorsEnabled != cors.Bool() {
+		log.ErrorContext(ctx, "bucket with different parameters already exists",
+			"existing_"+KeyBucketACL, access.ACL,
+			"existing_"+KeyBucketCORS, access.CorsEnabled,
+		)
+
+		return nil, tracing.Error(span, codes.AlreadyExists, ErrBucketExists)
+	}
+
+	log.InfoContext(ctx, "bucket exists")
 
 	return &cosi.DriverCreateBucketResponse{
 		BucketId:   bucket.Cluster + "/" + bucket.Label,
 		BucketInfo: bucketInfo(bucket.Cluster),
-	}, tracing.Error(span, codes.OK, nil, "bucket created")
+	}, tracing.Error(span, codes.OK, nil, "bucket exists")
 }
 
 // DriverDeleteBucket call is made to delete the bucket in the backend.
