@@ -79,8 +79,10 @@ func Start(ctx context.Context, name string) (context.Context, trace.Span) {
 // Error returns an error representing code and error message and records new event on the span.
 // If code is OK, returns nil.
 func Error(span trace.Span, code grpccodes.Code, err error, events ...string) error {
-	for _, event := range events {
-		span.AddEvent(event)
+	if span != nil {
+		for _, event := range events {
+			span.AddEvent(event)
+		}
 	}
 
 	if err != nil && span != nil {
