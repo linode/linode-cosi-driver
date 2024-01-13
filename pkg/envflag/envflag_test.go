@@ -211,3 +211,51 @@ func TestBool(t *testing.T) {
 		})
 	}
 }
+
+//nolint:paralleltest
+func TestInts(t *testing.T) {
+	const (
+		DefaultValue = 1
+		Key          = "KEY"
+		Value        = 10
+	)
+
+	for _, tc := range []struct {
+		name          string // required
+		key           string
+		value         int
+		defaultValue  int
+		expectedValue int
+	}{
+		{
+			name: "simple",
+		},
+		{
+			name:          "with default value",
+			defaultValue:  DefaultValue,
+			expectedValue: DefaultValue,
+		},
+		{
+			name:          "with actual value",
+			key:           Key,
+			value:         Value,
+			defaultValue:  DefaultValue,
+			expectedValue: Value,
+		},
+	} {
+		tc := tc
+
+		t.Run(tc.name, func(t *testing.T) {
+			if tc.key != "" {
+				tc.key = fmt.Sprintf("TEST_%d_%s", rand.Intn(256), tc.key) // #nosec G404
+
+				t.Setenv(tc.key, fmt.Sprint(tc.value))
+			}
+
+			actual := envflag.Int(tc.key, tc.defaultValue)
+			if actual != tc.expectedValue {
+				t.Errorf("expected: %d, got: %d", tc.expectedValue, actual)
+			}
+		})
+	}
+}

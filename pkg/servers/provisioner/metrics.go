@@ -14,11 +14,7 @@
 
 package provisioner
 
-import (
-	"go.opentelemetry.io/otel"
-)
-
-const meterName = "linode/linode-cosi-driver/servers/provisioner"
+import "github.com/linode/linode-cosi-driver/pkg/observability/metrics"
 
 // registerMetrics is the common place of registering new metrics to the server.
 // When creating new metrics from the meter1, we call something like:
@@ -27,7 +23,7 @@ const meterName = "linode/linode-cosi-driver/servers/provisioner"
 //
 // As we expect the metrics to be registered, it is important to return and handle the error.
 func (s *Server) registerMetrics() error {
-	_ = otel.Meter(meterName)
+	_ = metrics.Meter()
 
 	// TODO: any new metrics should be placed here.
 

@@ -20,12 +20,18 @@ import (
 
 	o11y "github.com/linode/linode-cosi-driver/pkg/observability"
 	"go.opentelemetry.io/otel"
+	otelcodes "go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/trace"
+	grpccodes "google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
+
+const tracerName = "github.com/linode/linode-cosi-driver/pkg/observability/tracing"
 
 func Setup(ctx context.Context, resource *resource.Resource, protocol string) (_ func(context.Context) error, err error) {
 	var exp sdktrace.SpanExporter
@@ -64,4 +70,28 @@ func registerTraceExporter(res *resource.Resource, exporter sdktrace.SpanExporte
 
 	// Shutdown will flush any remaining spans and shut down the exporter.
 	return tp.Shutdown, nil
+}
+
+func Start(ctx context.Context, name string) (context.Context, trace.Span) {
+	return otel.Tracer(tracerName).Start(ctx, name)
+}
+
+// Error returns an error representing code and error message and records new event on the span.
+// If code is OK, returns nil.
+func Error(span trace.Span, code grpccodes.Code, err error, events ...string) error {
+	if span != nil {
+		for _, event := range events {
+			span.AddEvent(event)
+		}
+	}
+
+	if err != nil && span != nil {
+		span.RecordError(err)
+
+		if code != grpccodes.OK {
+			span.SetStatus(otelcodes.Error, err.Error())
+		}
+	}
+
+	return status.Error(code, fmt.Sprintf("%v", err))
 }
