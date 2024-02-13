@@ -105,7 +105,7 @@ spec:
             - containerPort: 55679 # ZPages endpoint.
             - containerPort: 4317 # Default OpenTelemetry receiver port (gRPC).
             - containerPort: 4318 # Default OpenTelemetry receiver port (HTTP).
-            - containerPort: 8888 # Metrics.
+            - containerPort: 8888 # OTEL Collector Metrics.
         {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:

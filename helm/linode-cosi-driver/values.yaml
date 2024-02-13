@@ -102,6 +102,9 @@ securityContext:
 
 # -- Annotations to add to the pod.
 podAnnotations: {}
+  # prometheus.io/scrape: 'true'
+  # prometheus.io/path: '/metrics'
+  # prometheus.io/port: '8080'
 
 # -- Specify CPU and memory resource limits if needed.
 # The value defined for CPU limits affects the number of threads used in the driver.
