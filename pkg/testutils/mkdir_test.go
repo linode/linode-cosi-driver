@@ -26,6 +26,7 @@ func TestMustMkdriTemp(t *testing.T) {
 	AssertNotPanics(t, func() {
 		dir := MustMkdirTemp()
 		defer os.RemoveAll(dir)
+
 		AssertDirExists(t, dir)
 	})
 }
@@ -35,8 +36,10 @@ func TestMustMkUnixTemp(t *testing.T) {
 
 	AssertNotPanics(t, func() {
 		sock := MustMkUnixTemp("test.sock")
+
 		tp, _ := path.Split(sock.Path)
 		defer os.RemoveAll(tp)
+
 		AssertDirExists(t, tp)
 	})
 }
