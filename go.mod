@@ -16,7 +16,7 @@ require (
 	go.opentelemetry.io/otel/sdk v1.23.1
 	go.opentelemetry.io/otel/sdk/metric v1.23.1
 	go.opentelemetry.io/otel/trace v1.23.1
-	google.golang.org/grpc v1.61.0
+	google.golang.org/grpc v1.61.1
 	sigs.k8s.io/container-object-storage-interface-spec v0.1.0
 )
 
