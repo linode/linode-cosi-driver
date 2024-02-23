@@ -1,4 +1,4 @@
-// Copyright 2023 Akamai Technologies, Inc.
+// Copyright 2023-2024 Akamai Technologies, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -35,6 +35,7 @@ import (
 	grpclogger "github.com/linode/linode-cosi-driver/pkg/grpc/logger"
 	"github.com/linode/linode-cosi-driver/pkg/linodeclient"
 	"github.com/linode/linode-cosi-driver/pkg/linodeclient/tracedclient"
+	maxprocslogger "github.com/linode/linode-cosi-driver/pkg/maxprocs/logger"
 	o11y "github.com/linode/linode-cosi-driver/pkg/observability"
 	"github.com/linode/linode-cosi-driver/pkg/observability/metrics"
 	"github.com/linode/linode-cosi-driver/pkg/observability/tracing"
@@ -45,6 +46,7 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
+	"go.uber.org/automaxprocs/maxprocs"
 	"google.golang.org/grpc"
 	cosi "sigs.k8s.io/container-object-storage-interface-spec"
 )
@@ -101,6 +103,11 @@ type mainOptions struct {
 }
 
 func run(ctx context.Context, opts mainOptions) error {
+	_, err := maxprocs.Set(maxprocs.Logger(maxprocslogger.Wrap(log.Handler())))
+	if err != nil {
+		return fmt.Errorf("setting GOMAXPROCS failed: %w", err)
+	}
+
 	ctx, stop := signal.NotifyContext(ctx,
 		os.Interrupt,
 		syscall.SIGINT,
@@ -192,8 +199,8 @@ func grpcServer(ctx context.Context,
 	server := grpc.NewServer(
 		grpc.StatsHandler(otelgrpc.NewServerHandler()),
 		grpc.ChainUnaryInterceptor(
-			logging.UnaryServerInterceptor(grpclogger.Wrap(log)),
-			recovery.UnaryServerInterceptor(recovery.WithRecoveryHandler(handlers.PanicRecovery(ctx, log))),
+			logging.UnaryServerInterceptor(grpclogger.Wrap(log.Handler())),
+			recovery.UnaryServerInterceptor(recovery.WithRecoveryHandler(handlers.PanicRecovery(ctx, log.Handler()))),
 		),
 	)
 

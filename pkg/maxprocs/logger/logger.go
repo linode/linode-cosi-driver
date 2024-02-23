@@ -15,37 +15,26 @@
 package logger
 
 import (
-	"context"
+	"fmt"
 	"log/slog"
 
-	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	"github.com/linode/linode-cosi-driver/pkg/logutils"
-	"github.com/linode/linode-cosi-driver/pkg/version"
+	"go.uber.org/automaxprocs/maxprocs"
 )
 
 const (
-	component = "grpc"
+	component = "maxprocs"
 )
 
-type Logger struct {
-	loggerImpl *slog.Logger
-}
-
-var _ logging.Logger = (*Logger)(nil)
-
-func Wrap(handler slog.Handler) *Logger {
+func Wrap(handler slog.Handler) func(msg string, fields ...any) {
 	handler = handler.WithAttrs([]slog.Attr{
 		slog.String(logutils.KeyComponentName, component),
-		slog.String(logutils.KeyComponentVersion, version.Version),
+		slog.String(logutils.KeyComponentVersion, maxprocs.Version),
 	})
 
-	return &Logger{
-		loggerImpl: slog.New(handler),
-	}
-}
+	log := slog.New(handler)
 
-func (l *Logger) Log(ctx context.Context, level logging.Level, msg string, fields ...any) {
-	l.loggerImpl.Log(ctx, slog.Level(level),
-		msg,
-		fields...)
+	return func(msg string, fields ...any) {
+		log.Info(fmt.Sprintf(msg, fields...))
+	}
 }

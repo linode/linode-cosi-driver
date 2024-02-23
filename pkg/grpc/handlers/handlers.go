@@ -1,4 +1,4 @@
-// Copyright 2023 Akamai Technologies, Inc.
+// Copyright 2023-2024 Akamai Technologies, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,11 +21,24 @@ import (
 	"runtime/debug"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/recovery"
+	"github.com/linode/linode-cosi-driver/pkg/logutils"
+	"github.com/linode/linode-cosi-driver/pkg/version"
+)
+
+const (
+	component = "panic_recovery"
 )
 
 // PanicRecovery returns handler of the panics, that logs the panic and call stack.
 // It take optional argument called callbacks, that are functions, e.g. wrapping incrementing the panicMetric.
-func PanicRecovery(ctx context.Context, logger *slog.Logger, callbacks ...func(context.Context)) recovery.RecoveryHandlerFunc {
+func PanicRecovery(ctx context.Context, handler slog.Handler, callbacks ...func(context.Context)) recovery.RecoveryHandlerFunc {
+	handler = handler.WithAttrs([]slog.Attr{
+		slog.String(logutils.KeyComponentName, component),
+		slog.String(logutils.KeyComponentVersion, version.Version),
+	})
+
+	logger := slog.New(handler)
+
 	return func(p any) (err error) {
 		for _, callback := range callbacks {
 			callback(ctx)
