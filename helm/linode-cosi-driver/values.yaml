@@ -104,13 +104,16 @@ securityContext:
 podAnnotations: {}
 
 # -- Specify CPU and memory resource limits if needed.
+# The value defined for CPU limits affects the number of threads used in the driver.
+# The number of CPU seconds allocated above 1 is rounded using floor operation, so it should be done in integer steps (e.g. from 1 to 2).
+# This means that assigning CPU limit of 1.5 will result in only one CPU being used at a time.
 resources: {}
   # limits:
-  #   cpu: 100m
-  #   memory: 128Mi
+  #   cpu: 2
+  #   memory: 256Mi
   # requests:
   #   cpu: 100m
-  #   memory: 128Mi
+  #   memory: 256Mi
 
 # -- Node labels for pod assignment.
 nodeSelector: {}
