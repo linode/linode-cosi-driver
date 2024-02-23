@@ -51,8 +51,6 @@ import (
 	cosi "sigs.k8s.io/container-object-storage-interface-spec"
 )
 
-var log *slog.Logger
-
 const (
 	driverName     = "objectstorage.cosi.linode.com"
 	gracePeriod    = 5 * time.Second
@@ -74,9 +72,9 @@ func main() {
 	)
 
 	// TODO: any logger settup must be done here, before first log call.
-	log = slog.Default()
+	log := slog.Default()
 
-	if err := run(context.Background(), mainOptions{
+	if err := run(context.Background(), log, mainOptions{
 		cosiEndpoint:        cosiEndpoint,
 		linodeToken:         linodeToken,
 		linodeURL:           linodeURL,
@@ -102,7 +100,7 @@ type mainOptions struct {
 	otlpMetricsProtocol string
 }
 
-func run(ctx context.Context, opts mainOptions) error {
+func run(ctx context.Context, log *slog.Logger, opts mainOptions) error {
 	_, err := maxprocs.Set(maxprocs.Logger(maxprocslogger.Wrap(log.Handler())))
 	if err != nil {
 		return fmt.Errorf("setting GOMAXPROCS failed: %w", err)
@@ -116,7 +114,7 @@ func run(ctx context.Context, opts mainOptions) error {
 	defer stop()
 
 	if opts.withObservability {
-		o11yShutdown := setupObservabillity(ctx,
+		o11yShutdown := setupObservabillity(ctx, log,
 			opts.otlpTracesProtocol,
 			opts.otlpMetricsProtocol,
 		)
@@ -167,7 +165,7 @@ func run(ctx context.Context, opts mainOptions) error {
 	defer lis.Close()
 
 	// create the grpcServer
-	srv, err := grpcServer(ctx, idSrv, prvSrv)
+	srv, err := grpcServer(ctx, log, idSrv, prvSrv)
 	if err != nil {
 		return fmt.Errorf("gRPC server creation failed: %w", err)
 	}
@@ -193,6 +191,7 @@ func run(ctx context.Context, opts mainOptions) error {
 }
 
 func grpcServer(ctx context.Context,
+	log *slog.Logger,
 	identity cosi.IdentityServer,
 	provisioner cosi.ProvisionerServer,
 ) (*grpc.Server, error) {
@@ -251,6 +250,7 @@ func shutdown(ctx context.Context,
 }
 
 func setupObservabillity(ctx context.Context,
+	log *slog.Logger,
 	tracesProtocol string,
 	metricsProtocol string,
 ) func() {
