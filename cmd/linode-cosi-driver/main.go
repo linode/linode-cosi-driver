@@ -1,4 +1,4 @@
-// Copyright 2023 Akamai Technologies, Inc.
+// Copyright 2023-2024 Akamai Technologies, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -35,6 +35,7 @@ import (
 	grpclogger "github.com/linode/linode-cosi-driver/pkg/grpc/logger"
 	"github.com/linode/linode-cosi-driver/pkg/linodeclient"
 	"github.com/linode/linode-cosi-driver/pkg/linodeclient/tracedclient"
+	maxprocslogger "github.com/linode/linode-cosi-driver/pkg/maxprocs/logger"
 	o11y "github.com/linode/linode-cosi-driver/pkg/observability"
 	"github.com/linode/linode-cosi-driver/pkg/observability/metrics"
 	"github.com/linode/linode-cosi-driver/pkg/observability/tracing"
@@ -45,11 +46,10 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
+	"go.uber.org/automaxprocs/maxprocs"
 	"google.golang.org/grpc"
 	cosi "sigs.k8s.io/container-object-storage-interface-spec"
 )
-
-var log *slog.Logger
 
 const (
 	driverName     = "objectstorage.cosi.linode.com"
@@ -72,9 +72,9 @@ func main() {
 	)
 
 	// TODO: any logger settup must be done here, before first log call.
-	log = slog.Default()
+	log := slog.Default()
 
-	if err := run(context.Background(), mainOptions{
+	if err := run(context.Background(), log, mainOptions{
 		cosiEndpoint:        cosiEndpoint,
 		linodeToken:         linodeToken,
 		linodeURL:           linodeURL,
@@ -100,7 +100,12 @@ type mainOptions struct {
 	otlpMetricsProtocol string
 }
 
-func run(ctx context.Context, opts mainOptions) error {
+func run(ctx context.Context, log *slog.Logger, opts mainOptions) error {
+	_, err := maxprocs.Set(maxprocs.Logger(maxprocslogger.Wrap(log.Handler())))
+	if err != nil {
+		return fmt.Errorf("setting GOMAXPROCS failed: %w", err)
+	}
+
 	ctx, stop := signal.NotifyContext(ctx,
 		os.Interrupt,
 		syscall.SIGINT,
@@ -109,7 +114,7 @@ func run(ctx context.Context, opts mainOptions) error {
 	defer stop()
 
 	if opts.withObservability {
-		o11yShutdown := setupObservabillity(ctx,
+		o11yShutdown := setupObservabillity(ctx, log,
 			opts.otlpTracesProtocol,
 			opts.otlpMetricsProtocol,
 		)
@@ -160,7 +165,7 @@ func run(ctx context.Context, opts mainOptions) error {
 	defer lis.Close()
 
 	// create the grpcServer
-	srv, err := grpcServer(ctx, idSrv, prvSrv)
+	srv, err := grpcServer(ctx, log, idSrv, prvSrv)
 	if err != nil {
 		return fmt.Errorf("gRPC server creation failed: %w", err)
 	}
@@ -186,14 +191,15 @@ func run(ctx context.Context, opts mainOptions) error {
 }
 
 func grpcServer(ctx context.Context,
+	log *slog.Logger,
 	identity cosi.IdentityServer,
 	provisioner cosi.ProvisionerServer,
 ) (*grpc.Server, error) {
 	server := grpc.NewServer(
 		grpc.StatsHandler(otelgrpc.NewServerHandler()),
 		grpc.ChainUnaryInterceptor(
-			logging.UnaryServerInterceptor(grpclogger.Wrap(log)),
-			recovery.UnaryServerInterceptor(recovery.WithRecoveryHandler(handlers.PanicRecovery(ctx, log))),
+			logging.UnaryServerInterceptor(grpclogger.Wrap(log.Handler())),
+			recovery.UnaryServerInterceptor(recovery.WithRecoveryHandler(handlers.PanicRecovery(ctx, log.Handler()))),
 		),
 	)
 
@@ -244,6 +250,7 @@ func shutdown(ctx context.Context,
 }
 
 func setupObservabillity(ctx context.Context,
+	log *slog.Logger,
 	tracesProtocol string,
 	metricsProtocol string,
 ) func() {

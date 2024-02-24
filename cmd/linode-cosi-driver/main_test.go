@@ -1,4 +1,4 @@
-// Copyright 2023 Akamai Technologies, Inc.
+// Copyright 2023-2024 Akamai Technologies, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,6 +17,8 @@ package main
 import (
 	"context"
 	"errors"
+	"io"
+	"log/slog"
 	"os"
 	"testing"
 	"time"
@@ -45,6 +47,11 @@ func TestRun(t *testing.T) {
 		t.Run(tc.testName, func(t *testing.T) {
 			t.Parallel()
 
+			noopLog := slog.New(slog.NewTextHandler(
+				io.Discard,
+				&slog.HandlerOptions{Level: slog.LevelError},
+			))
+
 			defaultOpts := mainOptions{
 				cosiEndpoint:        "cosi.sock",
 				otlpTracesProtocol:  o11y.ProtoGRPC,
@@ -63,7 +70,7 @@ func TestRun(t *testing.T) {
 
 			defaultOpts.cosiEndpoint = "unix://" + tmp + defaultOpts.cosiEndpoint
 
-			err := run(ctx, defaultOpts)
+			err := run(ctx, noopLog, defaultOpts)
 			if !errors.Is(err, tc.expectedError) {
 				t.Errorf("expected error: %v, but got: %v", tc.expectedError, err)
 			}
