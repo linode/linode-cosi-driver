@@ -34,17 +34,11 @@ jobs:
           config: helm/.kube-linter.yaml
 
   package:
-    name: Package helm chart and push it to registry
+    name: Package helm chart
     runs-on: ubuntu-latest
-    if: ${{ startsWith(github.ref, 'refs/tags/linode-cosi-driver-v') }}
+    if: startsWith(github.ref, 'refs/tags/linode-cosi-driver-v')
     steps:
       - uses: actions/checkout@v4
-      - name: Login to registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ secrets.REGISTRY_USERNAME }}
-          password: ${{ secrets.REGISTRY_TOKEN }}
       - name: Capture latest tag if exists
         uses: actions-ecosystem/action-get-latest-tag@v1
         id: get-latest-tag
@@ -62,22 +56,15 @@ jobs:
             "${{ steps.get-latest-tag.outputs.tag }}" \
             "${GITHUB_OUTPUT}"
       - name: Setup helm
-        uses: azure/setup-helm@v3
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+        uses: azure/setup-helm@v4
       - name: Package artifacts
         run: |
           helm package \
             --destination=release \
             --version=${{ steps.tags.outputs.chart }} \
             helm/linode-cosi-driver
-      - name: Push artifcats
-        run: |
-          helm push \
-            ./release/linode-cosi-driver-${{ steps.tags.outputs.chart }}.tgz \
-            oci://${{ env.REGISTRY }}/${{ env.REPOSITORY }}
       - name: Upload Release Artifacts
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           name: ${{ github.ref_name }}
           files: |

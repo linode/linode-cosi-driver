@@ -49,5 +49,5 @@ TAGS_CSV+=("${TAGS[$length-1]}")
 echo "all=$(printf "${IMAGE}:%s" "${TAGS_CSV[@]}")";
 echo "version=${VERSION}";
 echo "full_version=${IMAGE}:${VERSION}";
-echo "chart=${CHART}+chart";
+echo "chart=${CHART}";
 } >> "${GITHUB_OUTPUT}"
