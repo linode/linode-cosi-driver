@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-ARG TOOLCHAIN_VERSION=1.21
+ARG TOOLCHAIN_VERSION=1.22
 
 #########################################################################################
 # Build
