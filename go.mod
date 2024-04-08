@@ -5,7 +5,7 @@ go 1.22
 require (
 	github.com/go-resty/resty/v2 v2.12.0
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.1.0
-	github.com/linode/linodego v1.31.0
+	github.com/linode/linodego v1.32.0
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.49.0
 	go.opentelemetry.io/otel v1.24.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v1.24.0
