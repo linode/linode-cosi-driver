@@ -31,7 +31,7 @@ jobs:
           fetch-depth: 0
       - uses: wagoid/commitlint-github-action@v6
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          configFile: .commitlintrc.mjs
 
   golangci-lint:
     name: Run golangci-lint
