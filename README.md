@@ -77,11 +77,11 @@ Follow these steps to get started with Linode COSI Driver:
           containers:
             - volumeMounts:
                 - mountPath: /conf
-                  name: BucketInfo
+                  name: example-secret-vol
           volumes:
             - name: example-secret-vol
               secret:
-                name: example-secret
+                secretName: example-secret
                 items:
                   - key: BucketInfo
                     path: BucketInfo.json
