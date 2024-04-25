@@ -49,7 +49,7 @@ RUN make build VERSION=${VERSION}
 #########################################################################################
 
 # Second stage: building final environment for running the executable.
-FROM gcr.io/distroless/static-debian11:latest AS runtime
+FROM gcr.io/distroless/static:latest AS runtime
 
 # Copy the executable.
 COPY --from=builder --chown=65532:65532 /work/bin/linode-cosi-driver /usr/bin/linode-cosi-driver
@@ -66,12 +66,19 @@ USER 65532:65532
 # Disable healthcheck.
 HEALTHCHECK NONE
 
+# Args for dynamically setting labels.
+ARG VERSION="unknown"
+
 # Add labels
-LABEL name="linode-cosi-driver"
-LABEL description="COSI Driver for Linode Object Storage"
-LABEL vendor="Akamai Technologies, Inc."
-LABEL license="Apache-2.0"
-LABEL maintainers="Linode COSI Driver Authors"
+LABEL org.opencontainers.image.title="linode-cosi-driver"
+LABEL org.opencontainers.image.description="COSI Driver for Linode Object Storage"
+LABEL org.opencontainers.image.authors="Linode COSI Driver Authors"
+LABEL org.opencontainers.image.vendor="Akamai Technologies, Inc."
+LABEL org.opencontainers.image.version="${VERSION}"
+LABEL org.opencontainers.image.license="Apache-2.0"
+LABEL org.opencontainers.image.source="https://github.com/linode/linode-cosi-driver"
+LABEL org.opencontainers.image.documentation="https://github.com/linode/linode-cosi-driver"
+LABEL org.opencontainers.image.base.name="gcr.io/distroless/static:latest"
 
 # Set the entrypoint.
 ENTRYPOINT [ "/usr/bin/linode-cosi-driver" ]

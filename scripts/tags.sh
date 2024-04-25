@@ -29,7 +29,7 @@ if [[ "${REF_NAME}" == v* ]]; then
   CHART="${REF_NAME}"
 elif [[ "${REF_NAME}" == "main" ]]; then
   VERSION="${DATE}-${LATEST_REF}-${SHA}"
-  TAGS=("${VERSION}" "nightly")
+  TAGS=("${VERSION}" "canary")
   CHART="${LATEST_REF}-${SHA}"
 else
   VERSION="${DATE}-${SHA}"

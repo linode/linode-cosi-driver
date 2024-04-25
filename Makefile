@@ -30,8 +30,8 @@ CONTAINERFILE ?= Dockerfile
 OCI_TAGS += --tag=${REGISTRY}/${REPOSITORY}/${IMAGE}:${VERSION}
 OCI_BUILDARGS += --build-arg=VERSION=${VERSION}
 
-GOFLAGS ?=
-LDFLAGS += -X ${MODULE_NAME}/pkg/version.Version=${VERSION}
+GOFLAGS += -trimpath
+LDFLAGS += -X ${MODULE_NAME}/pkg/version.Version=${VERSION} -s -w -extldflags "-static"
 GO_SETTINGS += CGO_ENABLED=0
 
 _GOBIN := $(shell go env GOPATH)/bin
