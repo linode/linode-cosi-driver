@@ -1,5 +1,0 @@
-checkmake
-golangci-lint
-helm
-kube-linter
-norwoodj/tap/helm-docs
