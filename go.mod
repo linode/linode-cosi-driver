@@ -2,6 +2,8 @@ module github.com/linode/linode-cosi-driver
 
 go 1.22
 
+toolchain go1.22.2
+
 require (
 	github.com/go-resty/resty/v2 v2.12.0
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.1.0
