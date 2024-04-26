@@ -23,6 +23,7 @@ spec:
         file: ../../../examples/example.BucketClaim.yaml
     - assert:
         file: ./example.BucketClaim.yaml
+  - try:
     - create:
         resource:
           apiVersion: v1

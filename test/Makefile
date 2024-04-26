@@ -16,6 +16,11 @@ SHELL := /usr/bin/env bash -o errexit -o pipefail -o nounset
 
 ROOT_DIR = "$(shell git rev-parse --show-toplevel)"
 
+export REGISTRY ?= docker.io
+export REPOSITORY ?= linode
+export IMAGE := linode-cosi-driver
+export VERSION ?= $(shell git tag | tail -n 1 | grep '' || echo 'v0.0.0')$(shell git diff --quiet || git rev-parse HEAD | sed 's/\(.\{6\}\).*/-\1/')
+
 TEST_SELECTOR ?= ""
 
 .DEFAULT_GOAL := help
@@ -35,21 +40,26 @@ integration-test:
 e2e-test: clean-test-cluster test-cluster _e2e-test
 	$(MAKE) clean-test-cluster
 
-_e2e-test:
-	$(CHAINSAW) test --parallel 1 --test-dir $(ROOT_DIR)/test/e2e --selector $(TEST_SELECTOR)
+_e2e-test: chainsaw
+	$(CHAINSAW) test --parallel 3 --test-dir $(ROOT_DIR)/test/e2e --selector $(TEST_SELECTOR)
 
 test-cluster: ctlptl kind helm
 	$(CTLPTL) apply -f $(ROOT_DIR)/test/ctlptl-config.yaml
+
 	kubectl create -k github.com/kubernetes-sigs/container-object-storage-interface-api
 	kubectl create -k github.com/kubernetes-sigs/container-object-storage-interface-controller
+
+	$(MAKE) -C $(ROOT_DIR) image
+	$(KIND) -n linode-cosi load docker-image ${REGISTRY}/${REPOSITORY}/${IMAGE}:${VERSION}
+
 	$(HELM) install linode-cosi-driver \
         $(ROOT_DIR)/helm/linode-cosi-driver \
         --set=apiToken=$(LINODE_TOKEN) \
         --set=driver.image.tag=$(VERSION) \
         --namespace=linode-cosi-driver \
-        --create-namespace
+        --create-namespace \
+		--wait
 	
-	sleep 5
 	kubectl wait pods --for=condition=Ready=True -l app.kubernetes.io/name=container-object-storage-interface-controller --timeout 1m
 	kubectl wait pods -n linode-cosi-driver --for=condition=Ready=True -l app.kubernetes.io/name=linode-cosi-driver --timeout 1m
 
