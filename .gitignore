@@ -6,6 +6,9 @@ bin/
 *.so
 *.dylib
 
+# Kind cluster config
+kubeconfig
+
 # Test binary, built with `go test -c`
 *.test
 
@@ -23,3 +26,6 @@ go.work
 
 # Release artifacts
 release/
+
+# IDE configs
+.vscode

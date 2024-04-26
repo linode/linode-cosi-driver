@@ -77,11 +77,11 @@ Follow these steps to get started with Linode COSI Driver:
           containers:
             - volumeMounts:
                 - mountPath: /conf
-                  name: BucketInfo
+                  name: example-secret-vol
           volumes:
             - name: example-secret-vol
               secret:
-                name: example-secret
+                secretName: example-secret
                 items:
                   - key: BucketInfo
                     path: BucketInfo.json
@@ -101,13 +101,29 @@ Before running the integration tests, ensure the following prerequisites are met
 
 #### Test Execution
 
+##### Integration test
+
 To run the integration tests, execute the following:
 
 ```bash
-go test -tags=integration ./...
+make -C test integration-test
 ```
 
 The tests cover various operations such as creating a bucket, granting and revoking bucket access, and deleting a bucket. These operations are performed multiple times to ensure idempotency.
+
+##### E2E test
+
+To run the integration tests, execute the following:
+
+```bash
+make -C test e2e-test
+```
+
+To run specific tests only please use label selector via `TEST_SELECTOR` environment variable.
+
+```bash
+TEST_SELECTOR=name=examples make -C test e2e-test
+```
 
 #### Configuration
 
