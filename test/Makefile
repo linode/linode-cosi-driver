@@ -45,6 +45,7 @@ test-cluster: ctlptl kind helm
 	$(HELM) install linode-cosi-driver \
         $(ROOT_DIR)/helm/linode-cosi-driver \
         --set=apiToken=$(LINODE_TOKEN) \
+        --set=driver.image.tag=$(VERSION) \
         --namespace=linode-cosi-driver \
         --create-namespace
 	
