@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.2.0](https://github.com/linode/linode-cosi-driver/compare/v0.1.0...v0.2.0) (2024-05-25)
+
+
+### Features
+
+* **e2e:** introduce E2E framework ([#55](https://github.com/linode/linode-cosi-driver/issues/55)) ([a84f8f8](https://github.com/linode/linode-cosi-driver/commit/a84f8f854a98c743b3d90fffd97d7c0d5d54494d))
+
+
+### Bug Fixes
+
+* **deps:** bump github.com/go-resty/resty/v2 from 2.12.0 to 2.13.1 ([#61](https://github.com/linode/linode-cosi-driver/issues/61)) ([92e29ac](https://github.com/linode/linode-cosi-driver/commit/92e29acab82a939e85947ec5b5c755b762d756ae))
+* **deps:** bump github.com/linode/linodego from 1.31.0 to 1.32.0 ([#48](https://github.com/linode/linode-cosi-driver/issues/48)) ([69930cd](https://github.com/linode/linode-cosi-driver/commit/69930cdf90bd511e97d1e1019d9fcc86cd2b2dc9))
+* **deps:** bump github.com/linode/linodego from 1.32.0 to 1.33.0 ([#53](https://github.com/linode/linode-cosi-driver/issues/53)) ([5b4481a](https://github.com/linode/linode-cosi-driver/commit/5b4481a9775cf1e5c784085f38134e374e21eb22))
+* **deps:** bump golangci/golangci-lint-action from 4 to 5 ([#58](https://github.com/linode/linode-cosi-driver/issues/58)) ([3bf7f0d](https://github.com/linode/linode-cosi-driver/commit/3bf7f0d83d643ca8fbfe0846bda2c043c865a633))
+* **deps:** bump golangci/golangci-lint-action from 5 to 6 ([#60](https://github.com/linode/linode-cosi-driver/issues/60)) ([428be48](https://github.com/linode/linode-cosi-driver/commit/428be4802cc1339cdef2b88ac1cba73867b3c6ce))
+* **deps:** bump google.golang.org/grpc from 1.62.1 to 1.63.2 ([#51](https://github.com/linode/linode-cosi-driver/issues/51)) ([8bf3e2b](https://github.com/linode/linode-cosi-driver/commit/8bf3e2b1a9281e2853bbc09f042e48009e9b350b))
+* **deps:** bump google.golang.org/grpc from 1.63.2 to 1.64.0 ([#63](https://github.com/linode/linode-cosi-driver/issues/63)) ([43536a3](https://github.com/linode/linode-cosi-driver/commit/43536a335d72ac3c36f37903bd90f2912e76a785))
+* **deps:** bump the otel-dependencies group with 10 updates ([#47](https://github.com/linode/linode-cosi-driver/issues/47)) ([a233df5](https://github.com/linode/linode-cosi-driver/commit/a233df53e0e530634b43e73deecc05892fb4d210))
+* **deps:** bump the otel-dependencies group with 10 updates ([#59](https://github.com/linode/linode-cosi-driver/issues/59)) ([47ef9cd](https://github.com/linode/linode-cosi-driver/commit/47ef9cd14795d3ea54a1b978cd8ed970b8f98c2f))
+* **deps:** bump wagoid/commitlint-github-action from 5 to 6 ([#46](https://github.com/linode/linode-cosi-driver/issues/46)) ([146bf6e](https://github.com/linode/linode-cosi-driver/commit/146bf6e20589751e9fc4117bfe0df297567b44d5))
+* **deps:** set toolchain go1.22.2 go.mod ([#57](https://github.com/linode/linode-cosi-driver/issues/57)) ([7232e55](https://github.com/linode/linode-cosi-driver/commit/7232e5571072602bbb68f4397e1c60c41655740b))
+
 ## [0.1.0](https://github.com/linode/linode-cosi-driver/compare/v0.1.0...v0.1.0) (2024-03-27)
 
 
