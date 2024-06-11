@@ -21,3 +21,15 @@ jobs:
         with:
           token: ${{ secrets.PAT }} # need to use separate PAT from GITHUB_TOKEN, so new actions can be triggered
           config-file: .github/release-please-config.json
+      - uses: actions/checkout@v4
+      - uses: fregante/setup-git-user@v2
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: ./go.mod
+          cache: false
+      - run: |
+          go install github.com/norwoodj/helm-docs/cmd/helm-docs@latest
+      - env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ./hack/release-gen.sh shanduur
