@@ -16,13 +16,8 @@ package tracing
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"net"
-	"net/http"
-	"os"
 
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.opentelemetry.io/contrib/exporters/autoexport"
 	"go.opentelemetry.io/otel"
 	otelcodes "go.opentelemetry.io/otel/codes"
@@ -62,40 +57,6 @@ func registerTraceExporter(res *resource.Resource, exporter sdktrace.SpanExporte
 
 	// set global propagator to tracecontext (the default is no-op).
 	otel.SetTextMapPropagator(propagation.TraceContext{})
-
-	if os.Getenv("OTEL_METRICS_EXPORTER") == "prometheus" {
-		lis, err := net.Listen("tcp", ":8080") // #nosec G102
-		if err != nil {
-			return nil, fmt.Errorf("failed to start listener for prometheus metrics server: %w", err)
-		}
-
-		srv := new(http.Server)
-		mux := new(http.ServeMux)
-		mux.Handle("/metrics", promhttp.Handler())
-		srv.Handler = mux
-
-		if err := srv.Serve(lis); err != nil {
-			return nil, fmt.Errorf("failed to start server for prometheus metrics server: %w", err)
-		}
-
-		return func(ctx context.Context) error {
-			var err error
-
-			if srvErr := srv.Shutdown(ctx); srvErr != nil {
-				err = errors.Join(err, srvErr)
-			}
-
-			if lisErr := lis.Close(); lisErr != nil {
-				err = errors.Join(err, lisErr)
-			}
-
-			if expErr := tp.Shutdown(ctx); expErr != nil {
-				err = errors.Join(err, expErr)
-			}
-
-			return err
-		}, nil
-	}
 
 	// Shutdown will flush any remaining spans and shut down the exporter.
 	return tp.Shutdown, nil
