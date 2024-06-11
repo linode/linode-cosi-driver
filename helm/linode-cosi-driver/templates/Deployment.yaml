@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ include "linode-cosi-driver.fullname" . }}
+  namespace: {{ .Release.Namespace }}
   labels:
     {{- include "linode-cosi-driver.labels" . | trim | nindent 4 }}
   {{- with .Values.podAnnotations }}
@@ -84,29 +85,6 @@ spec:
           volumeMounts:
             - name: cosi-socket-dir
               mountPath: /var/lib/cosi
-        {{- if ( .Values.otelExporter.deploySidecar ) }}
-        - name: otel-exporter-sidecar
-          image: {{ include "linode-cosi-driver.otelExporterSidecarImageName" . }}
-          imagePullPolicy: {{ .Values.otelExporter.image.pullPolicy }}
-          args:
-            - "--config=/conf/agent.yaml"
-          volumeMounts:
-            - name: otel-agent-config-vol
-              mountPath: /conf
-          {{- with .Values.securityContext }}
-          securityContext:
-            {{- toYaml . | nindent 12 }}
-          {{- end }}
-          {{- with .Values.resources }}
-          resources:
-            {{- toYaml . | nindent 12 }}
-          {{- end }}
-          ports:
-            - containerPort: 55679 # ZPages endpoint.
-            - containerPort: 4317 # Default OpenTelemetry receiver port (gRPC).
-            - containerPort: 4318 # Default OpenTelemetry receiver port (HTTP).
-            - containerPort: 8888 # OTEL Collector Metrics.
-        {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
@@ -122,11 +100,3 @@ spec:
       volumes:
         - name: cosi-socket-dir
           emptyDir: {}
-      {{- if (.Values.otelExporter.deploySidecar) }}
-        - name: otel-agent-config-vol
-          configMap:
-            name: {{ include "linode-cosi-driver.otelExporterConfigMap" . }}
-            items:
-              - key: {{ .Values.otelExporter.configMap.key }}
-                path: agent.yaml
-      {{- end }}

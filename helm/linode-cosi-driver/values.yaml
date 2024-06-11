@@ -45,26 +45,6 @@ sidecar:
   # -- Log verbosity level for the sidecar container.
   logVerbosity: 4
 
-otelExporter:
-  deploySidecar: false
-
-  image:
-    # -- OTEL agent container image repository.
-    repository: docker.io/otel/opentelemetry-collector
-
-    # -- OTEL agent container image tag.
-    tag: "0.91.0"
-
-    # -- OTEL agent container image pull policy.
-    pullPolicy: IfNotPresent
-
-  configMap:
-    # -- Name of existing config map. It is required if deploySidecar is true.
-    ref: ""
-
-    # -- Data key in config map under which agent configuration is located.
-    key: "agent.yaml"
-
 # -- List of Docker registry secret names to pull images.
 imagePullSecrets: []
 
