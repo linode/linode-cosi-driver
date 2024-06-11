@@ -35,21 +35,16 @@ const (
 )
 
 func Setup(ctx context.Context, resource *resource.Resource) (_ func(context.Context) error, err error) {
-	exp, err := autoexport.NewSpanExporter(ctx)
+	exporter, err := autoexport.NewSpanExporter(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	return registerTraceExporter(resource, exp)
-}
-
-func registerTraceExporter(res *resource.Resource, exporter sdktrace.SpanExporter) (func(context.Context) error, error) {
 	options := []sdktrace.TracerProviderOption{
 		sdktrace.WithBatcher(exporter),
-		sdktrace.WithSampler(sdktrace.TraceIDRatioBased(defaultSamplingRatio)),
 	}
-	if res != nil {
-		options = append(options, sdktrace.WithResource(res))
+	if resource != nil {
+		options = append(options, sdktrace.WithResource(resource))
 	}
 
 	tp := sdktrace.NewTracerProvider(options...)

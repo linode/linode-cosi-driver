@@ -27,20 +27,16 @@ import (
 const meterName = "github.com/linode/linode-cosi-driver/pkg/observability/metrics"
 
 func Setup(ctx context.Context, resource *resource.Resource) (_ func(context.Context) error, err error) {
-	exp, err := autoexport.NewMetricReader(ctx)
+	reader, err := autoexport.NewMetricReader(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	return registerMetricsReader(resource, exp)
-}
-
-func registerMetricsReader(res *resource.Resource, reader sdkmetric.Reader) (func(context.Context) error, error) {
 	options := []sdkmetric.Option{
 		sdkmetric.WithReader(reader),
 	}
-	if res != nil {
-		options = append(options, sdkmetric.WithResource(res))
+	if resource != nil {
+		options = append(options, sdkmetric.WithResource(resource))
 	}
 
 	mp := sdkmetric.NewMeterProvider(options...)
