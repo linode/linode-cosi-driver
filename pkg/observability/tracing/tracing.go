@@ -16,13 +16,17 @@ package tracing
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net"
+	"net/http"
+	"os"
+	"time"
 
-	o11y "github.com/linode/linode-cosi-driver/pkg/observability"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"go.opentelemetry.io/contrib/exporters/autoexport"
 	"go.opentelemetry.io/otel"
 	otelcodes "go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -31,23 +35,15 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-const tracerName = "github.com/linode/linode-cosi-driver/pkg/observability/tracing"
+const (
+	tracerName           = "github.com/linode/linode-cosi-driver/pkg/observability/tracing"
+	defaultSamplingRatio = 1
+)
 
-func Setup(ctx context.Context, resource *resource.Resource, protocol string) (_ func(context.Context) error, err error) {
-	var exp sdktrace.SpanExporter
-
-	switch protocol {
-	case o11y.ProtoGRPC:
-		exp, err = otlptracegrpc.New(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("unable to create new OTLP Metric GRPC Exporter: %w", err)
-		}
-
-	case o11y.ProtoHTTPJSON, o11y.ProtoHTTPProtobuf:
-		exp, err = otlptracehttp.New(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("unable to create new OTLP Metric GRPC Exporter: %w", err)
-		}
+func Setup(ctx context.Context, resource *resource.Resource) (_ func(context.Context) error, err error) {
+	exp, err := autoexport.NewSpanExporter(ctx)
+	if err != nil {
+		return nil, err
 	}
 
 	return registerTraceExporter(resource, exp)
@@ -56,7 +52,7 @@ func Setup(ctx context.Context, resource *resource.Resource, protocol string) (_
 func registerTraceExporter(res *resource.Resource, exporter sdktrace.SpanExporter) (func(context.Context) error, error) {
 	options := []sdktrace.TracerProviderOption{
 		sdktrace.WithBatcher(exporter),
-		sdktrace.WithSampler(sdktrace.AlwaysSample()),
+		sdktrace.WithSampler(sdktrace.TraceIDRatioBased(defaultSamplingRatio)),
 	}
 	if res != nil {
 		options = append(options, sdktrace.WithResource(res))
@@ -67,6 +63,43 @@ func registerTraceExporter(res *resource.Resource, exporter sdktrace.SpanExporte
 
 	// set global propagator to tracecontext (the default is no-op).
 	otel.SetTextMapPropagator(propagation.TraceContext{})
+
+	if os.Getenv("OTEL_METRICS_EXPORTER") == "prometheus" {
+		lis, err := net.Listen("tcp", ":8080") // #nosec G102
+		if err != nil {
+			return nil, fmt.Errorf("failed to start listener for prometheus metrics server: %w", err)
+		}
+
+		srv := new(http.Server)
+		mux := new(http.ServeMux)
+		mux.Handle("/metrics", promhttp.Handler())
+		srv.Handler = mux
+
+		if err := srv.Serve(lis); err != nil {
+			return nil, fmt.Errorf("failed to start server for prometheus metrics server: %w", err)
+		}
+
+		return func(ctx context.Context) error {
+			ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), time.Second)
+			defer cancel()
+
+			var err error
+
+			if srvErr := srv.Shutdown(ctx); srvErr != nil {
+				err = errors.Join(err, srvErr)
+			}
+
+			if lisErr := lis.Close(); lisErr != nil {
+				err = errors.Join(err, lisErr)
+			}
+
+			if expErr := tp.Shutdown(ctx); expErr != nil {
+				err = errors.Join(err, expErr)
+			}
+
+			return err
+		}, nil
+	}
 
 	// Shutdown will flush any remaining spans and shut down the exporter.
 	return tp.Shutdown, nil

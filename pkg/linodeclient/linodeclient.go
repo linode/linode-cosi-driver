@@ -16,8 +16,6 @@ package linodeclient
 
 import (
 	"context"
-	"net/url"
-	"regexp"
 
 	"github.com/linode/linodego"
 )
@@ -45,32 +43,13 @@ func NewLinodeClient(token, ua, apiURL, apiVersion string) (*linodego.Client, er
 	linodeClient.SetUserAgent(ua)
 	linodeClient.SetToken(token)
 
-	// Validate apiURL
-	parsedURL, err := url.Parse(apiURL)
-	if err != nil {
-		return nil, err
+	if apiURL != "" {
+		linodeClient.SetBaseURL(apiURL)
 	}
 
-	validatedURL := &url.URL{
-		Host:   parsedURL.Host,
-		Scheme: parsedURL.Scheme,
-	}
-
-	linodeClient.SetBaseURL(validatedURL.String())
-
-	version := ""
-	matches := regexp.MustCompile(`/v\d+`).FindAllString(parsedURL.Path, -1)
-
-	if len(matches) > 0 {
-		version = matches[len(matches)-1]
-	}
-
-	// If version segment is present, and apiVersion is present, use the apiVersion in linodeClient.SetAPIVersion(version)
 	if apiVersion != "" {
-		version = apiVersion
+		linodeClient.SetAPIVersion(apiVersion)
 	}
-
-	linodeClient.SetAPIVersion(version)
 
 	return &linodeClient, nil
 }

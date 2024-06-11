@@ -23,7 +23,6 @@ import (
 	"testing"
 	"time"
 
-	o11y "github.com/linode/linode-cosi-driver/pkg/observability"
 	"github.com/linode/linode-cosi-driver/pkg/testutils"
 )
 
@@ -53,9 +52,7 @@ func TestRun(t *testing.T) {
 			))
 
 			defaultOpts := mainOptions{
-				cosiEndpoint:        "cosi.sock",
-				otlpTracesProtocol:  o11y.ProtoGRPC,
-				otlpMetricsProtocol: o11y.ProtoGRPC,
+				cosiEndpoint: "cosi.sock",
 			}
 
 			for _, opt := range tc.options {
