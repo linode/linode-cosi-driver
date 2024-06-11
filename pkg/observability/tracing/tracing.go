@@ -21,7 +21,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"time"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.opentelemetry.io/contrib/exporters/autoexport"
@@ -80,9 +79,6 @@ func registerTraceExporter(res *resource.Resource, exporter sdktrace.SpanExporte
 		}
 
 		return func(ctx context.Context) error {
-			ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), time.Second)
-			defer cancel()
-
 			var err error
 
 			if srvErr := srv.Shutdown(ctx); srvErr != nil {

@@ -273,7 +273,7 @@ func setupObservabillity(ctx context.Context, log *slog.Logger) func() {
 	)
 
 	return func() {
-		timeout := 25 * time.Second // nolint:gomnd // 2.5x default OTLP timeout
+		timeout := 25 * time.Second // nolint:mnd // 2.5x default OTLP timeout
 
 		ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), timeout)
 		defer cancel()
