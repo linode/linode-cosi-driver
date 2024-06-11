@@ -20,7 +20,7 @@ A Helm chart for Kubernetes
 | linodeApiVersion | string | `""` | Linode API version, leave empty for default. |
 | nameOverride | string | `""` | Overrides the chart name. |
 | nodeSelector | object | `{}` | Node labels for pod assignment. |
-| podAnnotations | object | `{}` | Annotations to add to the pod. |
+| podAnnotations | object | `{"prometheus.io/path":"/metrics","prometheus.io/port":"9464","prometheus.io/scrape":"true"}` | Annotations to add to the pod. |
 | podSecurityContext.runAsNonRoot | bool | `true` | Run the pod as a non-root user. |
 | podSecurityContext.runAsUser | int | `65532` | User ID to run the pod as. |
 | rbac.annotations | object | `{}` | Annotations to add to the service account, cluster role, and cluster role binding. |
