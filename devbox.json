@@ -1,16 +1,9 @@
 {
   "packages": [
     "go_1_22@latest",
-    "ctlptl@0.8.28",
-    "kind@0.22.0",
-    "kubernetes-helm@3.14.3",
-    "kubectl@1.28.4"
-  ],
-  "shell": {
-    "init_hook": [
-      "export GOROOT=$(go env GOROOT)",
-      "export KUBECONFIG=${PWD}/kubeconfig"
-    ],
-    "scripts": {}
-  }
+    "ctlptl@0.8.29",
+    "kind@0.23.0",
+    "kubernetes-helm@3.15.1",
+    "kubectl@1.30.1"
+  ]
 }

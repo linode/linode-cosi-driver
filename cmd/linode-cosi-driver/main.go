@@ -36,7 +36,6 @@ import (
 	"github.com/linode/linode-cosi-driver/pkg/linodeclient"
 	"github.com/linode/linode-cosi-driver/pkg/linodeclient/tracedclient"
 	maxprocslogger "github.com/linode/linode-cosi-driver/pkg/maxprocs/logger"
-	o11y "github.com/linode/linode-cosi-driver/pkg/observability"
 	"github.com/linode/linode-cosi-driver/pkg/observability/metrics"
 	"github.com/linode/linode-cosi-driver/pkg/observability/tracing"
 	restylogger "github.com/linode/linode-cosi-driver/pkg/resty/logger"
@@ -64,24 +63,16 @@ func main() {
 		linodeURL        = envflag.String("LINODE_API_URL", "")
 		linodeAPIVersion = envflag.String("LINODE_API_VERSION", "")
 		cosiEndpoint     = envflag.String("COSI_ENDPOINT", "unix:///var/lib/cosi/cosi.sock")
-
-		withObservability   = envflag.Bool("COSI_LINODE_WITH_O11Y", false)
-		otlpProtocol        = envflag.String("OTEL_EXPORTER_OTLP_PROTOCOL", o11y.ProtoGRPC, o11y.OTLPProtocols...)
-		otlpTracesProtocol  = envflag.String("OTEL_EXPORTER_OTLP_TRACES_PROTOCOL", otlpProtocol, o11y.OTLPProtocols...)
-		otlpMetricsProtocol = envflag.String("OTEL_EXPORTER_OTLP_METRICSS_PROTOCOL", otlpProtocol, o11y.OTLPProtocols...)
 	)
 
 	// TODO: any logger settup must be done here, before first log call.
 	log := slog.Default()
 
 	if err := run(context.Background(), log, mainOptions{
-		cosiEndpoint:        cosiEndpoint,
-		linodeToken:         linodeToken,
-		linodeURL:           linodeURL,
-		linodeAPIVersion:    linodeAPIVersion,
-		withObservability:   withObservability,
-		otlpTracesProtocol:  otlpTracesProtocol,
-		otlpMetricsProtocol: otlpMetricsProtocol,
+		cosiEndpoint:     cosiEndpoint,
+		linodeToken:      linodeToken,
+		linodeURL:        linodeURL,
+		linodeAPIVersion: linodeAPIVersion,
 	},
 	); err != nil {
 		slog.Error("critical failure", "error", err)
@@ -94,10 +85,6 @@ type mainOptions struct {
 	linodeToken      string
 	linodeURL        string
 	linodeAPIVersion string
-
-	withObservability   bool
-	otlpTracesProtocol  string
-	otlpMetricsProtocol string
 }
 
 func run(ctx context.Context, log *slog.Logger, opts mainOptions) error {
@@ -113,13 +100,8 @@ func run(ctx context.Context, log *slog.Logger, opts mainOptions) error {
 	)
 	defer stop()
 
-	if opts.withObservability {
-		o11yShutdown := setupObservabillity(ctx, log,
-			opts.otlpTracesProtocol,
-			opts.otlpMetricsProtocol,
-		)
-		defer o11yShutdown()
-	}
+	o11yShutdown := setupObservabillity(ctx, log)
+	defer o11yShutdown()
 
 	// create identity server
 	idSrv, err := identity.New(driverName)
@@ -249,11 +231,7 @@ func shutdown(ctx context.Context,
 	}
 }
 
-func setupObservabillity(ctx context.Context,
-	log *slog.Logger,
-	tracesProtocol string,
-	metricsProtocol string,
-) func() {
+func setupObservabillity(ctx context.Context, log *slog.Logger) func() {
 	node := os.Getenv(envK8sNodeName)
 	pod := os.Getenv(envK8sPodName)
 
@@ -265,10 +243,7 @@ func setupObservabillity(ctx context.Context,
 		semconv.K8SNodeName(node),
 	)
 
-	log.Info("setting up tracing",
-		"protocol", tracesProtocol)
-
-	tracingShutdown, err := tracing.Setup(ctx, res, tracesProtocol)
+	tracingShutdown, err := tracing.Setup(ctx, res)
 	if err != nil {
 		// non critical error, just log it.
 		log.Error("failed to setup tracing",
@@ -276,10 +251,7 @@ func setupObservabillity(ctx context.Context,
 		)
 	}
 
-	log.Info("setting up metrics",
-		"protocol", metricsProtocol)
-
-	metricsShutdown, err := metrics.Setup(ctx, res, metricsProtocol)
+	metricsShutdown, err := metrics.Setup(ctx, res)
 	if err != nil {
 		// non critical error, just log it.
 		log.Error("failed to setup metrics",
@@ -301,7 +273,7 @@ func setupObservabillity(ctx context.Context,
 	)
 
 	return func() {
-		timeout := 25 * time.Second // nolint:gomnd // 2.5x default OTLP timeout
+		timeout := 25 * time.Second // nolint:mnd // 2.5x default OTLP timeout
 
 		ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), timeout)
 		defer cancel()

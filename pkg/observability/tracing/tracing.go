@@ -18,11 +18,9 @@ import (
 	"context"
 	"fmt"
 
-	o11y "github.com/linode/linode-cosi-driver/pkg/observability"
+	"go.opentelemetry.io/contrib/exporters/autoexport"
 	"go.opentelemetry.io/otel"
 	otelcodes "go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -31,35 +29,22 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-const tracerName = "github.com/linode/linode-cosi-driver/pkg/observability/tracing"
+const (
+	tracerName           = "github.com/linode/linode-cosi-driver/pkg/observability/tracing"
+	defaultSamplingRatio = 1
+)
 
-func Setup(ctx context.Context, resource *resource.Resource, protocol string) (_ func(context.Context) error, err error) {
-	var exp sdktrace.SpanExporter
-
-	switch protocol {
-	case o11y.ProtoGRPC:
-		exp, err = otlptracegrpc.New(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("unable to create new OTLP Metric GRPC Exporter: %w", err)
-		}
-
-	case o11y.ProtoHTTPJSON, o11y.ProtoHTTPProtobuf:
-		exp, err = otlptracehttp.New(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("unable to create new OTLP Metric GRPC Exporter: %w", err)
-		}
+func Setup(ctx context.Context, resource *resource.Resource) (_ func(context.Context) error, err error) {
+	exporter, err := autoexport.NewSpanExporter(ctx)
+	if err != nil {
+		return nil, err
 	}
 
-	return registerTraceExporter(resource, exp)
-}
-
-func registerTraceExporter(res *resource.Resource, exporter sdktrace.SpanExporter) (func(context.Context) error, error) {
 	options := []sdktrace.TracerProviderOption{
 		sdktrace.WithBatcher(exporter),
-		sdktrace.WithSampler(sdktrace.AlwaysSample()),
 	}
-	if res != nil {
-		options = append(options, sdktrace.WithResource(res))
+	if resource != nil {
+		options = append(options, sdktrace.WithResource(resource))
 	}
 
 	tp := sdktrace.NewTracerProvider(options...)

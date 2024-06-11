@@ -16,12 +16,9 @@ package metrics
 
 import (
 	"context"
-	"fmt"
 
-	o11y "github.com/linode/linode-cosi-driver/pkg/observability"
+	"go.opentelemetry.io/contrib/exporters/autoexport"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
 	"go.opentelemetry.io/otel/metric"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -29,37 +26,17 @@ import (
 
 const meterName = "github.com/linode/linode-cosi-driver/pkg/observability/metrics"
 
-func Setup(ctx context.Context, resource *resource.Resource, protocol string) (_ func(context.Context) error, err error) {
-	var exp sdkmetric.Exporter
-
-	switch protocol {
-	case o11y.ProtoGRPC:
-		exp, err = otlpmetricgrpc.New(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("unable to create new OTLP Metric GRPC Exporter: %w", err)
-		}
-
-	case o11y.ProtoHTTPJSON, o11y.ProtoHTTPProtobuf:
-		exp, err = otlpmetrichttp.New(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("unable to create new OTLP Metric GRPC Exporter: %w", err)
-		}
+func Setup(ctx context.Context, resource *resource.Resource) (_ func(context.Context) error, err error) {
+	reader, err := autoexport.NewMetricReader(ctx)
+	if err != nil {
+		return nil, err
 	}
-
-	return registerMetricsExporter(resource, exp)
-}
-
-func registerMetricsExporter(res *resource.Resource, exporter sdkmetric.Exporter) (func(context.Context) error, error) {
-	// This reader is used as a stand-in for a reader that will actually export
-	// data. See exporters in the go.opentelemetry.io/otel/exporters package
-	// for more information.
-	reader := sdkmetric.NewPeriodicReader(exporter)
 
 	options := []sdkmetric.Option{
 		sdkmetric.WithReader(reader),
 	}
-	if res != nil {
-		options = append(options, sdkmetric.WithResource(res))
+	if resource != nil {
+		options = append(options, sdkmetric.WithResource(resource))
 	}
 
 	mp := sdkmetric.NewMeterProvider(options...)
