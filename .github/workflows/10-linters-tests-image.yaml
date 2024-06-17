@@ -107,7 +107,7 @@ jobs:
             "${{ steps.get-latest-tag.outputs.tag }}" \
             "${GITHUB_OUTPUT}"
       - name: Build image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           push: ${{ startsWith(github.ref, 'refs/tags/v') || (github.ref == 'refs/heads/main') }}
           load: ${{ !(startsWith(github.ref, 'refs/tags/v') || (github.ref == 'refs/heads/main')) }}
