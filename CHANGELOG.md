@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.3.0](https://github.com/linode/linode-cosi-driver/compare/v0.2.0...v0.3.0) (2024-06-25)
+
+
+### Features
+
+* added helm-docs generator on release ([#70](https://github.com/linode/linode-cosi-driver/issues/70)) ([0c9f8d1](https://github.com/linode/linode-cosi-driver/commit/0c9f8d1c467c97f1e3b5c6d58f5ed5057aea4ed3))
+* support OTEL autoexport ([#68](https://github.com/linode/linode-cosi-driver/issues/68)) ([63f7d26](https://github.com/linode/linode-cosi-driver/commit/63f7d265c90b63b5b0663993ca1725043dc5fb7a))
+
+
+### Bug Fixes
+
+* **deps:** bump docker/build-push-action from 5 to 6 ([#72](https://github.com/linode/linode-cosi-driver/issues/72)) ([c3a9750](https://github.com/linode/linode-cosi-driver/commit/c3a975014a64cfeaae480e0482ee4709b9ca0d08))
+* **deps:** bump github.com/linode/linodego from 1.34.0 to 1.35.0 ([#67](https://github.com/linode/linode-cosi-driver/issues/67)) ([995b882](https://github.com/linode/linode-cosi-driver/commit/995b88200e589b276706aa938f905f3f1696eb96))
+* **deps:** bump github.com/linode/linodego from 1.35.0 to 1.36.0 ([#73](https://github.com/linode/linode-cosi-driver/issues/73)) ([0cea162](https://github.com/linode/linode-cosi-driver/commit/0cea162d98833929bd165da1feef89d17a42db57))
+* **deps:** bump the otel-dependencies group with 10 updates ([#65](https://github.com/linode/linode-cosi-driver/issues/65)) ([95a5708](https://github.com/linode/linode-cosi-driver/commit/95a5708a5f3369e4aa4af971e901671b28b23944))
+
 ## [0.2.0](https://github.com/linode/linode-cosi-driver/compare/v0.1.0...v0.2.0) (2024-05-25)
 
 
