@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.0](https://github.com/linode/linode-cosi-driver/compare/linode-cosi-driver-v0.1.0...linode-cosi-driver-v0.2.0) (2024-06-25)
+
+
+### Features
+
+* added helm-docs generator on release ([#70](https://github.com/linode/linode-cosi-driver/issues/70)) ([0c9f8d1](https://github.com/linode/linode-cosi-driver/commit/0c9f8d1c467c97f1e3b5c6d58f5ed5057aea4ed3))
+* support OTEL autoexport ([#68](https://github.com/linode/linode-cosi-driver/issues/68)) ([63f7d26](https://github.com/linode/linode-cosi-driver/commit/63f7d265c90b63b5b0663993ca1725043dc5fb7a))
+
 ## [0.1.0](https://github.com/linode/linode-cosi-driver/compare/linode-cosi-driver-v0.1.0...linode-cosi-driver-v0.1.0) (2024-03-27)
 
 

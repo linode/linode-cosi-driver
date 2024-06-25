@@ -1,4 +1,4 @@
 {
-  ".": "0.2.0",
-  "helm/linode-cosi-driver": "0.1.0"
+  ".": "0.3.0",
+  "helm/linode-cosi-driver": "0.2.0"
 }
