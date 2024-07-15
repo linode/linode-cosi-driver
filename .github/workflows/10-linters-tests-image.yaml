@@ -117,7 +117,7 @@ jobs:
           target: runtime
       - name: Scan image using Grype
         id: grype
-        uses: anchore/scan-action@v3
+        uses: anchore/scan-action@v4
         with:
           image: ${{ steps.tags.outputs.full_version }}
           output-format: table
