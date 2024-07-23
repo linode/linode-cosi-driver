@@ -63,7 +63,7 @@ func TestHappyPath(t *testing.T) {
 		return
 	}
 
-	srv, err := provisioner.New(slog.Default(), client)
+	srv, err := provisioner.New(slog.Default(), client, nil)
 	if err != nil {
 		t.Errorf("failed to provisioner: %v", err.Error())
 		return
