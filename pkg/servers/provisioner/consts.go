@@ -70,7 +70,7 @@ var (
 const (
 	KeyBucketID                = "bucket.id"
 	KeyBucketLabel             = "bucket.label"
-	KeyBucketCluster           = "bucket.cluster"
+	KeyBucketRegion            = "bucket.region"
 	KeyBucketCreationTimestamp = "bucket.created_at"
 	KeyBucketACL               = "bucket.acl"
 	KeyBucketCORS              = "bucket.cors_enabled"

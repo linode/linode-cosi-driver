@@ -91,7 +91,7 @@ func (c *Client) CreateObjectStorageBucket(ctx context.Context, opt linodego.Obj
 		return nil, err
 	}
 
-	key := fmt.Sprintf("%s/%s", opt.Cluster, opt.Label)
+	key := fmt.Sprintf("%s/%s", opt.Region, opt.Label)
 
 	bucket, ok := c.objectStorageBuckets[key]
 	if ok {
@@ -106,7 +106,7 @@ func (c *Client) CreateObjectStorageBucket(ctx context.Context, opt linodego.Obj
 
 	bucket = &linodego.ObjectStorageBucket{
 		Label:    opt.Label,
-		Cluster:  opt.Cluster,
+		Region:   opt.Region,
 		Hostname: fmt.Sprintf("%s.linodeobjects.com", opt.Label),
 	}
 	c.objectStorageBuckets[key] = bucket
@@ -126,12 +126,12 @@ func (c *Client) CreateObjectStorageBucket(ctx context.Context, opt linodego.Obj
 }
 
 // GetObjectStorageBucket is a stub function that stubs the behavior of GetObjectStorageBucket call from linodego.Client.
-func (c *Client) GetObjectStorageBucket(ctx context.Context, clusterID, label string) (*linodego.ObjectStorageBucket, error) {
+func (c *Client) GetObjectStorageBucket(ctx context.Context, region, label string) (*linodego.ObjectStorageBucket, error) {
 	if err := handleForcedFailure(ctx); err != nil {
 		return nil, err
 	}
 
-	key := fmt.Sprintf("%s/%s", clusterID, label)
+	key := fmt.Sprintf("%s/%s", region, label)
 
 	obj, ok := c.objectStorageBuckets[key]
 	if ok {
@@ -144,12 +144,12 @@ func (c *Client) GetObjectStorageBucket(ctx context.Context, clusterID, label st
 }
 
 // DeleteObjectStorageBucket is a stub function that stubs the behavior of DeleteObjectStorageBucket call from linodego.Client.
-func (c *Client) DeleteObjectStorageBucket(ctx context.Context, clusterID, label string) error {
+func (c *Client) DeleteObjectStorageBucket(ctx context.Context, region, label string) error {
 	if err := handleForcedFailure(ctx); err != nil {
 		return err
 	}
 
-	key := fmt.Sprintf("%s/%s", clusterID, label)
+	key := fmt.Sprintf("%s/%s", region, label)
 
 	bucket, ok := c.objectStorageBuckets[key]
 
@@ -169,12 +169,12 @@ func (c *Client) DeleteObjectStorageBucket(ctx context.Context, clusterID, label
 }
 
 // GetObjectStorageBucketAccess is a stub function that stubs the behavior of GetObjectStorageBucketAccess call from linodego.Client.
-func (c *Client) GetObjectStorageBucketAccess(ctx context.Context, clusterID, label string) (*linodego.ObjectStorageBucketAccess, error) {
+func (c *Client) GetObjectStorageBucketAccess(ctx context.Context, region, label string) (*linodego.ObjectStorageBucketAccess, error) {
 	if err := handleForcedFailure(ctx); err != nil {
 		return nil, err
 	}
 
-	key := fmt.Sprintf("%s/%s", clusterID, label)
+	key := fmt.Sprintf("%s/%s", region, label)
 
 	obj, ok := c.objectStorageBucketAccesses[key]
 	if ok {
@@ -187,12 +187,12 @@ func (c *Client) GetObjectStorageBucketAccess(ctx context.Context, clusterID, la
 }
 
 // UpdateObjectStorageBucketAccess is a stub function that stubs the behavior of UpdateObjectStorageBucketAccess call from linodego.Client.
-func (c *Client) UpdateObjectStorageBucketAccess(ctx context.Context, clusterID, label string, opt linodego.ObjectStorageBucketUpdateAccessOptions) error {
+func (c *Client) UpdateObjectStorageBucketAccess(ctx context.Context, region, label string, opt linodego.ObjectStorageBucketUpdateAccessOptions) error {
 	if err := handleForcedFailure(ctx); err != nil {
 		return err
 	}
 
-	key := fmt.Sprintf("%s/%s", clusterID, label)
+	key := fmt.Sprintf("%s/%s", region, label)
 
 	access, ok := c.objectStorageBucketAccesses[key]
 	if !ok {

@@ -30,7 +30,7 @@ import (
 var (
 	testBucket = &linodego.ObjectStorageBucket{
 		Label:    "test-label",
-		Cluster:  "test-cluster",
+		Region:   "test-region",
 		Hostname: "test-label.linodeobjects.com",
 		Objects:  0,
 		Size:     0,
@@ -43,7 +43,7 @@ var (
 
 	testKeyBucketAccessList = []linodego.ObjectStorageKeyBucketAccess{
 		{
-			Cluster:     "test-cluster",
+			Region:      "test-region",
 			BucketName:  "test-label",
 			Permissions: "test-permissions",
 		},
@@ -85,7 +85,7 @@ func TestNew(t *testing.T) {
 			{
 				testName: "bucket accesses input",
 				input: []stubclient.Option{
-					stubclient.WithBucketAccess(testBucketAccess, testBucket.Cluster, testBucket.Label),
+					stubclient.WithBucketAccess(testBucketAccess, testBucket.Region, testBucket.Label),
 				},
 			},
 			{
@@ -98,7 +98,7 @@ func TestNew(t *testing.T) {
 				testName: "mixed input",
 				input: []stubclient.Option{
 					stubclient.WithBucket(testBucket),
-					stubclient.WithBucketAccess(testBucketAccess, testBucket.Cluster, testBucket.Label),
+					stubclient.WithBucketAccess(testBucketAccess, testBucket.Region, testBucket.Label),
 					stubclient.WithKey(testKey),
 				},
 			},
@@ -131,9 +131,9 @@ func TestCreateObjectStorageBucket(t *testing.T) {
 			testName: "valid input",
 			client:   stubclient.New(),
 			opts: linodego.ObjectStorageBucketCreateOptions{
-				Cluster: testBucket.Cluster,
-				Label:   testBucket.Label,
-				ACL:     linodego.ACLPrivate,
+				Region: testBucket.Region,
+				Label:  testBucket.Label,
+				ACL:    linodego.ACLPrivate,
 			},
 			expectedError: nil,
 			expectedValue: testBucket,
@@ -142,9 +142,9 @@ func TestCreateObjectStorageBucket(t *testing.T) {
 			testName: "duplicated",
 			client:   stubclient.New(stubclient.WithBucket(testBucket)),
 			opts: linodego.ObjectStorageBucketCreateOptions{
-				Cluster: testBucket.Cluster,
-				Label:   testBucket.Label,
-				ACL:     linodego.ACLPrivate,
+				Region: testBucket.Region,
+				Label:  testBucket.Label,
+				ACL:    linodego.ACLPrivate,
 			},
 			expectedError: nil,
 			expectedValue: testBucket,
@@ -153,7 +153,7 @@ func TestCreateObjectStorageBucket(t *testing.T) {
 			testName: "with CORS",
 			client:   stubclient.New(),
 			opts: linodego.ObjectStorageBucketCreateOptions{
-				Cluster:     testBucket.Cluster,
+				Region:      testBucket.Region,
 				Label:       testBucket.Label,
 				ACL:         linodego.ACLPrivate,
 				CorsEnabled: &testBool,
@@ -165,9 +165,9 @@ func TestCreateObjectStorageBucket(t *testing.T) {
 			testName: "invalid ACL",
 			client:   stubclient.New(),
 			opts: linodego.ObjectStorageBucketCreateOptions{
-				Cluster: testBucket.Cluster,
-				Label:   testBucket.Label,
-				ACL:     "invalid-acl",
+				Region: testBucket.Region,
+				Label:  testBucket.Label,
+				ACL:    "invalid-acl",
 			},
 			expectedError: &linodego.Error{Code: http.StatusBadRequest},
 			expectedValue: nil,
@@ -226,7 +226,7 @@ func TestGetObjectStorageBucket(t *testing.T) {
 		testName      string
 		ctx           context.Context //nolint:containedctx
 		client        linodeclient.Client
-		clusterID     string
+		region        string
 		label         string
 		expectedValue *linodego.ObjectStorageBucket
 		expectedError error
@@ -234,7 +234,7 @@ func TestGetObjectStorageBucket(t *testing.T) {
 		{
 			testName:      "valid input",
 			client:        stubclient.New(stubclient.WithBucket(testBucket)),
-			clusterID:     testBucket.Cluster,
+			region:        testBucket.Region,
 			label:         testBucket.Label,
 			expectedValue: testBucket,
 			expectedError: nil,
@@ -242,7 +242,7 @@ func TestGetObjectStorageBucket(t *testing.T) {
 		{
 			testName:      "non existent bucket",
 			client:        stubclient.New(),
-			clusterID:     "non-existent-cluster",
+			region:        "non-existent-region",
 			label:         "non-existent-label",
 			expectedValue: nil,
 			expectedError: &linodego.Error{Code: http.StatusNotFound},
@@ -280,7 +280,7 @@ func TestGetObjectStorageBucket(t *testing.T) {
 			ctx, cancel := testutils.ContextFromT(tc.ctx, t)
 			defer cancel()
 
-			actual, err := tc.client.GetObjectStorageBucket(ctx, tc.clusterID, tc.label)
+			actual, err := tc.client.GetObjectStorageBucket(ctx, tc.region, tc.label)
 			if !errors.Is(err, tc.expectedError) {
 				t.Errorf("expected error: %v, but got: %v", tc.expectedError, err)
 			}
@@ -301,34 +301,34 @@ func TestDeleteObjectStorageBucket(t *testing.T) {
 		testName      string
 		ctx           context.Context //nolint:containedctx
 		client        linodeclient.Client
-		clusterID     string
+		region        string
 		label         string
 		expectedError error
 	}{
 		{
 			testName:      "valid input",
 			client:        stubclient.New(stubclient.WithBucket(testBucket)),
-			clusterID:     testBucket.Cluster,
+			region:        testBucket.Region,
 			label:         testBucket.Label,
 			expectedError: nil,
 		},
 		{
 			testName:      "non existent bucket",
 			client:        stubclient.New(),
-			clusterID:     testBucket.Cluster,
+			region:        testBucket.Region,
 			label:         testBucket.Label,
 			expectedError: &linodego.Error{Code: http.StatusNotFound},
 		},
 		{
 			testName: "non empty bucket",
 			client: stubclient.New(stubclient.WithBucket(&linodego.ObjectStorageBucket{
-				Cluster:  testBucket.Cluster,
+				Region:   testBucket.Region,
 				Label:    testBucket.Label,
 				Hostname: testBucket.Hostname,
 				Objects:  10,
 				Size:     102310,
 			})),
-			clusterID:     testBucket.Cluster,
+			region:        testBucket.Region,
 			label:         testBucket.Label,
 			expectedError: &linodego.Error{Code: http.StatusBadRequest},
 		},
@@ -365,7 +365,7 @@ func TestDeleteObjectStorageBucket(t *testing.T) {
 			ctx, cancel := testutils.ContextFromT(tc.ctx, t)
 			defer cancel()
 
-			err := tc.client.DeleteObjectStorageBucket(ctx, tc.clusterID, tc.label)
+			err := tc.client.DeleteObjectStorageBucket(ctx, tc.region, tc.label)
 			if !errors.Is(err, tc.expectedError) {
 				t.Errorf("expected error: %v, but got: %v", tc.expectedError, err)
 			}
@@ -380,7 +380,7 @@ func TestGetObjectStorageBucketAccess(t *testing.T) {
 		testName      string
 		ctx           context.Context //nolint:containedctx
 		client        linodeclient.Client
-		clusterID     string
+		region        string
 		label         string
 		expectedValue *linodego.ObjectStorageBucketAccess
 		expectedError error
@@ -388,9 +388,9 @@ func TestGetObjectStorageBucketAccess(t *testing.T) {
 		{
 			testName: "valid input",
 			client: stubclient.New(
-				stubclient.WithBucketAccess(testBucketAccess, testBucket.Cluster, testBucket.Label),
+				stubclient.WithBucketAccess(testBucketAccess, testBucket.Region, testBucket.Label),
 			),
-			clusterID:     testBucket.Cluster,
+			region:        testBucket.Region,
 			label:         testBucket.Label,
 			expectedValue: testBucketAccess,
 			expectedError: nil,
@@ -398,7 +398,7 @@ func TestGetObjectStorageBucketAccess(t *testing.T) {
 		{
 			testName:      "non existent bucket",
 			client:        stubclient.New(),
-			clusterID:     "non-existent-cluster",
+			region:        "non-existent-region",
 			label:         "non-existent-label",
 			expectedValue: nil,
 			expectedError: &linodego.Error{Code: http.StatusNotFound},
@@ -436,7 +436,7 @@ func TestGetObjectStorageBucketAccess(t *testing.T) {
 			ctx, cancel := testutils.ContextFromT(tc.ctx, t)
 			defer cancel()
 
-			actual, err := tc.client.GetObjectStorageBucketAccess(ctx, tc.clusterID, tc.label)
+			actual, err := tc.client.GetObjectStorageBucketAccess(ctx, tc.region, tc.label)
 			if !errors.Is(err, tc.expectedError) {
 				t.Errorf("expected error: %v, but got: %v", tc.expectedError, err)
 			}
@@ -457,7 +457,7 @@ func TestUpdateObjectStorageBucketAccess(t *testing.T) {
 		testName      string
 		ctx           context.Context //nolint:containedctx
 		client        linodeclient.Client
-		clusterID     string
+		region        string
 		label         string
 		opts          linodego.ObjectStorageBucketUpdateAccessOptions
 		expectedError error
@@ -465,10 +465,10 @@ func TestUpdateObjectStorageBucketAccess(t *testing.T) {
 		{
 			testName: "valid input",
 			client: stubclient.New(
-				stubclient.WithBucketAccess(testBucketAccess, testBucket.Cluster, testBucket.Label),
+				stubclient.WithBucketAccess(testBucketAccess, testBucket.Region, testBucket.Label),
 			),
-			clusterID: testBucket.Cluster,
-			label:     testBucket.Label,
+			region: testBucket.Region,
+			label:  testBucket.Label,
 			opts: linodego.ObjectStorageBucketUpdateAccessOptions{
 				ACL: testBucketAccess.ACL,
 			},
@@ -477,10 +477,10 @@ func TestUpdateObjectStorageBucketAccess(t *testing.T) {
 		{
 			testName: "with CORS",
 			client: stubclient.New(
-				stubclient.WithBucketAccess(testBucketAccess, testBucket.Cluster, testBucket.Label),
+				stubclient.WithBucketAccess(testBucketAccess, testBucket.Region, testBucket.Label),
 			),
-			clusterID: testBucket.Cluster,
-			label:     testBucket.Label,
+			region: testBucket.Region,
+			label:  testBucket.Label,
 			opts: linodego.ObjectStorageBucketUpdateAccessOptions{
 				ACL:         testBucketAccess.ACL,
 				CorsEnabled: &testBool,
@@ -490,10 +490,10 @@ func TestUpdateObjectStorageBucketAccess(t *testing.T) {
 		{
 			testName: "invalid ACL",
 			client: stubclient.New(
-				stubclient.WithBucketAccess(testBucketAccess, testBucket.Cluster, testBucket.Label),
+				stubclient.WithBucketAccess(testBucketAccess, testBucket.Region, testBucket.Label),
 			),
-			clusterID: testBucket.Cluster,
-			label:     testBucket.Label,
+			region: testBucket.Region,
+			label:  testBucket.Label,
 			opts: linodego.ObjectStorageBucketUpdateAccessOptions{
 				ACL: "invalid-acl",
 			},
@@ -502,7 +502,7 @@ func TestUpdateObjectStorageBucketAccess(t *testing.T) {
 		{
 			testName:      "non existent input",
 			client:        stubclient.New(),
-			clusterID:     "non-existent-cluster",
+			region:        "non-existent-region",
 			label:         "non-existent-label",
 			opts:          linodego.ObjectStorageBucketUpdateAccessOptions{},
 			expectedError: linodego.Error{Code: http.StatusNotFound},
@@ -540,7 +540,7 @@ func TestUpdateObjectStorageBucketAccess(t *testing.T) {
 			ctx, cancel := testutils.ContextFromT(tc.ctx, t)
 			defer cancel()
 
-			err := tc.client.UpdateObjectStorageBucketAccess(ctx, tc.clusterID, tc.label, tc.opts)
+			err := tc.client.UpdateObjectStorageBucketAccess(ctx, tc.region, tc.label, tc.opts)
 			if !errors.Is(err, tc.expectedError) {
 				t.Errorf("expected error: %v, but got: %v", tc.expectedError, err)
 			}

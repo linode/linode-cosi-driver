@@ -26,7 +26,7 @@ type Option func(c *Client)
 // WithBucket is an option to configure the stub client with an Object Storage bucket.
 func WithBucket(bucket *linodego.ObjectStorageBucket) Option {
 	return func(c *Client) {
-		id := fmt.Sprintf("%s/%s", bucket.Cluster, bucket.Label)
+		id := fmt.Sprintf("%s/%s", bucket.Region, bucket.Label)
 		c.objectStorageBuckets[id] = bucket
 	}
 }
@@ -40,9 +40,9 @@ func WithKey(key *linodego.ObjectStorageKey) Option {
 }
 
 // WithBucketAccess is an option to configure the stub client with Object Storage bucket access.
-func WithBucketAccess(bucketAccess *linodego.ObjectStorageBucketAccess, cluster, label string) Option {
+func WithBucketAccess(bucketAccess *linodego.ObjectStorageBucketAccess, region, label string) Option {
 	return func(c *Client) {
-		id := fmt.Sprintf("%s/%s", cluster, label)
+		id := fmt.Sprintf("%s/%s", region, label)
 		c.objectStorageBucketAccesses[id] = bucketAccess
 	}
 }
