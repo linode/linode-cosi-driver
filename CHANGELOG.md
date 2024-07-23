@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.4.0](https://github.com/linode/linode-cosi-driver/compare/v0.3.0...v0.4.0) (2024-07-23)
+
+
+### ⚠ BREAKING CHANGES
+
+* **deps:** bump github.com/linode/linodego from 1.36.0 to 1.37.0 ([#78](https://github.com/linode/linode-cosi-driver/issues/78))
+
+### Bug Fixes
+
+* **deps:** bump github.com/linode/linodego from 1.36.0 to 1.37.0 ([#78](https://github.com/linode/linode-cosi-driver/issues/78)) ([55483e1](https://github.com/linode/linode-cosi-driver/commit/55483e18550406803f0a9035d4e8c9711180057e))
+* **deps:** bump google.golang.org/grpc from 1.64.0 to 1.65.0 ([#77](https://github.com/linode/linode-cosi-driver/issues/77)) ([1c0f21e](https://github.com/linode/linode-cosi-driver/commit/1c0f21eaf18e6016e243d46db21c11ee434808b1))
+* **deps:** bump the otel-dependencies group with 7 updates ([#75](https://github.com/linode/linode-cosi-driver/issues/75)) ([a46020b](https://github.com/linode/linode-cosi-driver/commit/a46020b5cb38e2787a069c53eb4174eab5814658))
+
+
+### Miscellaneous Chores
+
+* updated license notice ([#83](https://github.com/linode/linode-cosi-driver/issues/83)) ([ee38174](https://github.com/linode/linode-cosi-driver/commit/ee38174caf95715e9bca56bcb4fb392f81cacbd1))
+
 ## [0.3.0](https://github.com/linode/linode-cosi-driver/compare/v0.2.0...v0.3.0) (2024-06-25)
 
 
