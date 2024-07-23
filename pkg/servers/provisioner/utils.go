@@ -15,9 +15,12 @@
 package provisioner
 
 import (
+	"encoding/base64"
 	"fmt"
+	"strconv"
 	"strings"
 
+	v1 "k8s.io/api/core/v1"
 	cosi "sigs.k8s.io/container-object-storage-interface-spec"
 )
 
@@ -51,4 +54,36 @@ func credentials(region, label, accessKey, secretKey string) map[string]*cosi.Cr
 			},
 		},
 	}
+}
+
+func boolFromSecret(secret *v1.Secret, key string, required bool) (bool, error) {
+	s, err := stringFromSecret(secret, key, required)
+	if err != nil {
+		return false, err
+	}
+
+	val, err := strconv.ParseBool(s)
+	if err != nil {
+		return false, err
+	}
+
+	return val, nil
+}
+
+func stringFromSecret(secret *v1.Secret, key string, required bool) (string, error) {
+	b, ok := secret.Data[key]
+	if !ok && required {
+		return "", fmt.Errorf("%w: %s not found", ErrInvalidSecret, key)
+	}
+
+	enc := base64.StdEncoding
+
+	dbuf := make([]byte, len(b))
+
+	n, err := enc.Decode(dbuf, b)
+	if err != nil {
+		return "", err
+	}
+
+	return string(dbuf[:n]), nil
 }

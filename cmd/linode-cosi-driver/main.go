@@ -27,12 +27,14 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/go-logr/logr"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/recovery"
 	"github.com/linode/linode-cosi-driver/pkg/endpoint"
 	"github.com/linode/linode-cosi-driver/pkg/envflag"
 	"github.com/linode/linode-cosi-driver/pkg/grpc/handlers"
 	grpclogger "github.com/linode/linode-cosi-driver/pkg/grpc/logger"
+	"github.com/linode/linode-cosi-driver/pkg/kubereader/tracedkubereader"
 	"github.com/linode/linode-cosi-driver/pkg/linodeclient"
 	"github.com/linode/linode-cosi-driver/pkg/linodeclient/tracedclient"
 	maxprocslogger "github.com/linode/linode-cosi-driver/pkg/maxprocs/logger"
@@ -47,7 +49,11 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"go.uber.org/automaxprocs/maxprocs"
 	"google.golang.org/grpc"
+	v1 "k8s.io/api/core/v1"
 	cosi "sigs.k8s.io/container-object-storage-interface-spec"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/config"
+	ctrlLog "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 const (
@@ -67,12 +73,26 @@ func main() {
 
 	// TODO: any logger settup must be done here, before first log call.
 	log := slog.Default()
+	ctrlLog.SetLogger(logr.FromSlogHandler(log.Handler()))
+
+	kubeclient, err := client.New(config.GetConfigOrDie(), client.Options{
+		Cache: &client.CacheOptions{
+			DisableFor: []client.Object{
+				&v1.Secret{},
+			},
+		},
+	})
+	if err != nil {
+		slog.Error("initializing kube client failed", "error", err)
+		os.Exit(1)
+	}
 
 	if err := run(context.Background(), log, mainOptions{
 		cosiEndpoint:     cosiEndpoint,
 		linodeToken:      linodeToken,
 		linodeURL:        linodeURL,
 		linodeAPIVersion: linodeAPIVersion,
+		kubeclient:       kubeclient,
 	},
 	); err != nil {
 		slog.Error("critical failure", "error", err)
@@ -85,6 +105,7 @@ type mainOptions struct {
 	linodeToken      string
 	linodeURL        string
 	linodeAPIVersion string
+	kubeclient       client.Client
 }
 
 func run(ctx context.Context, log *slog.Logger, opts mainOptions) error {
@@ -112,7 +133,7 @@ func run(ctx context.Context, log *slog.Logger, opts mainOptions) error {
 	// initialize Linode client
 	client, err := linodeclient.NewLinodeClient(
 		opts.linodeToken,
-		fmt.Sprintf("LinodeCOSI/%s", version.Version),
+		version.UserAgent(),
 		opts.linodeURL,
 		opts.linodeAPIVersion)
 	if err != nil {
@@ -121,10 +142,13 @@ func run(ctx context.Context, log *slog.Logger, opts mainOptions) error {
 
 	client.SetLogger(restylogger.Wrap(log))
 
+	podName := os.Getenv(envK8sPodName)
+
 	// create provisioner server
 	prvSrv, err := provisioner.New(
 		log,
-		tracedclient.NewClientWithTracing(client, os.Getenv(envK8sPodName)),
+		tracedclient.NewClientWithTracing(client, podName),
+		tracedkubereader.NewKubeReaderWithTracing(opts.kubeclient, podName),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create provisioner server: %w", err)

@@ -26,6 +26,7 @@ const (
 	ParamACL         = "cosi.linode.com/v1/acl"
 	ParamCORS        = "cosi.linode.com/v1/cors"
 	ParamPermissions = "cosi.linode.com/v1/permissions"
+	ParamSecretRef   = "cosi.linode.com/v1/secretRef" //nolint:gosec // this is key under which secret reference is placed
 )
 
 type ParamCORSValue string
@@ -59,12 +60,22 @@ const (
 	S3SecretAccessSecretKey = "accessSecretKey"
 )
 
+const (
+	LinodeTokenKey      = "LINODE_TOKEN"
+	LinodeAPIURLKey     = "LINODE_API_URL"
+	LinodeAPIVersionKey = "LINODE_API_VERSION"
+	LinodeDebugKey      = "LINODE_DEBUG"
+	// LinodeCAKey         = "LINODE_CA" // TODO: enable setting Linode CA from string in Linode Go.
+)
+
 var (
-	ErrNotFound            = linodego.Error{Code: http.StatusNotFound}
-	ErrBucketExists        = errors.New("bucket exists with different parameters")
-	ErrUnsuportedAuth      = errors.New("unsupported authentication schema")
-	ErrMissingRegion       = errors.New("region was not provided")
-	ErrUnknownPermsissions = errors.New("unknown permissions")
+	ErrNotFound               = linodego.Error{Code: http.StatusNotFound}
+	ErrBucketExists           = errors.New("bucket exists with different parameters")
+	ErrUnsuportedAuth         = errors.New("unsupported authentication schema")
+	ErrMissingRegion          = errors.New("region was not provided")
+	ErrUnknownPermsissions    = errors.New("unknown permissions")
+	ErrInvalidSecretReference = errors.New("invalid secret reference")
+	ErrInvalidSecret          = errors.New("invalid secret")
 )
 
 const (
