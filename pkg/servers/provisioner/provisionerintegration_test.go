@@ -96,7 +96,7 @@ func (s *suite) DriverCreateBucket(t *testing.T) {
 	req := &cosi.DriverCreateBucketRequest{
 		Name: "integration",
 		Parameters: map[string]string{
-			provisioner.ParamRegion: "us-east-1",
+			provisioner.ParamRegion: "us-east",
 			provisioner.ParamACL:    "private",
 			provisioner.ParamCORS:   string(provisioner.ParamCORSValueEnabled),
 		},

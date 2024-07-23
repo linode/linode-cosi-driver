@@ -41,8 +41,8 @@ const (
 
 var (
 	defaultLinodegoBucket = &linodego.ObjectStorageBucket{
-		Label:   testBucketName,
-		Cluster: testRegion,
+		Label:  testBucketName,
+		Region: testRegion,
 	}
 	defaultLinodegoBucketAccess = &linodego.ObjectStorageBucketAccess{
 		ACL:         linodego.ACLPrivate,
@@ -104,7 +104,7 @@ func TestDriverCreateBucket(t *testing.T) {
 			testName: "bucket exists",
 			client: stubclient.New(
 				stubclient.WithBucket(defaultLinodegoBucket),
-				stubclient.WithBucketAccess(defaultLinodegoBucketAccess, defaultLinodegoBucket.Cluster, defaultLinodegoBucket.Label),
+				stubclient.WithBucketAccess(defaultLinodegoBucketAccess, defaultLinodegoBucket.Region, defaultLinodegoBucket.Label),
 			),
 			request: &cosi.DriverCreateBucketRequest{
 				Name:       testBucketName,
@@ -278,7 +278,7 @@ func TestDriverGrantBucketAccess(t *testing.T) {
 				}
 
 				if !reflect.DeepEqual(tc.expectedResponse, actual) {
-					t.Errorf("call %d: expected credentials to be deeply equal\n> expected: %#+v,\n> got: %#+v",
+					t.Errorf("call %d: expected buckets to be deeply equal\n> expected: %#+v,\n> got: %#+v",
 						i,
 						tc.expectedResponse,
 						actual)
@@ -301,7 +301,7 @@ func TestDriverRevokeBucketAccess(t *testing.T) {
 			testName: "base",
 			client: stubclient.New(
 				stubclient.WithBucket(defaultLinodegoBucket),
-				stubclient.WithBucketAccess(defaultLinodegoBucketAccess, defaultLinodegoBucket.Cluster, defaultLinodegoBucket.Label),
+				stubclient.WithBucketAccess(defaultLinodegoBucketAccess, defaultLinodegoBucket.Region, defaultLinodegoBucket.Label),
 			),
 			request: &cosi.DriverRevokeBucketAccessRequest{
 				BucketId:  testBucketID,

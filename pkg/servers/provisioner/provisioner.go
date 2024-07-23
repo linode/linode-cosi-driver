@@ -77,7 +77,7 @@ func (s *Server) DriverCreateBucket(ctx context.Context, req *cosi.DriverCreateB
 	defer span.End()
 
 	label := req.GetName()
-	cluster := req.GetParameters()[ParamRegion]
+	region := req.GetParameters()[ParamRegion]
 	cors := ParamCORSValue(req.GetParameters()[ParamCORS])
 
 	acl := linodego.ObjectStorageACL(req.GetParameters()[ParamACL])
@@ -86,24 +86,24 @@ func (s *Server) DriverCreateBucket(ctx context.Context, req *cosi.DriverCreateB
 	}
 
 	log := s.logAttr(
-		slog.String(KeyBucketCluster, cluster),
+		slog.String(KeyBucketRegion, region),
 		slog.String(KeyBucketLabel, label),
 	).WithGroup("DriverCreateBucket")
 
 	span.SetAttributes(
-		attribute.String(KeyBucketCluster, cluster),
+		attribute.String(KeyBucketRegion, region),
 		attribute.String(KeyBucketLabel, label),
 	)
 
 	log.InfoContext(ctx, "bucket creation initiated")
 
-	if cluster == "" {
+	if region == "" {
 		log.ErrorContext(ctx, "required parameter was not provided in the request", "error", ErrMissingRegion)
 
 		return nil, tracing.Error(span, codes.InvalidArgument, ErrMissingRegion)
 	}
 
-	bucket, err := s.client.GetObjectStorageBucket(ctx, cluster, label)
+	bucket, err := s.client.GetObjectStorageBucket(ctx, region, label)
 	if err != nil {
 		if !errors.Is(err, ErrNotFound) {
 			log.ErrorContext(ctx, "failed to check if bucket exists", "error", err)
@@ -111,7 +111,7 @@ func (s *Server) DriverCreateBucket(ctx context.Context, req *cosi.DriverCreateB
 		}
 
 		opts := linodego.ObjectStorageBucketCreateOptions{
-			Cluster:     cluster,
+			Region:      region,
 			Label:       label,
 			ACL:         acl,
 			CorsEnabled: cors.BoolP(),
@@ -128,16 +128,16 @@ func (s *Server) DriverCreateBucket(ctx context.Context, req *cosi.DriverCreateB
 		log.InfoContext(ctx, "bucket created")
 
 		return &cosi.DriverCreateBucketResponse{
-			BucketId:   bucket.Cluster + "/" + bucket.Label,
-			BucketInfo: bucketInfo(bucket.Cluster),
+			BucketId:   bucket.Region + "/" + bucket.Label,
+			BucketInfo: bucketInfo(bucket.Region),
 		}, tracing.Error(span, codes.OK, nil, "bucket created")
 	}
 
 	log.DebugContext(ctx, "bucket found, checking bucket access",
-		KeyBucketCreationTimestamp, bucket.Cluster,
+		KeyBucketCreationTimestamp, bucket.Region,
 	)
 
-	access, err := s.client.GetObjectStorageBucketAccess(ctx, cluster, label)
+	access, err := s.client.GetObjectStorageBucketAccess(ctx, region, label)
 	if err != nil {
 		log.ErrorContext(ctx, "failed to check bucket access", "error", err)
 		return nil, tracing.Error(span, codes.Internal, fmt.Errorf("failed to check bucket access: %w", err))
@@ -155,8 +155,8 @@ func (s *Server) DriverCreateBucket(ctx context.Context, req *cosi.DriverCreateB
 	log.InfoContext(ctx, "bucket exists")
 
 	return &cosi.DriverCreateBucketResponse{
-		BucketId:   bucket.Cluster + "/" + bucket.Label,
-		BucketInfo: bucketInfo(bucket.Cluster),
+		BucketId:   bucket.Region + "/" + bucket.Label,
+		BucketInfo: bucketInfo(bucket.Region),
 	}, tracing.Error(span, codes.OK, nil, "bucket exists")
 }
 
@@ -168,23 +168,23 @@ func (s *Server) DriverDeleteBucket(ctx context.Context, req *cosi.DriverDeleteB
 	ctx, span := s.init(ctx, "DriverDeleteBucket")
 	defer span.End()
 
-	cluster, label := parseBucketID(req.GetBucketId())
+	region, label := parseBucketID(req.GetBucketId())
 
 	log := s.logAttr(
 		slog.String(KeyBucketID, req.GetBucketId()),
-		slog.String(KeyBucketCluster, cluster),
+		slog.String(KeyBucketRegion, region),
 		slog.String(KeyBucketLabel, label),
 	).WithGroup("DriverDeleteBucket")
 
 	span.SetAttributes(
 		attribute.String(KeyBucketID, req.GetBucketId()),
-		attribute.String(KeyBucketCluster, cluster),
+		attribute.String(KeyBucketRegion, region),
 		attribute.String(KeyBucketLabel, label),
 	)
 
 	log.InfoContext(ctx, "bucket deletion initiated")
 
-	err := s.client.DeleteObjectStorageBucket(ctx, cluster, label)
+	err := s.client.DeleteObjectStorageBucket(ctx, region, label)
 	if err == nil || errors.Is(err, ErrNotFound) {
 		log.InfoContext(ctx, "bucket deleted")
 		return &cosi.DriverDeleteBucketResponse{}, tracing.Error(span, codes.OK, err, "bucket deleted")
@@ -205,7 +205,7 @@ func (s *Server) DriverGrantBucketAccess(ctx context.Context, req *cosi.DriverGr
 	ctx, span := s.init(ctx, "DriverGrantBucketAccess")
 	defer span.End()
 
-	cluster, label := parseBucketID(req.GetBucketId())
+	region, label := parseBucketID(req.GetBucketId())
 	name := req.GetName()
 	auth := req.GetAuthenticationType()
 	perms := ParamPermissionsValue(req.GetParameters()[ParamPermissions])
@@ -216,7 +216,7 @@ func (s *Server) DriverGrantBucketAccess(ctx context.Context, req *cosi.DriverGr
 
 	log := s.logAttr(
 		slog.String(KeyBucketID, req.GetBucketId()),
-		slog.String(KeyBucketCluster, cluster),
+		slog.String(KeyBucketRegion, region),
 		slog.String(KeyBucketLabel, label),
 		slog.String(KeyBucketAccessName, name),
 		slog.Any(KeyBucketAccessAuth, auth),
@@ -225,7 +225,7 @@ func (s *Server) DriverGrantBucketAccess(ctx context.Context, req *cosi.DriverGr
 
 	span.SetAttributes(
 		attribute.String(KeyBucketID, req.GetBucketId()),
-		attribute.String(KeyBucketCluster, cluster),
+		attribute.String(KeyBucketRegion, region),
 		attribute.String(KeyBucketLabel, label),
 		attribute.String(KeyBucketAccessName, name),
 		attribute.String(KeyBucketAccessAuth, auth.String()),
@@ -246,7 +246,7 @@ func (s *Server) DriverGrantBucketAccess(ctx context.Context, req *cosi.DriverGr
 		Label: name,
 		BucketAccess: &[]linodego.ObjectStorageKeyBucketAccess{
 			{
-				Cluster:     cluster,
+				Region:      region,
 				BucketName:  label,
 				Permissions: string(perms),
 			},
@@ -265,7 +265,7 @@ func (s *Server) DriverGrantBucketAccess(ctx context.Context, req *cosi.DriverGr
 
 	return &cosi.DriverGrantBucketAccessResponse{
 		AccountId:   fmt.Sprintf("%d", key.ID),
-		Credentials: credentials(cluster, label, key.AccessKey, key.SecretKey),
+		Credentials: credentials(region, label, key.AccessKey, key.SecretKey),
 	}, tracing.Error(span, codes.OK, nil)
 }
 
@@ -276,13 +276,13 @@ func (s *Server) DriverRevokeBucketAccess(ctx context.Context, req *cosi.DriverR
 	ctx, span := s.init(ctx, "DriverRevokeBucketAccess")
 	defer span.End()
 
-	cluster, label := parseBucketID(req.GetBucketId())
+	region, label := parseBucketID(req.GetBucketId())
 	id, err := strconv.Atoi(req.GetAccountId())
 
 	log := s.logAttr(
 		slog.String(KeyBucketID, req.GetBucketId()),
 		slog.String(KeyBucketAccessIDRaw, req.GetBucketId()),
-		slog.String(KeyBucketCluster, cluster),
+		slog.String(KeyBucketRegion, region),
 		slog.String(KeyBucketLabel, label),
 		slog.Int(KeyBucketAccessID, id),
 	).WithGroup("DriverRevokeBucketAccess")
@@ -290,7 +290,7 @@ func (s *Server) DriverRevokeBucketAccess(ctx context.Context, req *cosi.DriverR
 	span.SetAttributes(
 		attribute.String(KeyBucketID, req.GetBucketId()),
 		attribute.String(KeyBucketAccessIDRaw, req.GetBucketId()),
-		attribute.String(KeyBucketCluster, cluster),
+		attribute.String(KeyBucketRegion, region),
 		attribute.String(KeyBucketLabel, label),
 		attribute.Int(KeyBucketAccessID, id),
 	)

@@ -21,7 +21,7 @@ import (
 	cosi "sigs.k8s.io/container-object-storage-interface-spec"
 )
 
-func parseBucketID(id string) (cluster string, label string) {
+func parseBucketID(id string) (region string, label string) {
 	chunks := 2
 
 	s := strings.SplitN(id, "/", chunks)
@@ -29,22 +29,22 @@ func parseBucketID(id string) (cluster string, label string) {
 	return s[0], s[1]
 }
 
-func bucketInfo(cluster string) *cosi.Protocol {
+func bucketInfo(region string) *cosi.Protocol {
 	return &cosi.Protocol{
 		Type: &cosi.Protocol_S3{
 			S3: &cosi.S3{
-				Region:           cluster,
+				Region:           region,
 				SignatureVersion: cosi.S3SignatureVersion_S3V4,
 			},
 		},
 	}
 }
 
-func credentials(cluster, label, accessKey, secretKey string) map[string]*cosi.CredentialDetails {
+func credentials(region, label, accessKey, secretKey string) map[string]*cosi.CredentialDetails {
 	return map[string]*cosi.CredentialDetails{
 		S3: {
 			Secrets: map[string]string{
-				S3Region:                cluster,
+				S3Region:                region,
 				S3Endpoint:              fmt.Sprintf("%s.linodeobjects.com", label),
 				S3SecretAccessKeyID:     accessKey,
 				S3SecretAccessSecretKey: secretKey,
