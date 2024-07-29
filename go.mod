@@ -7,7 +7,7 @@ toolchain go1.22.3
 require (
 	github.com/go-resty/resty/v2 v2.13.1
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.1.0
-	github.com/linode/linodego v1.37.0
+	github.com/linode/linodego v1.38.0
 	go.opentelemetry.io/contrib/exporters/autoexport v0.53.0
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.53.0
 	go.opentelemetry.io/otel v1.28.0
