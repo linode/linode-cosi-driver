@@ -16,7 +16,7 @@ require (
 	go.opentelemetry.io/otel/sdk/metric v1.28.0
 	go.opentelemetry.io/otel/trace v1.28.0
 	go.uber.org/automaxprocs v1.5.3
-	google.golang.org/grpc v1.65.0
+	google.golang.org/grpc v1.66.2
 	sigs.k8s.io/container-object-storage-interface-spec v0.1.0
 )
 
