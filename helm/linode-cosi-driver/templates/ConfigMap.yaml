@@ -15,8 +15,8 @@ data:
   {{- $key | nindent 2 }}: {{ quote $val }}
   {{- end }}
   {{- else }}
-  OTEL_TRACES_EXPORTER: none
-  OTEL_METRICS_EXPORTER: prometheus
-  OTEL_EXPORTER_PROMETHEUS_HOST: 0.0.0.0
-  OTEL_EXPORTER_PROMETHEUS_PORT: 9464
+  OTEL_TRACES_EXPORTER: "none"
+  OTEL_METRICS_EXPORTER: "prometheus"
+  OTEL_EXPORTER_PROMETHEUS_HOST: "0.0.0.0"
+  OTEL_EXPORTER_PROMETHEUS_PORT: "9464"
   {{- end }}
