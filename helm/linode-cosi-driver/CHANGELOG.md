@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/linode/linode-cosi-driver/compare/linode-cosi-driver-v0.2.0...linode-cosi-driver-v0.2.1) (2024-10-15)
+
+
+### Bug Fixes
+
+* invalid templating in chart ([#96](https://github.com/linode/linode-cosi-driver/issues/96)) ([ede0143](https://github.com/linode/linode-cosi-driver/commit/ede0143ddb6e1c0f9d51d0f173bc42db0df7bbfa))
+
 ## [0.2.0](https://github.com/linode/linode-cosi-driver/compare/linode-cosi-driver-v0.1.0...linode-cosi-driver-v0.2.0) (2024-06-25)
 
 

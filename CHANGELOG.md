@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.4.1](https://github.com/linode/linode-cosi-driver/compare/v0.4.0...v0.4.1) (2024-10-15)
+
+
+### Bug Fixes
+
+* **deps:** bump anchore/scan-action from 4 to 5 ([#101](https://github.com/linode/linode-cosi-driver/issues/101)) ([8d29bc1](https://github.com/linode/linode-cosi-driver/commit/8d29bc1885335bf420905a0de612f4ffdedb339e))
+* **deps:** bump github.com/go-resty/resty/v2 from 2.13.1 to 2.15.1 ([#93](https://github.com/linode/linode-cosi-driver/issues/93)) ([f5690fe](https://github.com/linode/linode-cosi-driver/commit/f5690fea66a7708eda11181a28ef16a181be9ef2))
+* **deps:** bump github.com/go-resty/resty/v2 from 2.15.1 to 2.15.3 ([#98](https://github.com/linode/linode-cosi-driver/issues/98)) ([f3bf09c](https://github.com/linode/linode-cosi-driver/commit/f3bf09c9da6d8274d6a4ed27dc020963ae4d8bdf))
+* **deps:** bump github.com/linode/linodego from 1.37.0 to 1.40.0 ([#88](https://github.com/linode/linode-cosi-driver/issues/88)) ([2acdf02](https://github.com/linode/linode-cosi-driver/commit/2acdf02f7e215018c99e49a13dcb1ece03fc8c5d))
+* **deps:** bump github.com/linode/linodego from 1.40.0 to 1.41.0 ([#97](https://github.com/linode/linode-cosi-driver/issues/97)) ([4b36361](https://github.com/linode/linode-cosi-driver/commit/4b36361a69ee73e112184864e8a5af6ec8615122))
+* **deps:** bump go.uber.org/automaxprocs from 1.5.3 to 1.6.0 ([#99](https://github.com/linode/linode-cosi-driver/issues/99)) ([c0f3bc3](https://github.com/linode/linode-cosi-driver/commit/c0f3bc3f819fd9d2bb4d26513557733ac6f1731c))
+* **deps:** bump google.golang.org/grpc from 1.65.0 to 1.66.2 ([#90](https://github.com/linode/linode-cosi-driver/issues/90)) ([cd13520](https://github.com/linode/linode-cosi-driver/commit/cd13520318bb7ff9bbfd307f3c14b1fcf9a8c382))
+* **deps:** bump google.golang.org/grpc from 1.66.2 to 1.67.1 ([#100](https://github.com/linode/linode-cosi-driver/issues/100)) ([d65049f](https://github.com/linode/linode-cosi-driver/commit/d65049f1179cb143e3503f1ac0942788224cb849))
+* **deps:** bump the otel-dependencies group across 1 directory with 7 updates ([#92](https://github.com/linode/linode-cosi-driver/issues/92)) ([f1363d6](https://github.com/linode/linode-cosi-driver/commit/f1363d6c284d5295bf1e14b5e5403ec68798cf36))
+* invalid templating in chart ([#96](https://github.com/linode/linode-cosi-driver/issues/96)) ([ede0143](https://github.com/linode/linode-cosi-driver/commit/ede0143ddb6e1c0f9d51d0f173bc42db0df7bbfa))
+* multiple fixes around codebase ([#102](https://github.com/linode/linode-cosi-driver/issues/102)) ([cec0962](https://github.com/linode/linode-cosi-driver/commit/cec09627bc3d09d155a594a7e14170092cb436af))
+
 ## [0.4.0](https://github.com/linode/linode-cosi-driver/compare/v0.3.0...v0.4.0) (2024-07-23)
 
 
