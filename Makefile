@@ -30,6 +30,11 @@ endif
 # tools. (i.e. podman)
 CONTAINER_TOOL ?= docker
 
+# flags for
+GOFLAGS += -trimpath
+LDFLAGS += -X ${MODULE_NAME}/pkg/version.Version=${VERSION} -s -w -extldflags "-static"
+GO_SETTINGS += CGO_ENABLED=0
+
 # Setting SHELL to bash allows bash commands to be executed by recipes.
 # Options are set to exit when a recipe line exits non-zero or a piped command fails.
 SHELL = /usr/bin/env bash -o pipefail
@@ -65,6 +70,26 @@ help: ## Display this help.
 generate: # Generate code.
 	go generate ./...
 
+.PHONY: build
+build: generate # Build the binary.
+	${GO_SETTINGS} go build \
+		${GOFLAGS} \
+		-ldflags="${LDFLAGS}" \
+		-o ./bin/linode-cosi-driver \
+		./cmd/linode-cosi-driver
+
+.PHONY: generate-docs
+generate-docs: helm-docs ## Run kube-linter on Kubernetes manifests.
+	$(HELM_DOCS) --badge-style=flat
+
+.PHONY: generate-schema
+generate-schema: helm-values-schema-json ## Run generate schema for Helm Chart values.
+	$(HELM_VALUES_SCHEMA_JSON) \
+		-draft=7 \
+		-indent=2 \
+		-input=helm/linode-cosi-driver/values.yaml \
+		-output=helm/linode-cosi-driver/values.schema.json \
+
 .PHONY: test
 test: manifests generate ## Run tests.
 	go test
@@ -85,9 +110,8 @@ lint-fix: golangci-lint ## Run golangci-lint linter and perform fixes.
 	$(GOLANGCI_LINT) run --fix
 
 .PHONY: lint-manifests
-lint-manifests: kustomize kube-linter ## Run kube-linter on Kubernetes manifests.
-	$(KUSTOMIZE) build config/default |\
-		$(KUBE_LINTER) lint --config=./config/.kube-linter.yaml -
+lint-manifests: kube-linter ## Run kube-linter on Kubernetes manifests.
+	$(KUBE_LINTER) lint --config=helm/.kube-linter.yaml ./helm/**
 
 .PHONY: hadolint
 hadolint: ## Run hadolint on Dockerfile
@@ -114,12 +138,6 @@ docker-build: ## Build docker image with the manager.
 docker-push: ## Push docker image with the manager.
 	$(CONTAINER_TOOL) push ${IMG}
 
-.PHONY: build-installer
-build-installer: manifests generate kustomize ## Generate a consolidated YAML with CRDs and deployment.
-	mkdir -p dist
-	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
-	$(KUSTOMIZE) build config/default > dist/install.yaml
-
 ##@ Deployment
 
 ifndef ignore-not-found
@@ -135,12 +153,12 @@ cluster-reset: kind ctlptl
 	$(CTLPTL) delete -f hack/kind.yaml
 
 .PHONY: deploy
-deploy: kustomize ## Deploy driver to the K8s cluster specified in ~/.kube/config.
-	$(KUSTOMIZE) build config/default | $(KUBECTL) apply -f -
+deploy: helm ## Deploy driver to the K8s cluster specified in ~/.kube/config.
+	echo "placeholder"
 
 .PHONY: undeploy
-undeploy: kustomize ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
-	$(KUSTOMIZE) build config/default | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
+undeploy: helm ## Undeploy driver from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
+	echo "placeholder"
 
 ##@ Dependencies
 
@@ -153,16 +171,22 @@ $(LOCALBIN):
 KUBECTL ?= kubectl
 CHAINSAW ?= $(LOCALBIN)/chainsaw
 CTLPTL ?= $(LOCALBIN)/ctlptl
-KIND ?= $(LOCALBIN)/kind
-KUSTOMIZE ?= $(LOCALBIN)/kustomize
 GOLANGCI_LINT ?= $(LOCALBIN)/golangci-lint
+HELM ?= $(LOCALBIN)/helm
+HELM_DOCS ?= $(LOCALBIN)/helm-docs
+HELM_VALUES_SCHEMA_JSON ?= $(LOCALBIN)/helm-values-schema-json
+KIND ?= $(LOCALBIN)/kind
+KUBE_LINTER ?= $(LOCALBIN)/kube-linter
 
 ## Tool Versions
 CHAINSAW_VERSION ?= $(shell grep 'github.com/kyverno/chainsaw ' ./go.mod | cut -d ' ' -f 2)
 CTLPTL_VERSION ?= $(shell grep 'github.com/tilt-dev/ctlptl ' ./go.mod | cut -d ' ' -f 2)
 GOLANGCI_LINT_VERSION ?= $(shell grep 'github.com/golangci/golangci-lint ' ./go.mod | cut -d ' ' -f 2)
+HELM_VERSION ?= $(shell grep 'helm.sh/helm/v3 ' ./go.mod | cut -d ' ' -f 2)
+HELM_DOCS_VERSION ?= $(shell grep 'github.com/norwoodj/helm-docs ' ./go.mod | cut -d ' ' -f 2)
+HELM_VALUES_SCHEMA_JSON_VERSION ?= $(shell grep 'github.com/losisin/helm-values-schema-json ' ./go.mod | cut -d ' ' -f 2)
 KIND_VERSION ?= $(shell grep 'sigs.k8s.io/kind ' ./go.mod | cut -d ' ' -f 2)
-KUSTOMIZE_VERSION ?= $(shell grep 'sigs.k8s.io/kustomize/kustomize/v5 ' ./go.mod | cut -d ' ' -f 2)
+KUBE_LINTER_VERSION ?= $(shell grep 'golang.stackrox.io/kube-linter ' ./go.mod | cut -d ' ' -f 2)
 
 .PHONY: chainsaw
 chainsaw: $(CHAINSAW)$(CHAINSAW_VERSION) ## Download chainsaw locally if necessary.
@@ -179,15 +203,30 @@ golangci-lint: $(GOLANGCI_LINT)$(GOLANGCI_LINT_VERSION) ## Download golangci-lin
 $(GOLANGCI_LINT)$(GOLANGCI_LINT_VERSION): $(LOCALBIN)
 	$(call go-install-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/cmd/golangci-lint,$(GOLANGCI_LINT_VERSION))
 
+.PHONY: helm-docs
+helm-docs: $(HELM_DOCS)$(HELM_DOCS_VERSION) ## Download helm-docs locally if necessary.
+$(HELM_DOCS)$(HELM_DOCS_VERSION): $(LOCALBIN)
+	$(call go-install-tool,$(HELM_DOCS),github.com/norwoodj/helm-docs/cmd/helm-docs,$(HELM_DOCS_VERSION))
+
+.PHONY: helm-values-schema-json
+helm-values-schema-json: $(HELM_VALUES_SCHEMA_JSON)$(HELM_VALUES_SCHEMA_JSON_VERSION) ## Download helm-values-schema-json locally if necessary.
+$(HELM_VALUES_SCHEMA_JSON)$(HELM_VALUES_SCHEMA_JSON_VERSION): $(LOCALBIN)
+	$(call go-install-tool,$(HELM_VALUES_SCHEMA_JSON),github.com/losisin/helm-values-schema-json,$(HELM_VALUES_SCHEMA_JSON_VERSION))
+
 .PHONY: kind
 kind: $(KIND)$(KIND_VERSION) ## Download kind locally if necessary.
 $(KIND)$(KIND_VERSION): $(LOCALBIN)
 	$(call go-install-tool,$(KIND),sigs.k8s.io/kind,$(KIND_VERSION))
 
-.PHONY: kustomize
-kustomize: $(KUSTOMIZE)$(KUSTOMIZE_VERSION) ## Download kustomize locally if necessary.
-$(KUSTOMIZE)$(KUSTOMIZE_VERSION): $(LOCALBIN)
-	$(call go-install-tool,$(KUSTOMIZE),sigs.k8s.io/kustomize/kustomize/v5,$(KUSTOMIZE_VERSION))
+.PHONY: kube-linter
+kube-linter: $(KUBE_LINTER)$(KUBE_LINTER_VERSION) ## Download kube-linter locally if necessary.
+$(KUBE_LINTER)$(KUBE_LINTER_VERSION): $(LOCALBIN)
+	$(call go-install-tool,$(KUBE_LINTER),golang.stackrox.io/kube-linter/cmd/kube-linter,$(KUBE_LINTER_VERSION))
+
+.PHONY: helm
+helm: $(HELM)$(HELM_VERSION) ## Download helm locally if necessary.
+$(HELM)$(HELM_VERSION): $(LOCALBIN)
+	$(call go-install-tool,$(HELM),helm.sh/helm/v3/cmd/helm,$(HELM_VERSION))
 
 # go-install-tool will 'go install' any package with custom target and name of binary, if it doesn't exist
 # $1 - target path with name of binary
