@@ -47,6 +47,13 @@ all: generate
 clean:
 	-rm -r bin/
 
+## Location to install dependencies to
+LOCALBIN ?= $(shell pwd)/bin
+$(LOCALBIN):
+	mkdir -p $(LOCALBIN)
+
+export PATH := $(LOCALBIN):$(PATH)
+
 ##@ General
 
 # The help target prints out all targets with their descriptions organized
@@ -67,7 +74,7 @@ help: ## Display this help.
 ##@ Development
 
 .PHONY: generate
-generate: # Generate code.
+generate: gowrap # Generate code.
 	go generate ./...
 
 .PHONY: build
@@ -162,16 +169,12 @@ undeploy: helm ## Undeploy driver from the K8s cluster specified in ~/.kube/conf
 
 ##@ Dependencies
 
-## Location to install dependencies to
-LOCALBIN ?= $(shell pwd)/bin
-$(LOCALBIN):
-	mkdir -p $(LOCALBIN)
-
 ## Tool Binaries
 KUBECTL ?= kubectl
 CHAINSAW ?= $(LOCALBIN)/chainsaw
 CTLPTL ?= $(LOCALBIN)/ctlptl
 GOLANGCI_LINT ?= $(LOCALBIN)/golangci-lint
+GOWRAP ?= $(LOCALBIN)/gowrap
 HELM ?= $(LOCALBIN)/helm
 HELM_DOCS ?= $(LOCALBIN)/helm-docs
 HELM_VALUES_SCHEMA_JSON ?= $(LOCALBIN)/helm-values-schema-json
@@ -182,6 +185,7 @@ KUBE_LINTER ?= $(LOCALBIN)/kube-linter
 CHAINSAW_VERSION ?= $(shell grep 'github.com/kyverno/chainsaw ' ./go.mod | cut -d ' ' -f 2)
 CTLPTL_VERSION ?= $(shell grep 'github.com/tilt-dev/ctlptl ' ./go.mod | cut -d ' ' -f 2)
 GOLANGCI_LINT_VERSION ?= $(shell grep 'github.com/golangci/golangci-lint ' ./go.mod | cut -d ' ' -f 2)
+GOWRAP_VERSION ?= $(shell grep 'github.com/hexdigest/gowrap ' ./go.mod | cut -d ' ' -f 2)
 HELM_VERSION ?= $(shell grep 'helm.sh/helm/v3 ' ./go.mod | cut -d ' ' -f 2)
 HELM_DOCS_VERSION ?= $(shell grep 'github.com/norwoodj/helm-docs ' ./go.mod | cut -d ' ' -f 2)
 HELM_VALUES_SCHEMA_JSON_VERSION ?= $(shell grep 'github.com/losisin/helm-values-schema-json ' ./go.mod | cut -d ' ' -f 2)
@@ -203,6 +207,16 @@ golangci-lint: $(GOLANGCI_LINT)$(GOLANGCI_LINT_VERSION) ## Download golangci-lin
 $(GOLANGCI_LINT)$(GOLANGCI_LINT_VERSION): $(LOCALBIN)
 	$(call go-install-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/cmd/golangci-lint,$(GOLANGCI_LINT_VERSION))
 
+.PHONY: gowrap
+gowrap: $(GOWRAP)$(GOWRAP_VERSION) ## Download gowrap locally if necessary.
+$(GOWRAP)$(GOWRAP_VERSION): $(LOCALBIN)
+	$(call go-install-tool,$(GOWRAP),github.com/hexdigest/gowrap/cmd/gowrap,$(GOWRAP_VERSION))
+
+.PHONY: helm
+helm: $(HELM)$(HELM_VERSION) ## Download helm locally if necessary.
+$(HELM)$(HELM_VERSION): $(LOCALBIN)
+	$(call go-install-tool,$(HELM),helm.sh/helm/v3/cmd/helm,$(HELM_VERSION))
+
 .PHONY: helm-docs
 helm-docs: $(HELM_DOCS)$(HELM_DOCS_VERSION) ## Download helm-docs locally if necessary.
 $(HELM_DOCS)$(HELM_DOCS_VERSION): $(LOCALBIN)
@@ -222,11 +236,6 @@ $(KIND)$(KIND_VERSION): $(LOCALBIN)
 kube-linter: $(KUBE_LINTER)$(KUBE_LINTER_VERSION) ## Download kube-linter locally if necessary.
 $(KUBE_LINTER)$(KUBE_LINTER_VERSION): $(LOCALBIN)
 	$(call go-install-tool,$(KUBE_LINTER),golang.stackrox.io/kube-linter/cmd/kube-linter,$(KUBE_LINTER_VERSION))
-
-.PHONY: helm
-helm: $(HELM)$(HELM_VERSION) ## Download helm locally if necessary.
-$(HELM)$(HELM_VERSION): $(LOCALBIN)
-	$(call go-install-tool,$(HELM),helm.sh/helm/v3/cmd/helm,$(HELM_VERSION))
 
 # go-install-tool will 'go install' any package with custom target and name of binary, if it doesn't exist
 # $1 - target path with name of binary
