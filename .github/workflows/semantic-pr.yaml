@@ -1,4 +1,5 @@
 name: semantic-pr
+
 on:
   pull_request_target:
     types:
@@ -6,8 +7,10 @@ on:
       - reopened
       - edited
       - synchronize
+
 permissions:
   pull-requests: read
+
 jobs:
   pr-title:
     runs-on: ubuntu-latest

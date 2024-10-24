@@ -89,8 +89,8 @@ build: generate # Build the binary.
 generate-docs: helm-docs ## Run kube-linter on Kubernetes manifests.
 	$(HELM_DOCS) --badge-style=flat
 
-.PHONY: generate-schema
-generate-schema: helm-values-schema-json ## Run generate schema for Helm Chart values.
+.PHONY: generate-schemas
+generate-schemas: helm-values-schema-json ## Run generate schema for Helm Chart values.
 	$(HELM_VALUES_SCHEMA_JSON) \
 		-draft=7 \
 		-indent=2 \
