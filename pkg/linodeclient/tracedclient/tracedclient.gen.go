@@ -9,22 +9,22 @@ package tracedclient
 import (
 	"context"
 
-	"github.com/linode/linode-cosi-driver/pkg/linodeclient"
+	_sourceLinodeclient "github.com/linode/linode-cosi-driver/pkg/linodeclient"
 	"github.com/linode/linodego"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 )
 
-// ClientWithTracing implements linodeclient.Client interface instrumented with opentracing spans
+// ClientWithTracing implements _sourceLinodeclient.Client interface instrumented with opentracing spans
 type ClientWithTracing struct {
-	linodeclient.Client
+	_sourceLinodeclient.Client
 	_instance      string
 	_spanDecorator func(span trace.Span, params, results map[string]interface{})
 }
 
 // NewClientWithTracing returns ClientWithTracing
-func NewClientWithTracing(base linodeclient.Client, instance string, spanDecorator ...func(span trace.Span, params, results map[string]interface{})) ClientWithTracing {
+func NewClientWithTracing(base _sourceLinodeclient.Client, instance string, spanDecorator ...func(span trace.Span, params, results map[string]interface{})) ClientWithTracing {
 	d := ClientWithTracing{
 		Client:    base,
 		_instance: instance,
@@ -37,9 +37,9 @@ func NewClientWithTracing(base linodeclient.Client, instance string, spanDecorat
 	return d
 }
 
-// CreateObjectStorageBucket implements linodeclient.Client
+// CreateObjectStorageBucket implements _sourceLinodeclient.Client
 func (_d ClientWithTracing) CreateObjectStorageBucket(ctx context.Context, o1 linodego.ObjectStorageBucketCreateOptions) (op1 *linodego.ObjectStorageBucket, err error) {
-	ctx, _span := otel.Tracer(_d._instance).Start(ctx, "linodeclient.Client.CreateObjectStorageBucket")
+	ctx, _span := otel.Tracer(_d._instance).Start(ctx, "_sourceLinodeclient.Client.CreateObjectStorageBucket")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -60,9 +60,9 @@ func (_d ClientWithTracing) CreateObjectStorageBucket(ctx context.Context, o1 li
 	return _d.Client.CreateObjectStorageBucket(ctx, o1)
 }
 
-// CreateObjectStorageKey implements linodeclient.Client
+// CreateObjectStorageKey implements _sourceLinodeclient.Client
 func (_d ClientWithTracing) CreateObjectStorageKey(ctx context.Context, o1 linodego.ObjectStorageKeyCreateOptions) (op1 *linodego.ObjectStorageKey, err error) {
-	ctx, _span := otel.Tracer(_d._instance).Start(ctx, "linodeclient.Client.CreateObjectStorageKey")
+	ctx, _span := otel.Tracer(_d._instance).Start(ctx, "_sourceLinodeclient.Client.CreateObjectStorageKey")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -83,9 +83,9 @@ func (_d ClientWithTracing) CreateObjectStorageKey(ctx context.Context, o1 linod
 	return _d.Client.CreateObjectStorageKey(ctx, o1)
 }
 
-// DeleteObjectStorageBucket implements linodeclient.Client
+// DeleteObjectStorageBucket implements _sourceLinodeclient.Client
 func (_d ClientWithTracing) DeleteObjectStorageBucket(ctx context.Context, s1 string, s2 string) (err error) {
-	ctx, _span := otel.Tracer(_d._instance).Start(ctx, "linodeclient.Client.DeleteObjectStorageBucket")
+	ctx, _span := otel.Tracer(_d._instance).Start(ctx, "_sourceLinodeclient.Client.DeleteObjectStorageBucket")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -106,9 +106,9 @@ func (_d ClientWithTracing) DeleteObjectStorageBucket(ctx context.Context, s1 st
 	return _d.Client.DeleteObjectStorageBucket(ctx, s1, s2)
 }
 
-// DeleteObjectStorageKey implements linodeclient.Client
+// DeleteObjectStorageKey implements _sourceLinodeclient.Client
 func (_d ClientWithTracing) DeleteObjectStorageKey(ctx context.Context, i1 int) (err error) {
-	ctx, _span := otel.Tracer(_d._instance).Start(ctx, "linodeclient.Client.DeleteObjectStorageKey")
+	ctx, _span := otel.Tracer(_d._instance).Start(ctx, "_sourceLinodeclient.Client.DeleteObjectStorageKey")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -128,9 +128,9 @@ func (_d ClientWithTracing) DeleteObjectStorageKey(ctx context.Context, i1 int) 
 	return _d.Client.DeleteObjectStorageKey(ctx, i1)
 }
 
-// GetObjectStorageBucket implements linodeclient.Client
+// GetObjectStorageBucket implements _sourceLinodeclient.Client
 func (_d ClientWithTracing) GetObjectStorageBucket(ctx context.Context, s1 string, s2 string) (op1 *linodego.ObjectStorageBucket, err error) {
-	ctx, _span := otel.Tracer(_d._instance).Start(ctx, "linodeclient.Client.GetObjectStorageBucket")
+	ctx, _span := otel.Tracer(_d._instance).Start(ctx, "_sourceLinodeclient.Client.GetObjectStorageBucket")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -152,9 +152,9 @@ func (_d ClientWithTracing) GetObjectStorageBucket(ctx context.Context, s1 strin
 	return _d.Client.GetObjectStorageBucket(ctx, s1, s2)
 }
 
-// GetObjectStorageBucketAccess implements linodeclient.Client
+// GetObjectStorageBucketAccess implements _sourceLinodeclient.Client
 func (_d ClientWithTracing) GetObjectStorageBucketAccess(ctx context.Context, s1 string, s2 string) (op1 *linodego.ObjectStorageBucketAccess, err error) {
-	ctx, _span := otel.Tracer(_d._instance).Start(ctx, "linodeclient.Client.GetObjectStorageBucketAccess")
+	ctx, _span := otel.Tracer(_d._instance).Start(ctx, "_sourceLinodeclient.Client.GetObjectStorageBucketAccess")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -176,9 +176,9 @@ func (_d ClientWithTracing) GetObjectStorageBucketAccess(ctx context.Context, s1
 	return _d.Client.GetObjectStorageBucketAccess(ctx, s1, s2)
 }
 
-// GetObjectStorageKey implements linodeclient.Client
+// GetObjectStorageKey implements _sourceLinodeclient.Client
 func (_d ClientWithTracing) GetObjectStorageKey(ctx context.Context, i1 int) (op1 *linodego.ObjectStorageKey, err error) {
-	ctx, _span := otel.Tracer(_d._instance).Start(ctx, "linodeclient.Client.GetObjectStorageKey")
+	ctx, _span := otel.Tracer(_d._instance).Start(ctx, "_sourceLinodeclient.Client.GetObjectStorageKey")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -199,9 +199,9 @@ func (_d ClientWithTracing) GetObjectStorageKey(ctx context.Context, i1 int) (op
 	return _d.Client.GetObjectStorageKey(ctx, i1)
 }
 
-// ListObjectStorageKeys implements linodeclient.Client
+// ListObjectStorageKeys implements _sourceLinodeclient.Client
 func (_d ClientWithTracing) ListObjectStorageKeys(ctx context.Context, lp1 *linodego.ListOptions) (oa1 []linodego.ObjectStorageKey, err error) {
-	ctx, _span := otel.Tracer(_d._instance).Start(ctx, "linodeclient.Client.ListObjectStorageKeys")
+	ctx, _span := otel.Tracer(_d._instance).Start(ctx, "_sourceLinodeclient.Client.ListObjectStorageKeys")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -222,9 +222,9 @@ func (_d ClientWithTracing) ListObjectStorageKeys(ctx context.Context, lp1 *lino
 	return _d.Client.ListObjectStorageKeys(ctx, lp1)
 }
 
-// UpdateObjectStorageBucketAccess implements linodeclient.Client
+// UpdateObjectStorageBucketAccess implements _sourceLinodeclient.Client
 func (_d ClientWithTracing) UpdateObjectStorageBucketAccess(ctx context.Context, s1 string, s2 string, o1 linodego.ObjectStorageBucketUpdateAccessOptions) (err error) {
-	ctx, _span := otel.Tracer(_d._instance).Start(ctx, "linodeclient.Client.UpdateObjectStorageBucketAccess")
+	ctx, _span := otel.Tracer(_d._instance).Start(ctx, "_sourceLinodeclient.Client.UpdateObjectStorageBucketAccess")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{

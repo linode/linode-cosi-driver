@@ -36,8 +36,6 @@ linters:
     - errcheck
     # Find code that will cause problems with the error wrapping scheme.
     - errorlint
-    # Find exporting pointers for loop variables.
-    - exportloopref
     # Inspects source code for security problems.
     - gosec
     # Check that compiler directives are valid.

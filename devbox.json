@@ -1,9 +1,0 @@
-{
-  "packages": [
-    "go_1_22@latest",
-    "ctlptl@0.8.29",
-    "kind@0.23.0",
-    "kubernetes-helm@3.15.1",
-    "kubectl@1.30.1"
-  ]
-}

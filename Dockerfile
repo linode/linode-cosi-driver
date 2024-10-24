@@ -49,7 +49,7 @@ RUN make build VERSION=${VERSION}
 #########################################################################################
 
 # Second stage: building final environment for running the executable.
-FROM gcr.io/distroless/static:latest AS runtime
+FROM gcr.io/distroless/static:nonroot AS runtime
 
 # Copy the executable.
 COPY --from=builder --chown=65532:65532 /work/bin/linode-cosi-driver /usr/bin/linode-cosi-driver
@@ -78,7 +78,7 @@ LABEL org.opencontainers.image.version="${VERSION}"
 LABEL org.opencontainers.image.license="Apache-2.0"
 LABEL org.opencontainers.image.source="https://github.com/linode/linode-cosi-driver"
 LABEL org.opencontainers.image.documentation="https://github.com/linode/linode-cosi-driver"
-LABEL org.opencontainers.image.base.name="gcr.io/distroless/static:latest"
+LABEL org.opencontainers.image.base.name="gcr.io/distroless/static:nonroot"
 
 # Set the entrypoint.
 ENTRYPOINT [ "/usr/bin/linode-cosi-driver" ]

@@ -13,9 +13,9 @@
       - [Installing golangci-lint via Homebrew (macOS)](#installing-golangci-lint-via-homebrew-macos)
       - [Installing golangci-lint via `go install`](#installing-golangci-lint-via-go-install)
     - [Testing](#testing)
-      - [Writing Tests](#writing-tests)
-        - [Unit tests](#unit-tests)
-        - [End-to-end tests](#end-to-end-tests)
+      - [Unit tests](#unit-tests)
+      - [Integration tests](#integration-tests)
+      - [End-to-end tests](#end-to-end-tests)
 
 **First:** if you're unsure or afraid of _anything_, just ask
 or submit the issue or pull request anyways. You won't be yelled at for
@@ -122,11 +122,9 @@ Remember, we encourage contributions to be well-formatted and follow the project
 
 ### Testing
 
-#### Writing Tests
-
 When adding new features or fixing bugs, it's essential to write tests to ensure the stability and correctness of the code changes. `linode-cosi-driver` uses both unit tests and integration tests.
 
-##### Unit tests
+#### Unit tests
 
 Unit tests focus on testing individual functions and components in isolation. To write a unit test, create a new file in the `*_test.go` format alongside the code you want to test. Use the Go testing framework to create test functions that cover different scenarios and edge cases.
 
@@ -147,6 +145,39 @@ func TestAdd(t *testing.T) {
 }
 ```
 
-##### End-to-end tests
+#### Integration tests
 
-Our end-to-end tests are located in a dedicated directory (`test/e2e`). These tests are written using Behavior-Driven Development (BDD) principles, employing the Ginkgo testing framework and Gomega assertion library.
+> [!IMPORTANT]
+> 
+> Before running the integration tests, ensure the following prerequisites are met:
+> - **Linode Account**: You need a valid Linode account with access to the Linode API.
+> - **Linode Token**: Set the `LINODE_TOKEN` environment variable with your Linode API token.
+> - **Environment Variables**: Additional environment variables, such as `LINODE_API_URL` and `LINODE_API_VERSION`, can be set as needed.
+
+To run the end-to-end tests, execute the following:
+
+```bash
+make test-integration
+```
+
+The tests cover various operations such as creating a bucket, granting and revoking bucket access, and deleting a bucket. These operations are performed multiple times to ensure idempotency. You can controll number of times the idempotent operations are run and `IDEMPOTENCY_ITERATIONS` (default is 2).
+
+#### End-to-end tests
+
+> [!IMPORTANT]
+> 
+> Before running the integration tests, ensure the following prerequisites are met:
+> - **Linode Account**: You need a valid Linode account with access to the Linode API.
+> - **Linode Token**: Set the `LINODE_TOKEN` environment variable with your Linode API token.
+
+To run the end-to-end tests, execute the following:
+
+```bash
+make test-e2e
+```
+
+To run specific tests only please use label selector via `TEST_SELECTOR` environment variable.
+
+```bash
+TEST_SELECTOR=name=examples make test-e2e
+```

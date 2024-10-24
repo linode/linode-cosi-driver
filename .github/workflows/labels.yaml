@@ -1,7 +1,4 @@
-# This workflow is used to declaratively sync labels.
-# It is supposed to be run on push to main.
-
-name: Sync labels
+name: labels
 
 on:
   push:

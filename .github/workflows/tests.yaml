@@ -1,0 +1,40 @@
+name: tests
+
+on:
+  pull_request:
+    branches: [ '*' ]
+  push:
+    branches:
+      - "main"
+
+jobs:
+  unit-integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: ./go.mod
+          cache: false
+      - run: |
+          export LINODE_TOKEN=${{ secrets.LINODE_TOKEN }}
+          make \
+            test-integration
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: ./go.mod
+          cache: false
+      - run: |
+          export LINODE_TOKEN=${{ secrets.LINODE_TOKEN }}
+          make \
+            IMG=localhost:5005/manager:e2e \
+            cluster \
+            docker-build docker-push \
+            deploy
+      - run: |
+          make test-e2e

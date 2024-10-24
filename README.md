@@ -8,14 +8,6 @@ The Linode COSI Driver is an implementation of the Kubernetes Container Object S
 
 - [Linode COSI Driver](#linode-cosi-driver)
   - [Getting Started](#getting-started)
-  - [Testing](#testing)
-    - [Integration tests](#integration-tests)
-      - [Prerequisites](#prerequisites)
-      - [Test Execution](#test-execution)
-      - [Configuration](#configuration)
-      - [Test Cases](#test-cases)
-        - [Happy Path Test](#happy-path-test)
-      - [Suite Structure](#suite-structure)
   - [License](#license)
   - [Support](#support)
   - [Contributing](#contributing)
@@ -86,63 +78,6 @@ Follow these steps to get started with Linode COSI Driver:
                   - key: BucketInfo
                     path: BucketInfo.json
     ```
-
-## Testing
-
-### Integration tests
-
-#### Prerequisites
-
-Before running the integration tests, ensure the following prerequisites are met:
-
-- **Linode Account**: You need a valid Linode account with access to the Linode API.
-- **Linode Token**: Set the `LINODE_TOKEN` environment variable with your Linode API token.
-- **Environment Variables**: Additional environment variables, such as `LINODE_API_URL` and `LINODE_API_VERSION`, can be set as needed.
-
-#### Test Execution
-
-##### Integration test
-
-To run the integration tests, execute the following:
-
-```bash
-make -C test integration-test
-```
-
-The tests cover various operations such as creating a bucket, granting and revoking bucket access, and deleting a bucket. These operations are performed multiple times to ensure idempotency.
-
-##### E2E test
-
-To run the integration tests, execute the following:
-
-```bash
-make -C test e2e-test
-```
-
-To run specific tests only please use label selector via `TEST_SELECTOR` environment variable.
-
-```bash
-TEST_SELECTOR=name=examples make -C test e2e-test
-```
-
-#### Configuration
-
-The test suite provides configurable parameters through environment variables:
-
-- `LINODE_TOKEN`: Linode API token.
-- `LINODE_API_URL`: Linode API URL.
-- `LINODE_API_VERSION`: Linode API version.
-- `IDEMPOTENCY_ITERATIONS`: Number of times to run idempotent operations (default is 2).
-
-#### Test Cases
-
-##### Happy Path Test
-
-The `TestHappyPath` function executes a series of idempotent operations on the Linode COSI driver, covering bucket creation, access granting and revoking, and bucket deletion. The test validates the driver's functionality under normal conditions.
-
-#### Suite Structure
-
-The test suite is organized into a `suite` struct, providing a clean separation of concerns for different test operations. The suite includes methods for creating, deleting, granting access to, and revoking access from a bucket. These methods are called in an idempotent loop to ensure the driver's robustness.
 
 ## License
 
