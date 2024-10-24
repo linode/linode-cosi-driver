@@ -8,7 +8,7 @@ on:
       - "main"
 
 jobs:
-  unit:
+  unit-integration:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -16,8 +16,11 @@ jobs:
         with:
           go-version-file: ./go.mod
           cache: false
-      - run: |
-          make test
+      - env:
+          LINODE_TOKEN: ${{ secrets.LINODE_TOKEN }}
+        run: |
+          make \
+            test-integration
 
   e2e:
     runs-on: ubuntu-latest
