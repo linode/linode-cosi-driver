@@ -21,6 +21,7 @@ require (
 // tools
 require (
 	github.com/golangci/golangci-lint v1.61.0
+	github.com/hexdigest/gowrap v1.4.0
 	github.com/kyverno/chainsaw v0.2.11
 	github.com/losisin/helm-values-schema-json v1.6.1
 	github.com/norwoodj/helm-docs v1.14.2
