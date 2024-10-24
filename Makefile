@@ -98,8 +98,16 @@ generate-schema: helm-values-schema-json ## Run generate schema for Helm Chart v
 		-output=helm/linode-cosi-driver/values.schema.json \
 
 .PHONY: test
-test: manifests generate ## Run tests.
-	go test
+test: generate ## Run tests.
+	go test \
+		-race \
+		-cover -covermode=atomic -coverprofile=coverage.out \
+		./...
+
+.PHONY: test-integration
+test-integration: generate ## Run integration tests.
+	go test \
+		-tags=integration \
 		-race \
 		-cover -covermode=atomic -coverprofile=coverage.out \
 		./...
