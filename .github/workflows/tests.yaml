@@ -16,9 +16,8 @@ jobs:
         with:
           go-version-file: ./go.mod
           cache: false
-      - env:
-          LINODE_TOKEN: ${{ secrets.LINODE_TOKEN }}
-        run: |
+      - run: |
+          export LINODE_TOKEN=${{ secrets.LINODE_TOKEN }}
           make \
             test-integration
 
@@ -31,6 +30,7 @@ jobs:
           go-version-file: ./go.mod
           cache: false
       - run: |
+          export LINODE_TOKEN=${{ secrets.LINODE_TOKEN }}
           make \
             IMG=localhost:5005/manager:e2e \
             cluster \
