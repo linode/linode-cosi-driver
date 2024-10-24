@@ -1,0 +1,144 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "properties": {
+    "affinity": {
+      "properties": {},
+      "type": "object"
+    },
+    "apiToken": {
+      "type": "string"
+    },
+    "driver": {
+      "properties": {
+        "image": {
+          "properties": {
+            "pullPolicy": {
+              "type": "string"
+            },
+            "repository": {
+              "type": "string"
+            },
+            "tag": {
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "otelConfig": {
+          "properties": {},
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
+    "fullnameOverride": {
+      "type": "string"
+    },
+    "imagePullSecrets": {
+      "type": "array"
+    },
+    "linodeApiUrl": {
+      "type": "string"
+    },
+    "linodeApiVersion": {
+      "type": "string"
+    },
+    "nameOverride": {
+      "type": "string"
+    },
+    "nodeSelector": {
+      "properties": {},
+      "type": "object"
+    },
+    "podAnnotations": {
+      "properties": {
+        "prometheus.io/path": {
+          "type": "string"
+        },
+        "prometheus.io/port": {
+          "type": "string"
+        },
+        "prometheus.io/scrape": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "podSecurityContext": {
+      "properties": {
+        "runAsNonRoot": {
+          "type": "boolean"
+        },
+        "runAsUser": {
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "rbac": {
+      "properties": {
+        "annotations": {
+          "properties": {},
+          "type": "object"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "replicaCount": {
+      "type": "integer"
+    },
+    "resources": {
+      "properties": {},
+      "type": "object"
+    },
+    "secret": {
+      "properties": {
+        "annotations": {
+          "properties": {},
+          "type": "object"
+        },
+        "ref": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "securityContext": {
+      "properties": {
+        "readOnlyRootFilesystem": {
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "sidecar": {
+      "properties": {
+        "image": {
+          "properties": {
+            "pullPolicy": {
+              "type": "string"
+            },
+            "repository": {
+              "type": "string"
+            },
+            "tag": {
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "logVerbosity": {
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "tolerations": {
+      "type": "array"
+    }
+  },
+  "type": "object"
+}
