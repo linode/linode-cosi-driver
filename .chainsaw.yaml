@@ -4,4 +4,4 @@ metadata:
   name: chainsaw
 spec:
   templating:
-    enabled: false
+    enabled: true
