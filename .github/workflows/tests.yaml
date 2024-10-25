@@ -32,9 +32,10 @@ jobs:
       - run: |
           export LINODE_TOKEN=${{ secrets.LINODE_TOKEN }}
           make \
-            IMG=localhost:5005/manager:e2e \
+            IMG=localhost:5005/linode-cosi-driver \
+            TAG=e2e-${{ github.ref_name }} \
             cluster \
             docker-build docker-push \
-            deploy
+            deploy-deps deploy
       - run: |
           make test-e2e

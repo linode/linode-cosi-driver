@@ -13,9 +13,14 @@
 # limitations under the License.
 
 # Image URL to use all building/pushing image targets
-IMG ?= docker.io/linode/linode-cosi-driver:main
+IMG ?= docker.io/linode/linode-cosi-driver
+TAG ?= dev-v$(shell date +%y%m%d-%H%M%S)-$(shell git rev-parse HEAD | cut -c1-6)
 PLATFORM ?= linux/$(shell go env GOARCH)
 CHAINSAW_ARGS ?=
+
+# Versions of COSI dependencies
+CRD_VERSION := v0.1.0
+CONTROLLER_VERSION := v0.1.2-alpha1
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -147,11 +152,11 @@ diff: ## Run git diff-index to check if any changes are made.
 docker-build: ## Build docker image with the manager.
 	$(CONTAINER_TOOL) build \
 		--platform=${PLATFORM} \
-		--tag=${IMG} .
+		--tag=${IMG}:${TAG} .
 
 .PHONY: docker-push
 docker-push: ## Push docker image with the manager.
-	$(CONTAINER_TOOL) push ${IMG}
+	$(CONTAINER_TOOL) push ${IMG}:${TAG}
 
 ##@ Deployment
 
@@ -167,13 +172,28 @@ cluster: kind ctlptl
 cluster-reset: kind ctlptl
 	$(CTLPTL) delete -f hack/kind.yaml
 
+.PHONY: deploy-deps
+deploy-deps: ## Deploy all dependencies of Linode COSI Driver. This step installs CRDs and Controller.
+	kubectl apply -k github.com/kubernetes-sigs/container-object-storage-interface-api/?ref=${CRD_VERSION}
+	kubectl apply -k github.com/kubernetes-sigs/container-object-storage-interface-controller/?ref=${CONTROLLER_VERSION}
+
+.PHONY: undeploy-deps
+undeploy-deps: ## Deploy all dependencies of Linode COSI Driver. This step installs CRDs and Controller.
+	kubectl delete -k github.com/kubernetes-sigs/container-object-storage-interface-controller/?ref=${CONTROLLER_VERSION}
+	kubectl delete -k github.com/kubernetes-sigs/container-object-storage-interface-api/?ref=${CRD_VERSION}
+
 .PHONY: deploy
 deploy: helm ## Deploy driver to the K8s cluster specified in ~/.kube/config.
-	echo "placeholder"
+	$(HELM) upgrade --install \
+		linode-cosi-driver \
+		./helm/linode-cosi-driver \
+			--set=apiToken=$$LINODE_TOKEN \
+			--set=driver.image.repository=${IMG} \
+			--set=driver.image.tag=${TAG}
 
 .PHONY: undeploy
-undeploy: helm ## Undeploy driver from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
-	echo "placeholder"
+undeploy: helm ## Undeploy driver from the K8s cluster specified in ~/.kube/config.
+	$(HELM) uninstall linode-cosi-driver
 
 ##@ Dependencies
 
