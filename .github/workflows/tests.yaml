@@ -8,7 +8,19 @@ on:
       - "main"
 
 jobs:
-  unit-integration:
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: ./go.mod
+          cache: false
+      - run: |
+          make \
+            test
+
+  integration:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
