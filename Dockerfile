@@ -12,14 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-ARG TOOLCHAIN_VERSION=1.22
-
 #########################################################################################
 # Build
 #########################################################################################
 
 # First stage: building the driver executable.
-FROM docker.io/library/golang:${TOOLCHAIN_VERSION} as builder
+FROM docker.io/library/golang:1.23 as builder
 
 # Set the working directory.
 WORKDIR /work
