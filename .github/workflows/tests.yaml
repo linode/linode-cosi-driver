@@ -1,0 +1,21 @@
+name: tests
+
+on:
+  pull_request:
+    branches: [ '*' ]
+  push:
+    branches:
+      - "main"
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: ./go.mod
+          cache: false
+      - run: |
+          make \
+            test

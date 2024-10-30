@@ -1,0 +1,45 @@
+name: tests
+
+on:
+  pull_request_target:
+    branches: [ '*' ]
+  push:
+    branches:
+      - "main"
+
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: ./go.mod
+          cache: false
+      - env:
+          LINODE_TOKEN: ${{ secrets.LINODE_TOKEN }}
+        run: |
+          export LINODE_TOKEN=${LINODE_TOKEN:?Token not set or empty}
+          make \
+            test-integration
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: ./go.mod
+          cache: false
+      - env:
+          LINODE_TOKEN: ${{ secrets.LINODE_TOKEN }}
+        run: |
+          export LINODE_TOKEN=${LINODE_TOKEN:?Token not set or empty}
+          make \
+            IMG=localhost:5005/linode-cosi-driver \
+            TAG=e2e \
+            cluster \
+            docker-build docker-push \
+            deploy-deps deploy
+      - run: |
+          make test-e2e

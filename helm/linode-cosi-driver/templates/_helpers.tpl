@@ -84,11 +84,7 @@ Create version of the driver image.
 */}}
 {{- define "linode-cosi-driver.version" }}
   {{- $version := default .Chart.AppVersion .Values.driver.image.tag }}
-  {{- if hasPrefix "v" $version }}
-    {{- print $version }}
-  {{- else }}
-    {{- printf "v%s" $version }}
-  {{- end }}
+  {{- print $version }}
 {{- end }}
 
 {{/*
