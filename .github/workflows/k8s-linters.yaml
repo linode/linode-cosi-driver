@@ -1,4 +1,4 @@
-name: kubernetes-linters
+name: k8s-linters
 
 on:
   pull_request:
@@ -8,17 +8,6 @@ on:
       - "main"
 
 jobs:
-  commitlint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: wagoid/commitlint-github-action@v6
-        with:
-          configFile: .commitlintrc.mjs
-          token: ${{ secrets.GITHUB_TOKEN }}
-
   chart-testing:
     runs-on: ubuntu-latest
     steps:
@@ -36,7 +25,7 @@ jobs:
       - run: |
           ct lint --target-branch ${{ github.event.repository.default_branch }}
 
-  linters:
+  kube-linters:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
