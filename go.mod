@@ -3,6 +3,7 @@ module github.com/linode/linode-cosi-driver
 go 1.23.1
 
 require (
+	github.com/go-logr/logr v1.4.2
 	github.com/go-resty/resty/v2 v2.15.3
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.1.0
 	github.com/linode/linodego v1.42.0
@@ -15,7 +16,10 @@ require (
 	go.opentelemetry.io/otel/trace v1.31.0
 	go.uber.org/automaxprocs v1.6.0
 	google.golang.org/grpc v1.67.1
+	k8s.io/api v0.31.1
+	k8s.io/apimachinery v0.31.1
 	sigs.k8s.io/container-object-storage-interface-spec v0.1.0
+	sigs.k8s.io/controller-runtime v0.19.0
 )
 
 // tools
@@ -134,7 +138,6 @@ require (
 	github.com/go-critic/go-critic v0.11.4 // indirect
 	github.com/go-errors/errors v1.5.1 // indirect
 	github.com/go-gorp/gorp/v3 v3.1.0 // indirect
-	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/go-openapi/jsonpointer v0.21.0 // indirect
@@ -392,9 +395,7 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	honnef.co/go/tools v0.5.1 // indirect
-	k8s.io/api v0.31.1 // indirect
 	k8s.io/apiextensions-apiserver v0.31.1 // indirect
-	k8s.io/apimachinery v0.31.1 // indirect
 	k8s.io/apiserver v0.31.1 // indirect
 	k8s.io/cli-runtime v0.31.0 // indirect
 	k8s.io/client-go v0.31.1 // indirect
@@ -408,7 +409,6 @@ require (
 	mvdan.cc/unparam v0.0.0-20240528143540-8a5130ca722f // indirect
 	oras.land/oras-go v1.2.5 // indirect
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.30.3 // indirect
-	sigs.k8s.io/controller-runtime v0.19.0 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/kubectl-validate v0.0.5-0.20240827210056-ce13d95db263 // indirect
 	sigs.k8s.io/kustomize/api v0.18.0 // indirect

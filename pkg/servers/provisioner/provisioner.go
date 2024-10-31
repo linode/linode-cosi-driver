@@ -20,15 +20,20 @@ import (
 	"fmt"
 	"log/slog"
 	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/linode/linode-cosi-driver/pkg/linodeclient"
 	"github.com/linode/linode-cosi-driver/pkg/observability/tracing"
+	"github.com/linode/linode-cosi-driver/pkg/version"
 	"github.com/linode/linodego"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc/codes"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 	cosi "sigs.k8s.io/container-object-storage-interface-spec"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // Server implements cosi.ProvisionerServer interface.
@@ -36,17 +41,19 @@ type Server struct {
 	log  *slog.Logger
 	once sync.Once
 
-	client linodeclient.Client
+	client     linodeclient.Client
+	kubeclient client.Reader
 }
 
 // Interface guards.
 var _ cosi.ProvisionerServer = (*Server)(nil)
 
 // New returns provisioner.Server with default values.
-func New(logger *slog.Logger, client linodeclient.Client) (*Server, error) {
+func New(logger *slog.Logger, client linodeclient.Client, kubeclient client.Reader) (*Server, error) {
 	srv := &Server{
-		log:    logger,
-		client: client,
+		log:        logger,
+		client:     client,
+		kubeclient: kubeclient,
 	}
 
 	return srv, srv.registerMetrics()
@@ -76,6 +83,18 @@ func (s *Server) DriverCreateBucket(ctx context.Context, req *cosi.DriverCreateB
 	ctx, span := s.init(ctx, "DriverCreateBucket")
 	defer span.End()
 
+	var (
+		client linodeclient.Client = s.client
+		err    error
+	)
+
+	if ref, ok := req.GetParameters()[ParamSecretRef]; ok {
+		client, err = s.scopedClient(ctx, ref)
+		if err != nil {
+			return nil, tracing.Error(span, codes.Internal, err)
+		}
+	}
+
 	label := req.GetName()
 	region := req.GetParameters()[ParamRegion]
 	cors := ParamCORSValue(req.GetParameters()[ParamCORS])
@@ -103,7 +122,7 @@ func (s *Server) DriverCreateBucket(ctx context.Context, req *cosi.DriverCreateB
 		return nil, tracing.Error(span, codes.InvalidArgument, ErrMissingRegion)
 	}
 
-	bucket, err := s.client.GetObjectStorageBucket(ctx, region, label)
+	bucket, err := client.GetObjectStorageBucket(ctx, region, label)
 	if err != nil {
 		if !errors.Is(err, ErrNotFound) {
 			log.ErrorContext(ctx, "failed to check if bucket exists", "error", err)
@@ -119,7 +138,7 @@ func (s *Server) DriverCreateBucket(ctx context.Context, req *cosi.DriverCreateB
 
 		log.InfoContext(ctx, "creating bucket")
 
-		bucket, err = s.client.CreateObjectStorageBucket(ctx, opts)
+		bucket, err = client.CreateObjectStorageBucket(ctx, opts)
 		if err != nil {
 			log.ErrorContext(ctx, "failed to create bucket", "error", err)
 			return nil, tracing.Error(span, codes.Internal, fmt.Errorf("failed to create bucket: %w", err))
@@ -137,7 +156,7 @@ func (s *Server) DriverCreateBucket(ctx context.Context, req *cosi.DriverCreateB
 		KeyBucketCreationTimestamp, bucket.Region,
 	)
 
-	access, err := s.client.GetObjectStorageBucketAccess(ctx, region, label)
+	access, err := client.GetObjectStorageBucketAccess(ctx, region, label)
 	if err != nil {
 		log.ErrorContext(ctx, "failed to check bucket access", "error", err)
 		return nil, tracing.Error(span, codes.Internal, fmt.Errorf("failed to check bucket access: %w", err))
@@ -168,6 +187,20 @@ func (s *Server) DriverDeleteBucket(ctx context.Context, req *cosi.DriverDeleteB
 	ctx, span := s.init(ctx, "DriverDeleteBucket")
 	defer span.End()
 
+	// TODO: requires COSI v1alpha2
+	client := s.client
+	// var (
+	// 	client linodeclient.Client = s.client
+	// 	err    error
+	// )
+	//
+	// if ref, ok := req.GetParameters()[ParamSecretRef]; ok {
+	// 	client, err = s.scopedClient(ctx, ref)
+	// 	if err != nil {
+	// 		return nil, tracing.Error(span, codes.Internal, err)
+	// 	}
+	// }
+
 	region, label := parseBucketID(req.GetBucketId())
 
 	log := s.logAttr(
@@ -184,7 +217,7 @@ func (s *Server) DriverDeleteBucket(ctx context.Context, req *cosi.DriverDeleteB
 
 	log.InfoContext(ctx, "bucket deletion initiated")
 
-	err := s.client.DeleteObjectStorageBucket(ctx, region, label)
+	err := client.DeleteObjectStorageBucket(ctx, region, label)
 	if err == nil || errors.Is(err, ErrNotFound) {
 		log.InfoContext(ctx, "bucket deleted")
 		return &cosi.DriverDeleteBucketResponse{}, tracing.Error(span, codes.OK, err, "bucket deleted")
@@ -204,6 +237,18 @@ func (s *Server) DriverDeleteBucket(ctx context.Context, req *cosi.DriverDeleteB
 func (s *Server) DriverGrantBucketAccess(ctx context.Context, req *cosi.DriverGrantBucketAccessRequest) (*cosi.DriverGrantBucketAccessResponse, error) {
 	ctx, span := s.init(ctx, "DriverGrantBucketAccess")
 	defer span.End()
+
+	var (
+		client linodeclient.Client = s.client
+		err    error
+	)
+
+	if ref, ok := req.GetParameters()[ParamSecretRef]; ok {
+		client, err = s.scopedClient(ctx, ref)
+		if err != nil {
+			return nil, tracing.Error(span, codes.Internal, err)
+		}
+	}
 
 	region, label := parseBucketID(req.GetBucketId())
 	name := req.GetName()
@@ -255,7 +300,7 @@ func (s *Server) DriverGrantBucketAccess(ctx context.Context, req *cosi.DriverGr
 
 	log.InfoContext(ctx, "creating object storage key")
 
-	key, err := s.client.CreateObjectStorageKey(ctx, opts)
+	key, err := client.CreateObjectStorageKey(ctx, opts)
 	if err != nil {
 		log.ErrorContext(ctx, "failed to create object storage key", "error", err)
 		return nil, tracing.Error(span, codes.InvalidArgument, fmt.Errorf("failed to create object storage key: %w", err))
@@ -275,6 +320,20 @@ func (s *Server) DriverGrantBucketAccess(ctx context.Context, req *cosi.DriverGr
 func (s *Server) DriverRevokeBucketAccess(ctx context.Context, req *cosi.DriverRevokeBucketAccessRequest) (*cosi.DriverRevokeBucketAccessResponse, error) {
 	ctx, span := s.init(ctx, "DriverRevokeBucketAccess")
 	defer span.End()
+
+	// TODO: requires COSI v1alpha2
+	client := s.client
+	// var (
+	// 	client linodeclient.Client = s.client
+	// 	err    error
+	// )
+	//
+	// if ref, ok := req.GetParameters()[ParamSecretRef]; ok {
+	// 	client, err = s.scopedClient(ctx, ref)
+	// 	if err != nil {
+	// 		return nil, tracing.Error(span, codes.Internal, err)
+	// 	}
+	// }
 
 	region, label := parseBucketID(req.GetBucketId())
 	id, err := strconv.Atoi(req.GetAccountId())
@@ -300,7 +359,7 @@ func (s *Server) DriverRevokeBucketAccess(ctx context.Context, req *cosi.DriverR
 		return nil, tracing.Error(span, codes.InvalidArgument, fmt.Errorf("account id is invalid: %w", err))
 	}
 
-	err = s.client.DeleteObjectStorageKey(ctx, id)
+	err = client.DeleteObjectStorageKey(ctx, id)
 	if err == nil || errors.Is(err, ErrNotFound) {
 		log.InfoContext(ctx, "key deleted")
 		return &cosi.DriverRevokeBucketAccessResponse{}, tracing.Error(span, codes.OK, nil, "key deleted")
@@ -309,4 +368,65 @@ func (s *Server) DriverRevokeBucketAccess(ctx context.Context, req *cosi.DriverR
 	log.ErrorContext(ctx, "failed to delete key", "error", err)
 
 	return nil, tracing.Error(span, codes.Internal, fmt.Errorf("failed to delete key: %w", err))
+}
+
+func (s *Server) scopedClient(ctx context.Context, secretRef string) (linodeclient.Client, error) {
+	const namespacedName = 2
+
+	if s.kubeclient == nil || secretRef == "" {
+		return s.client, nil
+	}
+
+	ref := strings.Split(secretRef, "/")
+	if len(ref) != namespacedName {
+		return nil, ErrInvalidSecretReference
+	}
+
+	secret := v1.Secret{}
+
+	if err := s.kubeclient.Get(ctx, types.NamespacedName{
+		Namespace: ref[0],
+		Name:      ref[1],
+	}, &secret); err != nil {
+		return nil, fmt.Errorf("unable to obtain secret %s: %w", secretRef, err)
+	}
+
+	var errs error
+
+	token, err := stringFromSecret(&secret, LinodeTokenKey, true)
+	if err != nil {
+		errs = errors.Join(errs, err)
+	}
+
+	apiURL, err := stringFromSecret(&secret, LinodeAPIURLKey, true)
+	if err != nil {
+		errs = errors.Join(errs, err)
+	}
+
+	apiVersion, err := stringFromSecret(&secret, LinodeAPIVersionKey, true)
+	if err != nil {
+		errs = errors.Join(errs, err)
+	}
+
+	if errs != nil {
+		return nil, errs
+	}
+
+	debug, _ := boolFromSecret(&secret, LinodeDebugKey, false)
+
+	client, err := linodeclient.NewLinodeClient(
+		token,
+		version.UserAgent(),
+		apiURL,
+		apiVersion,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	client.SetDebug(debug)
+
+	// client.SetRootCertificateFromString() // TODO: set CA dynamically
+
+	return client, nil
 }

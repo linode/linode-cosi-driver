@@ -32,6 +32,7 @@ import (
 	grpccodes "google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	cosi "sigs.k8s.io/container-object-storage-interface-spec"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -87,6 +88,7 @@ func TestDriverCreateBucket(t *testing.T) {
 	for _, tc := range []struct {
 		testName         string
 		client           linodeclient.Client
+		kubeclient       client.Reader
 		request          *cosi.DriverCreateBucketRequest
 		expectedResponse *cosi.DriverCreateBucketResponse
 		expectedError    error
@@ -144,7 +146,7 @@ func TestDriverCreateBucket(t *testing.T) {
 			ctx, cancel := testutils.ContextFromT(context.Background(), t)
 			defer cancel()
 
-			srv, err := provisioner.New(nil, tc.client)
+			srv, err := provisioner.New(nil, tc.client, tc.kubeclient)
 			if err != nil {
 				t.Fatalf("failed to create provisioner server: %v", err)
 			}
@@ -172,6 +174,7 @@ func TestDriverDeleteBucket(t *testing.T) {
 	for _, tc := range []struct {
 		testName      string
 		client        linodeclient.Client
+		kubeclient    client.Reader
 		request       *cosi.DriverDeleteBucketRequest
 		expectedError error
 	}{
@@ -191,7 +194,7 @@ func TestDriverDeleteBucket(t *testing.T) {
 			ctx, cancel := testutils.ContextFromT(context.Background(), t)
 			defer cancel()
 
-			srv, err := provisioner.New(nil, tc.client)
+			srv, err := provisioner.New(nil, tc.client, tc.kubeclient)
 			if err != nil {
 				t.Fatalf("failed to create provisioner server: %v", err)
 			}
@@ -212,6 +215,7 @@ func TestDriverGrantBucketAccess(t *testing.T) {
 	for _, tc := range []struct {
 		testName         string
 		client           linodeclient.Client
+		kubeclient       client.Reader
 		request          *cosi.DriverGrantBucketAccessRequest
 		expectedResponse *cosi.DriverGrantBucketAccessResponse
 		expectedError    error
@@ -269,7 +273,7 @@ func TestDriverGrantBucketAccess(t *testing.T) {
 			ctx, cancel := testutils.ContextFromT(context.Background(), t)
 			defer cancel()
 
-			srv, err := provisioner.New(nil, tc.client)
+			srv, err := provisioner.New(nil, tc.client, tc.kubeclient)
 			if err != nil {
 				t.Fatalf("failed to create provisioner server: %v", err)
 			}
@@ -297,6 +301,7 @@ func TestDriverRevokeBucketAccess(t *testing.T) {
 	for _, tc := range []struct {
 		testName      string
 		client        linodeclient.Client
+		kubeclient    client.Reader
 		request       *cosi.DriverRevokeBucketAccessRequest
 		expectedError error
 	}{
@@ -320,7 +325,7 @@ func TestDriverRevokeBucketAccess(t *testing.T) {
 			ctx, cancel := testutils.ContextFromT(context.Background(), t)
 			defer cancel()
 
-			srv, err := provisioner.New(nil, tc.client)
+			srv, err := provisioner.New(nil, tc.client, tc.kubeclient)
 			if err != nil {
 				t.Fatalf("failed to create provisioner server: %v", err)
 			}

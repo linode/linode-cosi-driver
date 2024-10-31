@@ -1,4 +1,4 @@
-// Copyright 2023-2024 Akamai Technologies, Inc.
+// Copyright 2024 Akamai Technologies, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,14 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package version
+package kubereader
 
 import (
-	"fmt"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var Version string
-
-func UserAgent() string {
-	return fmt.Sprintf("LinodeCOSI/%s", Version)
+type KubeReader interface {
+	client.Reader
 }
