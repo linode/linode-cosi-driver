@@ -2,11 +2,13 @@ name: autopilot
 
 on: pull_request_target
 
+permissions:
+  pull-requests: write
+  contents: write
+
 jobs:
   auto-approve:
     runs-on: ubuntu-latest
-    permissions:
-      pull-requests: write
     if: |
       contains(github.event.pull_request.labels.*.name, 'area/dependency') &&
       !contains(github.event.pull_request.labels.*.name, 'do-not-merge') &&
