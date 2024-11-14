@@ -28,7 +28,7 @@ require (
 	github.com/tilt-dev/ctlptl v0.8.34
 	golang.stackrox.io/kube-linter v0.6.8
 	helm.sh/helm/v3 v3.16.3
-	sigs.k8s.io/kind v0.24.0
+	sigs.k8s.io/kind v0.25.0
 )
 
 require (
