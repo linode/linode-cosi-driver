@@ -5,7 +5,7 @@ go 1.23.1
 require (
 	github.com/go-resty/resty/v2 v2.15.3
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.1.0
-	github.com/linode/linodego v1.42.0
+	github.com/linode/linodego v1.43.0
 	go.opentelemetry.io/contrib/exporters/autoexport v0.57.0
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.57.0
 	go.opentelemetry.io/otel v1.32.0
