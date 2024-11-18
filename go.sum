@@ -924,8 +924,8 @@ github.com/liggitt/tabwriter v0.0.0-20181228230101-89fcab3d43de h1:9TO3cAIGXtEhn
 github.com/liggitt/tabwriter v0.0.0-20181228230101-89fcab3d43de/go.mod h1:zAbeS9B/r2mtpb6U+EI2rYA5OAXxsYw6wTamcNW+zcE=
 github.com/linode/linodego v1.42.0 h1:ZSbi4MtvwrfB9Y6bknesorvvueBGGilcmh2D5dq76RM=
 github.com/linode/linodego v1.42.0/go.mod h1:2yzmY6pegPBDgx2HDllmt0eIk2IlzqcgK6NR0wFCFRY=
-github.com/losisin/helm-values-schema-json v1.6.1 h1:evUI+DtE0YNbmbtLXbzMed9sakuwML3Go4ZqOMBqjlM=
-github.com/losisin/helm-values-schema-json v1.6.1/go.mod h1:d9Zsv2tHBYRCEHNXd/3lnmrkZtua6+ByioZUbqswv88=
+github.com/losisin/helm-values-schema-json v1.6.3 h1:FYQhCzAW2tq2xcNc7b+aWys3gUtGWqtGloRrUgk0UP4=
+github.com/losisin/helm-values-schema-json v1.6.3/go.mod h1:d9Zsv2tHBYRCEHNXd/3lnmrkZtua6+ByioZUbqswv88=
 github.com/lufia/plan9stats v0.0.0-20220326011226-f1430873d8db h1:m2s7Fwo4OwmcheIWUc/Nw9/MZ0eFtP3to0ovTpqOiCQ=
 github.com/lufia/plan9stats v0.0.0-20220326011226-f1430873d8db/go.mod h1:VgrrWVwBO2+6XKn8ypT3WUqvoxCa8R2M5to2tRzGovI=
 github.com/macabu/inamedparam v0.1.3 h1:2tk/phHkMlEL/1GNe/Yf6kkR/hkcUdAEY3L0hjYV1Mk=
