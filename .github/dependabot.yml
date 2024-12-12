@@ -19,9 +19,6 @@ updates:
         patterns:
           - "k8s.io/*"
           - "sigs.k8s.io/*"
-      otel-dependencies:
-        patterns:
-          - "go.opentelemetry.io/*"
   - package-ecosystem: "docker"
     directory: "/"
     schedule:
@@ -33,15 +30,6 @@ updates:
       - "area/dependency"
   - package-ecosystem: "github-actions"
     directory: "/"
-    schedule:
-      interval: "weekly"
-    commit-message:
-      prefix: "fix"
-      include: "scope"
-    labels:
-      - "area/dependency"
-  - package-ecosystem: "gomod"
-    directory: "/test"
     schedule:
       interval: "weekly"
     commit-message:
