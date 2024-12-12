@@ -7,7 +7,7 @@ require (
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.1.0
 	github.com/linode/linodego v1.43.0
 	go.uber.org/automaxprocs v1.6.0
-	google.golang.org/grpc v1.68.0
+	google.golang.org/grpc v1.68.1
 	sigs.k8s.io/container-object-storage-interface-spec v0.1.0
 )
 
