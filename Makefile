@@ -19,8 +19,8 @@ PLATFORM ?= linux/$(shell go env GOARCH)
 CHAINSAW_ARGS ?=
 
 # Versions of COSI dependencies
-CRD_VERSION := v0.1.0
-CONTROLLER_VERSION := v0.1.2-alpha1
+CRD_VERSION := 7ddc93baaa3f08c9c8990a17c7b958955d93c044
+CONTROLLER_VERSION := 7ddc93baaa3f08c9c8990a17c7b958955d93c044
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -46,7 +46,7 @@ SHELL = /usr/bin/env bash -o pipefail
 .SHELLFLAGS = -ec
 
 .PHONY: all
-all: generate
+all: build
 
 .PHONY: clean
 clean:
@@ -78,12 +78,8 @@ help: ## Display this help.
 
 ##@ Development
 
-.PHONY: generate
-generate: gowrap # Generate code.
-	go generate ./...
-
 .PHONY: build
-build: generate # Build the binary.
+build: # Build the binary.
 	${GO_SETTINGS} go build \
 		${GOFLAGS} \
 		-ldflags="${LDFLAGS}" \
@@ -103,14 +99,14 @@ generate-schemas: helm-values-schema-json ## Run generate schema for Helm Chart 
 		-output=helm/linode-cosi-driver/values.schema.json \
 
 .PHONY: test
-test: generate ## Run tests.
+test: ## Run tests.
 	go test \
 		-race \
 		-cover -covermode=atomic -coverprofile=coverage.out \
 		./...
 
 .PHONY: test-integration
-test-integration: generate ## Run integration tests.
+test-integration: ## Run integration tests.
 	go test \
 		-tags=integration \
 		-race \
@@ -174,13 +170,13 @@ cluster-reset: kind ctlptl
 
 .PHONY: deploy-deps
 deploy-deps: ## Deploy all dependencies of Linode COSI Driver. This step installs CRDs and Controller.
-	kubectl apply -k github.com/kubernetes-sigs/container-object-storage-interface-api/?ref=${CRD_VERSION}
-	kubectl apply -k github.com/kubernetes-sigs/container-object-storage-interface-controller/?ref=${CONTROLLER_VERSION}
+	kubectl apply -k github.com/kubernetes-sigs/container-object-storage-interface/?ref=${CRD_VERSION}
+	kubectl apply -k github.com/kubernetes-sigs/container-object-storage-interface//controller?ref=${CONTROLLER_VERSION}
 
 .PHONY: undeploy-deps
 undeploy-deps: ## Deploy all dependencies of Linode COSI Driver. This step installs CRDs and Controller.
-	kubectl delete -k github.com/kubernetes-sigs/container-object-storage-interface-controller/?ref=${CONTROLLER_VERSION}
-	kubectl delete -k github.com/kubernetes-sigs/container-object-storage-interface-api/?ref=${CRD_VERSION}
+	kubectl delete -k github.com/kubernetes-sigs/container-object-storage-interface/?ref=${CONTROLLER_VERSION}
+	kubectl delete -k github.com/kubernetes-sigs/container-object-storage-interface//controller?ref=${CRD_VERSION}
 
 .PHONY: deploy
 deploy: helm ## Deploy driver to the K8s cluster specified in ~/.kube/config.
@@ -202,7 +198,6 @@ KUBECTL ?= kubectl
 CHAINSAW ?= $(LOCALBIN)/chainsaw
 CTLPTL ?= $(LOCALBIN)/ctlptl
 GOLANGCI_LINT ?= $(LOCALBIN)/golangci-lint
-GOWRAP ?= $(LOCALBIN)/gowrap
 HELM ?= $(LOCALBIN)/helm
 HELM_DOCS ?= $(LOCALBIN)/helm-docs
 HELM_VALUES_SCHEMA_JSON ?= $(LOCALBIN)/helm-values-schema-json
@@ -213,7 +208,6 @@ KUBE_LINTER ?= $(LOCALBIN)/kube-linter
 CHAINSAW_VERSION ?= $(shell grep 'github.com/kyverno/chainsaw ' ./go.mod | cut -d ' ' -f 2)
 CTLPTL_VERSION ?= $(shell grep 'github.com/tilt-dev/ctlptl ' ./go.mod | cut -d ' ' -f 2)
 GOLANGCI_LINT_VERSION ?= $(shell grep 'github.com/golangci/golangci-lint ' ./go.mod | cut -d ' ' -f 2)
-GOWRAP_VERSION ?= $(shell grep 'github.com/hexdigest/gowrap ' ./go.mod | cut -d ' ' -f 2)
 HELM_VERSION ?= $(shell grep 'helm.sh/helm/v3 ' ./go.mod | cut -d ' ' -f 2)
 HELM_DOCS_VERSION ?= $(shell grep 'github.com/norwoodj/helm-docs ' ./go.mod | cut -d ' ' -f 2)
 HELM_VALUES_SCHEMA_JSON_VERSION ?= $(shell grep 'github.com/losisin/helm-values-schema-json ' ./go.mod | cut -d ' ' -f 2)
@@ -234,11 +228,6 @@ $(CTLPTL)$(CTLPTL_VERSION): $(LOCALBIN)
 golangci-lint: $(GOLANGCI_LINT)$(GOLANGCI_LINT_VERSION) ## Download golangci-lint locally if necessary.
 $(GOLANGCI_LINT)$(GOLANGCI_LINT_VERSION): $(LOCALBIN)
 	$(call go-install-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/cmd/golangci-lint,$(GOLANGCI_LINT_VERSION))
-
-.PHONY: gowrap
-gowrap: $(GOWRAP)$(GOWRAP_VERSION) ## Download gowrap locally if necessary.
-$(GOWRAP)$(GOWRAP_VERSION): $(LOCALBIN)
-	$(call go-install-tool,$(GOWRAP),github.com/hexdigest/gowrap/cmd/gowrap,$(GOWRAP_VERSION))
 
 .PHONY: helm
 helm: $(HELM)$(HELM_VERSION) ## Download helm locally if necessary.

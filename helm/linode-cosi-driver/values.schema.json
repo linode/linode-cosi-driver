@@ -23,10 +23,6 @@
             }
           },
           "type": "object"
-        },
-        "otelConfig": {
-          "properties": {},
-          "type": "object"
         }
       },
       "type": "object"

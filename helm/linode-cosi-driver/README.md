@@ -1,6 +1,6 @@
 # linode-cosi-driver
 
-![Version: 0.3.0](https://img.shields.io/badge/Version-0.3.0-informational?style=flat) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat) ![AppVersion: v0.5.0](https://img.shields.io/badge/AppVersion-v0.5.0-informational?style=flat)
+![Version: 0.4.0](https://img.shields.io/badge/Version-0.4.0-informational?style=flat) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat) ![AppVersion: v0.6.0](https://img.shields.io/badge/AppVersion-v0.6.0-informational?style=flat)
 
 A Kubernetes Container Object Storage Interface (COSI) Driver for Linode
 
@@ -13,7 +13,6 @@ A Kubernetes Container Object Storage Interface (COSI) Driver for Linode
 | driver.image.pullPolicy | string | `"IfNotPresent"` | Driver container image pull policy. |
 | driver.image.repository | string | `"docker.io/linode/linode-cosi-driver"` | Driver container image repository. |
 | driver.image.tag | string | `""` | Overrides the image tag whose default is the chart appVersion. |
-| driver.otelConfig | object | `{}` | OpenTelemetry configuration. All values defined here conform to the OTEL specification, and are not strictly defined in the Chart values. |
 | fullnameOverride | string | `""` | Overrides the full chart name. |
 | imagePullSecrets | list | `[]` | List of Docker registry secret names to pull images. |
 | linodeApiUrl | string | `""` | Linode API URL, leave empty for default. |

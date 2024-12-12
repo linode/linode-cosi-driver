@@ -1,4 +1,4 @@
-// Copyright 2023-2024 Akamai Technologies, Inc.
+// Copyright 2024 Akamai Technologies, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,20 +12,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package identity
+package logutils
 
-import "github.com/linode/linode-cosi-driver/pkg/observability/metrics"
+import (
+	"fmt"
+	"log/slog"
 
-// registerMetrics is the common place of registering new metrics to the server.
-// When creating new metrics from the meter1, we call something like:
-//
-//	counter, err := meter.Float64Counter("example")
-//
-// As we expect the metrics to be registered, it is important to return and handle the error.
-func (s *Server) registerMetrics() error {
-	_ = metrics.Meter()
+	"go.uber.org/automaxprocs/maxprocs"
+)
 
-	// TODO: any new metrics should be placed here.
+const (
+	componentMaxprocs = "maxprocs"
+)
 
-	return nil
+func ForMaxprocs(handler slog.Handler) func(msg string, fields ...any) {
+	handler = handler.WithAttrs([]slog.Attr{
+		slog.String(KeyComponentName, componentMaxprocs),
+		slog.String(KeyComponentVersion, maxprocs.Version),
+	})
+
+	log := slog.New(handler)
+
+	return func(msg string, fields ...any) {
+		log.Info(fmt.Sprintf(msg, fields...))
+	}
 }
