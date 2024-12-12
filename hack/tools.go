@@ -5,7 +5,6 @@ package hack
 
 import (
 	_ "github.com/golangci/golangci-lint/cmd/golangci-lint"
-	_ "github.com/hexdigest/gowrap/cmd/gowrap"
 	_ "github.com/kyverno/chainsaw"
 	_ "github.com/losisin/helm-values-schema-json"
 	_ "github.com/norwoodj/helm-docs/cmd/helm-docs"

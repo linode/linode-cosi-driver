@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // Package handlers includes common HandlerFuncs that can be used around the gRPC environment.
-package handlers
+package grpc
 
 import (
 	"context"
@@ -21,6 +21,7 @@ import (
 	"runtime/debug"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/recovery"
+
 	"github.com/linode/linode-cosi-driver/pkg/logutils"
 	"github.com/linode/linode-cosi-driver/pkg/version"
 )
@@ -46,7 +47,7 @@ func PanicRecovery(ctx context.Context, handler slog.Handler, callbacks ...func(
 
 		if logger != nil {
 			logger.Log(ctx, 0,
-				"Recovered from panic.",
+				"Recovered from panic",
 				"panic", p,
 				"stack", debug.Stack())
 		}

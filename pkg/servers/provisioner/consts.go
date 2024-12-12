@@ -61,7 +61,6 @@ const (
 
 var (
 	ErrNotFound            = linodego.Error{Code: http.StatusNotFound}
-	ErrBucketExists        = errors.New("bucket exists with different parameters")
 	ErrUnsuportedAuth      = errors.New("unsupported authentication schema")
 	ErrMissingRegion       = errors.New("region was not provided")
 	ErrUnknownPermsissions = errors.New("unknown permissions")

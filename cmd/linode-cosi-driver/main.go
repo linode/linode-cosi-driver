@@ -22,32 +22,24 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
-	"strings"
 	"sync"
 	"syscall"
 	"time"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/recovery"
-	"github.com/linode/linode-cosi-driver/pkg/endpoint"
-	"github.com/linode/linode-cosi-driver/pkg/envflag"
-	"github.com/linode/linode-cosi-driver/pkg/grpc/handlers"
-	grpclogger "github.com/linode/linode-cosi-driver/pkg/grpc/logger"
-	"github.com/linode/linode-cosi-driver/pkg/linodeclient"
-	"github.com/linode/linode-cosi-driver/pkg/linodeclient/tracedclient"
-	maxprocslogger "github.com/linode/linode-cosi-driver/pkg/maxprocs/logger"
-	"github.com/linode/linode-cosi-driver/pkg/observability/metrics"
-	"github.com/linode/linode-cosi-driver/pkg/observability/tracing"
-	restylogger "github.com/linode/linode-cosi-driver/pkg/resty/logger"
-	"github.com/linode/linode-cosi-driver/pkg/servers/identity"
-	"github.com/linode/linode-cosi-driver/pkg/servers/provisioner"
-	"github.com/linode/linode-cosi-driver/pkg/version"
-	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
-	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"go.uber.org/automaxprocs/maxprocs"
 	"google.golang.org/grpc"
 	cosi "sigs.k8s.io/container-object-storage-interface-spec"
+
+	"github.com/linode/linode-cosi-driver/pkg/endpoint"
+	"github.com/linode/linode-cosi-driver/pkg/envflag"
+	grpchandlers "github.com/linode/linode-cosi-driver/pkg/grpc"
+	"github.com/linode/linode-cosi-driver/pkg/linodeclient"
+	"github.com/linode/linode-cosi-driver/pkg/logutils"
+	"github.com/linode/linode-cosi-driver/pkg/servers/identity"
+	"github.com/linode/linode-cosi-driver/pkg/servers/provisioner"
+	"github.com/linode/linode-cosi-driver/pkg/version"
 )
 
 const (
@@ -75,7 +67,7 @@ func main() {
 		linodeAPIVersion: linodeAPIVersion,
 	},
 	); err != nil {
-		slog.Error("critical failure", "error", err)
+		slog.Error("Critical failure", "error", err)
 		os.Exit(1)
 	}
 }
@@ -88,7 +80,7 @@ type mainOptions struct {
 }
 
 func run(ctx context.Context, log *slog.Logger, opts mainOptions) error {
-	_, err := maxprocs.Set(maxprocs.Logger(maxprocslogger.Wrap(log.Handler())))
+	_, err := maxprocs.Set(maxprocs.Logger(logutils.ForMaxprocs(log.Handler())))
 	if err != nil {
 		return fmt.Errorf("setting GOMAXPROCS failed: %w", err)
 	}
@@ -99,9 +91,6 @@ func run(ctx context.Context, log *slog.Logger, opts mainOptions) error {
 		syscall.SIGTERM,
 	)
 	defer stop()
-
-	o11yShutdown := setupObservabillity(ctx, log)
-	defer o11yShutdown()
 
 	// create identity server
 	idSrv, err := identity.New(driverName)
@@ -119,12 +108,12 @@ func run(ctx context.Context, log *slog.Logger, opts mainOptions) error {
 		return fmt.Errorf("unable to create new client: %w", err)
 	}
 
-	client.SetLogger(restylogger.Wrap(log))
+	client.SetLogger(logutils.ForResty(log))
 
 	// create provisioner server
 	prvSrv, err := provisioner.New(
 		log,
-		tracedclient.NewClientWithTracing(client, os.Getenv(envK8sPodName)),
+		client,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create provisioner server: %w", err)
@@ -158,7 +147,7 @@ func run(ctx context.Context, log *slog.Logger, opts mainOptions) error {
 
 	go shutdown(ctx, &wg, srv)
 
-	slog.Info("starting server",
+	slog.Info("Starting server",
 		"endpoint", endpointURL,
 		"version", version.Version)
 
@@ -178,10 +167,9 @@ func grpcServer(ctx context.Context,
 	provisioner cosi.ProvisionerServer,
 ) (*grpc.Server, error) {
 	server := grpc.NewServer(
-		grpc.StatsHandler(otelgrpc.NewServerHandler()),
 		grpc.ChainUnaryInterceptor(
-			logging.UnaryServerInterceptor(grpclogger.Wrap(log.Handler())),
-			recovery.UnaryServerInterceptor(recovery.WithRecoveryHandler(handlers.PanicRecovery(ctx, log.Handler()))),
+			logging.UnaryServerInterceptor(logutils.ForGRPC(log.Handler())),
+			recovery.UnaryServerInterceptor(recovery.WithRecoveryHandler(grpchandlers.PanicRecovery(ctx, log.Handler()))),
 		),
 	)
 
@@ -202,9 +190,9 @@ func shutdown(ctx context.Context,
 ) {
 	<-ctx.Done()
 	defer wg.Done()
-	defer slog.Info("stopped")
+	defer slog.Info("Stopped")
 
-	slog.Info("shutting down")
+	slog.Info("Shutting down")
 
 	dctx, stop := context.WithTimeout(context.Background(), gracePeriod)
 	defer stop()
@@ -220,7 +208,7 @@ func shutdown(ctx context.Context,
 		for {
 			select {
 			case <-dctx.Done():
-				slog.Warn("forcing shutdown")
+				slog.Warn("Forcing shutdown")
 				g.Stop()
 
 				return
@@ -228,86 +216,5 @@ func shutdown(ctx context.Context,
 				return
 			}
 		}
-	}
-}
-
-func setupObservabillity(ctx context.Context, log *slog.Logger) func() {
-	node := os.Getenv(envK8sNodeName)
-	pod := os.Getenv(envK8sPodName)
-
-	res := resource.NewWithAttributes(
-		semconv.SchemaURL,
-		semconv.ServiceName(driverName),
-		semconv.ServiceVersion(version.Version),
-		semconv.K8SPodName(pod),
-		semconv.K8SNodeName(node),
-	)
-
-	tracingShutdown, err := tracing.Setup(ctx, res)
-	if err != nil {
-		// non critical error, just log it.
-		log.Error("failed to setup tracing",
-			"error", err,
-		)
-	}
-
-	metricsShutdown, err := metrics.Setup(ctx, res)
-	if err != nil {
-		// non critical error, just log it.
-		log.Error("failed to setup metrics",
-			"error", err,
-		)
-	}
-
-	attrs := []any{}
-
-	for _, kv := range os.Environ() {
-		k, v, ok := strings.Cut(kv, "=")
-		if ok && strings.HasPrefix(k, "OTEL_") {
-			attrs = append(attrs, slog.String(k, v))
-		}
-	}
-
-	log.Info("opentelemetry configuration applied",
-		attrs...,
-	)
-
-	return func() {
-		timeout := 25 * time.Second // nolint:mnd // 2.5x default OTLP timeout
-
-		ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), timeout)
-		defer cancel()
-
-		wg := &sync.WaitGroup{}
-
-		if tracingShutdown != nil {
-			wg.Add(1)
-
-			go func() {
-				defer wg.Done()
-
-				if err := tracingShutdown(ctx); err != nil {
-					log.Error("failed to shutdown tracing",
-						"error", err,
-					)
-				}
-			}()
-		}
-
-		if metricsShutdown != nil {
-			wg.Add(1)
-
-			go func() {
-				defer wg.Done()
-
-				if err := tracingShutdown(ctx); err != nil {
-					log.Error("failed to shutdown tracing",
-						"error", err,
-					)
-				}
-			}()
-		}
-
-		wg.Wait()
 	}
 }

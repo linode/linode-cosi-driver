@@ -24,12 +24,13 @@ import (
 	"testing"
 	"time"
 
+	cosi "sigs.k8s.io/container-object-storage-interface-spec"
+
 	"github.com/linode/linode-cosi-driver/pkg/envflag"
 	"github.com/linode/linode-cosi-driver/pkg/linodeclient"
 	"github.com/linode/linode-cosi-driver/pkg/servers/provisioner"
 	"github.com/linode/linode-cosi-driver/pkg/testutils"
 	"github.com/linode/linode-cosi-driver/pkg/version"
-	cosi "sigs.k8s.io/container-object-storage-interface-spec"
 )
 
 func idempotentRun(t *testing.T, n int, name string, run func(t *testing.T)) {
