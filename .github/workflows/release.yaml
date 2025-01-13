@@ -46,7 +46,7 @@ jobs:
           fromTag: ${{ github.ref_name }}
           excludeTypes: ""
           excludeScopes: ""
-      - uses: ncipollo/release-action@v1.14.0
+      - uses: ncipollo/release-action@v1.15.0
         with:
           allowUpdates: true
           draft: false
