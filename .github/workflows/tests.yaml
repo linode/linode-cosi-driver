@@ -1,6 +1,7 @@
 name: tests
 
 on:
+  merge_group:
   pull_request:
     branches: [ '*' ]
   push:

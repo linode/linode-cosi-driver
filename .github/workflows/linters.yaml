@@ -1,6 +1,7 @@
 name: linters
 
 on:
+  merge_group:
   pull_request:
     branches: [ '*' ]
   push:
