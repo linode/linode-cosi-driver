@@ -1,6 +1,6 @@
 # Linode COSI Driver
 
-[![GitHub](https://img.shields.io/github/license/linode/linode-cosi-driver)](LICENSE.txt)
+[![GitHub](https://img.shields.io/github/license/linode/linode-cosi-driver)](LICENSE)
 [![Go Report Card](https://goreportcard.com/badge/github.com/linode/linode-cosi-driver)](https://goreportcard.com/report/github.com/linode/linode-cosi-driver)
 [![Static Badge](https://img.shields.io/badge/COSI_Specification-v1alpha1-green)](https://github.com/kubernetes-sigs/container-object-storage-interface-spec/tree/v0.1.0)
 

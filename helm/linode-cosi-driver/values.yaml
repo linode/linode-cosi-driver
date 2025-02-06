@@ -28,13 +28,13 @@ driver:
 sidecar:
   image:
     # -- Sidecar container image repository.
-    repository: gcr.io/k8s-staging-sig-storage/objectstorage-sidecar/objectstorage-sidecar
+    repository: gcr.io/k8s-staging-sig-storage/objectstorage-sidecar
 
     # -- Sidecar container image pull policy.
     pullPolicy: IfNotPresent
 
     # -- Sidecar container image tag.
-    tag: "v20221117-v0.1.0-22-g0e67387"
+    tag: "v20230921-v0.1.0-27-g8e23092"
 
   # -- Log verbosity level for the sidecar container.
   logVerbosity: 4

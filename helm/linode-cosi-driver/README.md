@@ -1,6 +1,6 @@
 # linode-cosi-driver
 
-![Version: 0.4.1](https://img.shields.io/badge/Version-0.4.1-informational?style=flat) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat) ![AppVersion: v0.6.0](https://img.shields.io/badge/AppVersion-v0.6.0-informational?style=flat)
+![Version: 0.4.2](https://img.shields.io/badge/Version-0.4.2-informational?style=flat) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat) ![AppVersion: v0.6.2](https://img.shields.io/badge/AppVersion-v0.6.2-informational?style=flat)
 
 A Kubernetes Container Object Storage Interface (COSI) Driver for Linode
 
@@ -30,8 +30,8 @@ A Kubernetes Container Object Storage Interface (COSI) Driver for Linode
 | secret.ref | string | `""` | Name of existing secret. If not set, a new secret is created. |
 | securityContext.readOnlyRootFilesystem | bool | `true` | Container runs with a read-only root filesystem. |
 | sidecar.image.pullPolicy | string | `"IfNotPresent"` | Sidecar container image pull policy. |
-| sidecar.image.repository | string | `"gcr.io/k8s-staging-sig-storage/objectstorage-sidecar/objectstorage-sidecar"` | Sidecar container image repository. |
-| sidecar.image.tag | string | `"v20221117-v0.1.0-22-g0e67387"` | Sidecar container image tag. |
+| sidecar.image.repository | string | `"gcr.io/k8s-staging-sig-storage/objectstorage-sidecar"` | Sidecar container image repository. |
+| sidecar.image.tag | string | `"v20230921-v0.1.0-27-g8e23092"` | Sidecar container image tag. |
 | sidecar.logVerbosity | int | `4` | Log verbosity level for the sidecar container. |
 | tolerations | list | `[]` | Tolerations for pod assignment. |
 
