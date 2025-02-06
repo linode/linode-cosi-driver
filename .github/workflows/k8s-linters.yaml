@@ -1,6 +1,7 @@
 name: k8s-linters
 
 on:
+  merge_group:
   pull_request:
     branches: ["*"]
   push:
