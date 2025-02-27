@@ -38,6 +38,7 @@ import (
 	"github.com/linode/linode-cosi-driver/pkg/linodeclient"
 	"github.com/linode/linode-cosi-driver/pkg/linodeclient/cache"
 	"github.com/linode/linode-cosi-driver/pkg/logutils"
+	"github.com/linode/linode-cosi-driver/pkg/s3"
 	"github.com/linode/linode-cosi-driver/pkg/servers/identity"
 	"github.com/linode/linode-cosi-driver/pkg/servers/provisioner"
 	"github.com/linode/linode-cosi-driver/pkg/version"
@@ -50,24 +51,36 @@ const (
 	envK8sPodName  = "K8S_POD_NAME"
 )
 
+var ErrNoKeySpecified = errors.New("no S3 policy credentials, " +
+	"when S3_CLIENT_EPHEMERAL_CREDENTIALS is not set or false " +
+	"you need to provide S3_ACCESS_KEY and S3_SECRET_KEY")
+
 func main() {
 	var (
-		linodeToken      = envflag.String("LINODE_TOKEN", "")
-		linodeURL        = envflag.String("LINODE_API_URL", "")
-		linodeAPIVersion = envflag.String("LINODE_API_VERSION", "")
-		cosiEndpoint     = envflag.String("COSI_ENDPOINT", "unix:///var/lib/cosi/cosi.sock")
-		cacheTTL         = envflag.Duration("LINODE_OBJECT_STORAGE_CACHE_TTL", cache.DefaultTTL)
+		linodeToken            = envflag.String("LINODE_TOKEN", "")
+		linodeURL              = envflag.String("LINODE_API_URL", "")
+		linodeAPIVersion       = envflag.String("LINODE_API_VERSION", "")
+		cosiEndpoint           = envflag.String("COSI_ENDPOINT", "unix:///var/lib/cosi/cosi.sock")
+		cacheTTL               = envflag.Duration("LINODE_OBJECT_STORAGE_CACHE_TTL", cache.DefaultTTL)
+		s3SSL                  = envflag.Bool("S3_CLIENT_SSL_ENABLED", true)
+		s3EphemeralCredentials = envflag.Bool("S3_CLIENT_EPHEMERAL_CREDENTIALS", true)
+		s3AccessKey            = envflag.String("S3_ACCESS_KEY", "")
+		s3SecretKey            = envflag.String("S3_SECRET_KEY", "")
 	)
 
 	// TODO: any logger settup must be done here, before first log call.
 	log := slog.Default()
 
 	if err := run(context.Background(), log, mainOptions{
-		cosiEndpoint:     cosiEndpoint,
-		linodeToken:      linodeToken,
-		linodeURL:        linodeURL,
-		linodeAPIVersion: linodeAPIVersion,
-		cacheTTL:         cacheTTL,
+		cosiEndpoint:           cosiEndpoint,
+		linodeToken:            linodeToken,
+		linodeURL:              linodeURL,
+		linodeAPIVersion:       linodeAPIVersion,
+		cacheTTL:               cacheTTL,
+		s3SSL:                  s3SSL,
+		s3EphemeralCredentials: s3EphemeralCredentials,
+		s3AccessKey:            s3AccessKey,
+		s3SecretKey:            s3SecretKey,
 	},
 	); err != nil {
 		slog.Error("Critical failure", "error", err)
@@ -76,11 +89,15 @@ func main() {
 }
 
 type mainOptions struct {
-	cosiEndpoint     string
-	linodeToken      string
-	linodeURL        string
-	linodeAPIVersion string
-	cacheTTL         time.Duration
+	cosiEndpoint           string
+	linodeToken            string
+	linodeURL              string
+	linodeAPIVersion       string
+	cacheTTL               time.Duration
+	s3SSL                  bool
+	s3EphemeralCredentials bool
+	s3AccessKey            string
+	s3SecretKey            string
 }
 
 func run(ctx context.Context, log *slog.Logger, opts mainOptions) error {
@@ -123,11 +140,41 @@ func run(ctx context.Context, log *slog.Logger, opts mainOptions) error {
 		}
 	}()
 
+	if opts.s3EphemeralCredentials {
+		creds, cleanup, err := linodeclient.NewEphemeralS3Credentials(ctx, client)
+		if err != nil {
+			return fmt.Errorf("unable to create ephemeral credentials: %w", err)
+		}
+
+		defer func() { //nolint:contextcheck // this is secondary context
+			ctx, cancel := context.WithTimeout(context.Background(), gracePeriod)
+			defer cancel()
+
+			if err := cleanup(ctx); err != nil {
+				log.Error("unable to cleanup ephemeral credentials", "error", err)
+			}
+		}()
+
+		opts.s3AccessKey = creds.AccessKey
+		opts.s3SecretKey = creds.SecretKey
+	}
+
+	if opts.s3AccessKey == "" || opts.s3SecretKey == "" {
+		return ErrNoKeySpecified
+	}
+
+	s3cli := s3.New(
+		epc,
+		opts.s3AccessKey, opts.s3SecretKey,
+		opts.s3SSL,
+	)
+
 	// create provisioner server
 	prvSrv, err := provisioner.New(
 		log,
 		client,
 		epc,
+		s3cli,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create provisioner server: %w", err)

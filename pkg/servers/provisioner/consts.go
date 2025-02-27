@@ -1,4 +1,4 @@
-// Copyright 2023 Akamai Technologies, Inc.
+// Copyright 2023-2025 Akamai Technologies, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,11 +22,27 @@ import (
 )
 
 const (
-	ParamRegion      = "cosi.linode.com/v1/region"
-	ParamACL         = "cosi.linode.com/v1/acl"
-	ParamCORS        = "cosi.linode.com/v1/cors"
-	ParamPermissions = "cosi.linode.com/v1/permissions"
+	prefix           = "cosi.linode.com/v1/"
+	ParamACL         = prefix + "acl"
+	ParamCORS        = prefix + "cors"
+	ParamPermissions = prefix + "permissions"
+	ParamPolicy      = prefix + "policy"
+	ParamRegion      = prefix + "region"
 )
+
+// TODO(v1alpha2): add the cleanup:
+//
+//	const ParamCleanup = prefix + "cleanup"
+//
+//	type ParamCleanupValue string
+//
+//	const (
+//		ParamCleanupForce ParamCleanupValue = "force"
+//	)
+//
+//	func (v ParamCleanupValue) Force() bool {
+//		return v == ParamCleanupForce
+//	}
 
 type ParamCORSValue string
 

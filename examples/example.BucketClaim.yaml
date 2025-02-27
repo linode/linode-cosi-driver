@@ -1,8 +1,7 @@
 apiVersion: objectstorage.k8s.io/v1alpha1
 kind: BucketClaim
 metadata:
-  name: example-claim
-  namespace: default
+  name: example
 spec:
-  bucketClassName: example-class
+  bucketClassName: linode-objectstorage
   protocols: [ 'S3' ]

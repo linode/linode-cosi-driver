@@ -16,6 +16,8 @@ package linodeclient
 
 import (
 	"context"
+	"fmt"
+	"os"
 
 	"github.com/linode/linodego"
 )
@@ -54,4 +56,38 @@ func NewLinodeClient(token, ua, apiURL, apiVersion string) (*linodego.Client, er
 	}
 
 	return &linodeClient, nil
+}
+
+func NewEphemeralS3Credentials(
+	ctx context.Context,
+	c *linodego.Client,
+) (*linodego.ObjectStorageKey, func(context.Context) error, error) {
+	hostname, err := os.Hostname()
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to obtain hostname: %w", err)
+	}
+
+	clusters, err := c.ListObjectStorageClusters(ctx, &linodego.ListOptions{})
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to list ObjectStorage clusters: %w", err)
+	}
+
+	var regions []string
+	for _, cluster := range clusters {
+		regions = append(regions, cluster.Region)
+	}
+
+	creds, err := c.CreateObjectStorageKey(ctx, linodego.ObjectStorageKeyCreateOptions{
+		Label:   "linode-cosi-" + hostname,
+		Regions: regions,
+	})
+	if err != nil {
+		return nil, nil, fmt.Errorf("unable to create object storage key: %w", err)
+	}
+
+	cleanup := func(cctx context.Context) error {
+		return c.DeleteObjectStorageKey(cctx, creds.ID)
+	}
+
+	return creds, cleanup, nil
 }

@@ -41,10 +41,16 @@ rules:
   - apiGroups:
       - "" # default API group
     resources:
-      - events # events are emmited from COSI Provisioner Sidecar
       - secrets # secrets are created by COSI Provisioner Sidecar as a part of access granting
     verbs: # CRUD
       - create
       - get
       - update
       - delete
+  - apiGroups:
+      - "" # default API group
+    resources:
+      - events # events are emmited from COSI Provisioner Sidecar
+    verbs:
+      - create
+      - patch
