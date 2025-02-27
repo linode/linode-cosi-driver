@@ -73,7 +73,7 @@ var (
 		provisioner.S3: {
 			Secrets: map[string]string{
 				provisioner.S3Region:                testRegion,
-				provisioner.S3Endpoint:              fmt.Sprintf("%s.linodeobjects.com", testBucketName),
+				provisioner.S3Endpoint:              fmt.Sprintf("%s.%s.linodeobjects.com", testBucketName, testRegion),
 				provisioner.S3SecretAccessKeyID:     stubclient.TestAccessKey,
 				provisioner.S3SecretAccessSecretKey: stubclient.TestSecretKey,
 			},

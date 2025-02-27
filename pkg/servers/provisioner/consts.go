@@ -64,6 +64,7 @@ var (
 	ErrUnsuportedAuth      = errors.New("unsupported authentication schema")
 	ErrMissingRegion       = errors.New("region was not provided")
 	ErrUnknownPermsissions = errors.New("unknown permissions")
+	ErrValidationError     = errors.New("required value cannot be empty")
 )
 
 const (
