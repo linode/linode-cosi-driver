@@ -17,7 +17,7 @@ require (
 	github.com/kyverno/chainsaw v0.2.12
 	github.com/losisin/helm-values-schema-json v1.7.0
 	github.com/norwoodj/helm-docs v1.14.2
-	github.com/tilt-dev/ctlptl v0.8.38
+	github.com/tilt-dev/ctlptl v0.8.39
 	golang.stackrox.io/kube-linter v0.7.1
 	helm.sh/helm/v3 v3.17.1
 	sigs.k8s.io/kind v0.27.0
