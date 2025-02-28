@@ -1,4 +1,4 @@
-// Copyright 2023-2024 Akamai Technologies, Inc.
+// Copyright 2023 Akamai Technologies, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -11,9 +11,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
-//go:build !integration
-// +build !integration
 
 package main
 
@@ -62,7 +59,7 @@ func TestRun(t *testing.T) {
 				opt(&defaultOpts)
 			}
 
-			ctx, cancel := testutils.ContextFromTimeout(context.Background(), t, time.Second)
+			ctx, cancel := context.WithTimeout(t.Context(), time.Second)
 			defer cancel()
 
 			tmp := testutils.MustMkdirTemp()

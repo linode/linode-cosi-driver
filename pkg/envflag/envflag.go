@@ -1,4 +1,4 @@
-// Copyright 2023-2024 Akamai Technologies, Inc.
+// Copyright 2023 Akamai Technologies, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ package envflag
 import (
 	"os"
 	"strconv"
+	"time"
 )
 
 func String(envKey string, defaultValue string, expectedValues ...string) string {
@@ -58,6 +59,19 @@ func Int(envKey string, defaultValue int) int {
 	}
 
 	if actual, err := strconv.Atoi(val); err == nil {
+		return actual
+	}
+
+	return defaultValue
+}
+
+func Duration(envKey string, defaultValue time.Duration) time.Duration {
+	val, ok := os.LookupEnv(envKey)
+	if !ok {
+		return defaultValue
+	}
+
+	if actual, err := time.ParseDuration(val); err == nil {
 		return actual
 	}
 

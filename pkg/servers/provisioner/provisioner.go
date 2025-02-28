@@ -1,4 +1,4 @@
-// Copyright 2023-2024 Akamai Technologies, Inc.
+// Copyright 2023 Akamai Technologies, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -30,22 +30,28 @@ import (
 	"github.com/linode/linodego"
 )
 
+type Cache interface {
+	Get(key string) (string, bool)
+}
+
 // Server implements cosi.ProvisionerServer interface.
 type Server struct {
 	log  *slog.Logger
 	once sync.Once
 
 	client linodeclient.Client
+	cache  Cache
 }
 
 // Interface guards.
 var _ cosi.ProvisionerServer = (*Server)(nil)
 
 // New returns provisioner.Server with default values.
-func New(logger *slog.Logger, client linodeclient.Client) (*Server, error) {
+func New(logger *slog.Logger, client linodeclient.Client, cache Cache) (*Server, error) {
 	srv := &Server{
 		log:    logger,
 		client: client,
+		cache:  cache,
 	}
 
 	return srv, nil
@@ -228,9 +234,15 @@ func (s *Server) DriverGrantBucketAccess(ctx context.Context, req *cosi.DriverGr
 
 	log.InfoContext(ctx, "Object storage key created")
 
+	endpoint, ok := s.cache.Get(region)
+	if !ok || endpoint == "" {
+		log.ErrorContext(ctx, "Failed to get endpoint for region", "region", region)
+		return nil, status.Error(codes.Internal, fmt.Sprintf("failed to get endpoint for region: %v", region))
+	}
+
 	return &cosi.DriverGrantBucketAccessResponse{
 		AccountId:   fmt.Sprintf("%d", key.ID),
-		Credentials: credentials(region, label, key.AccessKey, key.SecretKey),
+		Credentials: credentials(region, endpoint, label, key.AccessKey, key.SecretKey),
 	}, status.Error(codes.OK, "bucket access granted")
 }
 
