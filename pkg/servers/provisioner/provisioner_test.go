@@ -1,4 +1,4 @@
-// Copyright 2023-2024 Akamai Technologies, Inc.
+// Copyright 2023 Akamai Technologies, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,26 +12,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build !integration
-// +build !integration
-
 package provisioner_test
 
 import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"reflect"
 	"testing"
 
-	"github.com/linode/linode-cosi-driver/pkg/linodeclient"
-	"github.com/linode/linode-cosi-driver/pkg/linodeclient/stubclient"
-	"github.com/linode/linode-cosi-driver/pkg/servers/provisioner"
-	"github.com/linode/linode-cosi-driver/pkg/testutils"
-	"github.com/linode/linodego"
 	grpccodes "google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	cosi "sigs.k8s.io/container-object-storage-interface-spec"
+
+	"github.com/linode/linode-cosi-driver/pkg/linodeclient"
+	"github.com/linode/linode-cosi-driver/pkg/linodeclient/cache"
+	"github.com/linode/linode-cosi-driver/pkg/linodeclient/stubclient"
+	"github.com/linode/linode-cosi-driver/pkg/servers/provisioner"
+	"github.com/linode/linodego"
 )
 
 const (
@@ -43,6 +42,9 @@ const (
 )
 
 var (
+	discardLog   = slog.New(slog.DiscardHandler)
+	testEndpoint = "test-region-1.linodeobjects.com"
+
 	defaultLinodegoBucket = &linodego.ObjectStorageBucket{
 		Label:  testBucketName,
 		Region: testRegion,
@@ -61,6 +63,12 @@ var (
 		provisioner.ParamCORS: string(provisioner.ParamCORSValueDisabled),
 	}
 
+	defaultLinodegoEndpoint = linodego.ObjectStorageEndpoint{
+		Region:       testRegion,
+		S3Endpoint:   &testEndpoint,
+		EndpointType: linodego.ObjectStorageEndpointE0,
+	}
+
 	defaultBucketInfo = &cosi.Protocol{
 		Type: &cosi.Protocol_S3{
 			S3: &cosi.S3{
@@ -73,7 +81,7 @@ var (
 		provisioner.S3: {
 			Secrets: map[string]string{
 				provisioner.S3Region:                testRegion,
-				provisioner.S3Endpoint:              fmt.Sprintf("%s.%s.linodeobjects.com", testBucketName, testRegion),
+				provisioner.S3Endpoint:              fmt.Sprintf("https://%s.%s", testBucketName, testEndpoint),
 				provisioner.S3SecretAccessKeyID:     stubclient.TestAccessKey,
 				provisioner.S3SecretAccessSecretKey: stubclient.TestSecretKey,
 			},
@@ -141,10 +149,15 @@ func TestDriverCreateBucket(t *testing.T) {
 		t.Run(tc.testName, func(t *testing.T) {
 			t.Parallel()
 
-			ctx, cancel := testutils.ContextFromT(context.Background(), t)
+			ctx, cancel := context.WithCancel(t.Context())
 			defer cancel()
 
-			srv, err := provisioner.New(nil, tc.client)
+			epc := cache.New(discardLog, tc.client, 0)
+			if err := epc.Refresh(ctx); err != nil {
+				t.Fatalf("failed to refresh cache: %v", err)
+			}
+
+			srv, err := provisioner.New(nil, tc.client, epc)
 			if err != nil {
 				t.Fatalf("failed to create provisioner server: %v", err)
 			}
@@ -188,10 +201,15 @@ func TestDriverDeleteBucket(t *testing.T) {
 		t.Run(tc.testName, func(t *testing.T) {
 			t.Parallel()
 
-			ctx, cancel := testutils.ContextFromT(context.Background(), t)
+			ctx, cancel := context.WithCancel(t.Context())
 			defer cancel()
 
-			srv, err := provisioner.New(nil, tc.client)
+			epc := cache.New(discardLog, tc.client, 0)
+			if err := epc.Refresh(ctx); err != nil {
+				t.Fatalf("failed to refresh cache: %v", err)
+			}
+
+			srv, err := provisioner.New(nil, tc.client, epc)
 			if err != nil {
 				t.Fatalf("failed to create provisioner server: %v", err)
 			}
@@ -218,7 +236,10 @@ func TestDriverGrantBucketAccess(t *testing.T) {
 	}{
 		{
 			testName: "base",
-			client:   stubclient.New(stubclient.WithBucket(defaultLinodegoBucket)),
+			client: stubclient.New(
+				stubclient.WithBucket(defaultLinodegoBucket),
+				stubclient.WithEndpoint(defaultLinodegoEndpoint),
+			),
 			request: &cosi.DriverGrantBucketAccessRequest{
 				BucketId:           testBucketID,
 				Name:               testBucketAccessName,
@@ -232,7 +253,10 @@ func TestDriverGrantBucketAccess(t *testing.T) {
 		},
 		{
 			testName: "IAM Auth",
-			client:   stubclient.New(stubclient.WithBucket(defaultLinodegoBucket)),
+			client: stubclient.New(
+				stubclient.WithBucket(defaultLinodegoBucket),
+				stubclient.WithEndpoint(defaultLinodegoEndpoint),
+			),
 			request: &cosi.DriverGrantBucketAccessRequest{
 				BucketId:           testBucketID,
 				Name:               testBucketAccessName,
@@ -246,7 +270,10 @@ func TestDriverGrantBucketAccess(t *testing.T) {
 		},
 		{
 			testName: "invalid permissions",
-			client:   stubclient.New(stubclient.WithBucket(defaultLinodegoBucket)),
+			client: stubclient.New(
+				stubclient.WithBucket(defaultLinodegoBucket),
+				stubclient.WithEndpoint(defaultLinodegoEndpoint),
+			),
 			request: &cosi.DriverGrantBucketAccessRequest{
 				BucketId:           testBucketID,
 				Name:               testBucketAccessName,
@@ -266,10 +293,15 @@ func TestDriverGrantBucketAccess(t *testing.T) {
 		t.Run(tc.testName, func(t *testing.T) {
 			t.Parallel()
 
-			ctx, cancel := testutils.ContextFromT(context.Background(), t)
+			ctx, cancel := context.WithCancel(t.Context())
 			defer cancel()
 
-			srv, err := provisioner.New(nil, tc.client)
+			epc := cache.New(discardLog, tc.client, 0)
+			if err := epc.Refresh(ctx); err != nil {
+				t.Fatalf("failed to refresh cache: %v", err)
+			}
+
+			srv, err := provisioner.New(nil, tc.client, epc)
 			if err != nil {
 				t.Fatalf("failed to create provisioner server: %v", err)
 			}
@@ -281,7 +313,7 @@ func TestDriverGrantBucketAccess(t *testing.T) {
 				}
 
 				if !reflect.DeepEqual(tc.expectedResponse, actual) {
-					t.Errorf("call %d: expected buckets to be deeply equal\n> expected: %#+v,\n> got: %#+v",
+					t.Errorf("call %d: expected accesses to be deeply equal\n> expected: %#+v,\n> got: %#+v",
 						i,
 						tc.expectedResponse,
 						actual)
@@ -317,10 +349,15 @@ func TestDriverRevokeBucketAccess(t *testing.T) {
 		t.Run(tc.testName, func(t *testing.T) {
 			t.Parallel()
 
-			ctx, cancel := testutils.ContextFromT(context.Background(), t)
+			ctx, cancel := context.WithCancel(t.Context())
 			defer cancel()
 
-			srv, err := provisioner.New(nil, tc.client)
+			epc := cache.New(discardLog, tc.client, 0)
+			if err := epc.Refresh(ctx); err != nil {
+				t.Fatalf("failed to refresh cache: %v", err)
+			}
+
+			srv, err := provisioner.New(nil, tc.client, epc)
 			if err != nil {
 				t.Fatalf("failed to create provisioner server: %v", err)
 			}

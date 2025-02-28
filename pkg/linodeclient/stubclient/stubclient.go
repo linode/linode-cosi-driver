@@ -1,4 +1,4 @@
-// Copyright 2023-2024 Akamai Technologies, Inc.
+// Copyright 2023 Akamai Technologies, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -43,6 +43,7 @@ type Client struct {
 	objectStorageBuckets        map[string]*linodego.ObjectStorageBucket
 	objectStorageBucketAccesses map[string]*linodego.ObjectStorageBucketAccess
 	objectStorageKeys           map[int]*linodego.ObjectStorageKey
+	objectStorageEndpoints      []linodego.ObjectStorageEndpoint
 }
 
 var _ linodeclient.Client = (*Client)(nil)
@@ -319,4 +320,12 @@ func (c *Client) DeleteObjectStorageKey(ctx context.Context, id int) error {
 	return &linodego.Error{
 		Code: http.StatusNotFound,
 	}
+}
+
+func (c *Client) ListObjectStorageEndpoints(ctx context.Context, _ *linodego.ListOptions) ([]linodego.ObjectStorageEndpoint, error) {
+	if err := handleForcedFailure(ctx); err != nil {
+		return nil, err
+	}
+
+	return c.objectStorageEndpoints, nil
 }

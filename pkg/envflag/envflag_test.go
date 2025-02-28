@@ -1,4 +1,4 @@
-// Copyright 2023-2024 Akamai Technologies, Inc.
+// Copyright 2023 Akamai Technologies, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,15 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build !integration
-// +build !integration
-
 package envflag_test
 
 import (
 	"fmt"
 	"math/rand"
 	"testing"
+	"time"
 
 	"github.com/linode/linode-cosi-driver/pkg/envflag"
 )
@@ -256,6 +254,60 @@ func TestInts(t *testing.T) {
 			}
 
 			actual := envflag.Int(tc.key, tc.defaultValue)
+			if actual != tc.expectedValue {
+				t.Errorf("expected: %d, got: %d", tc.expectedValue, actual)
+			}
+		})
+	}
+}
+
+//nolint:paralleltest
+func TestDurations(t *testing.T) {
+	const (
+		DefaultValue = time.Second
+		Key          = "KEY"
+	)
+
+	for _, tc := range []struct {
+		name          string // required
+		key           string
+		value         string
+		defaultValue  time.Duration
+		expectedValue time.Duration
+	}{
+		{
+			name: "simple",
+		},
+		{
+			name:          "with default value",
+			defaultValue:  DefaultValue,
+			expectedValue: DefaultValue,
+		},
+		{
+			name:          "with actual value",
+			key:           Key,
+			value:         "10s",
+			defaultValue:  DefaultValue,
+			expectedValue: time.Second * 10,
+		},
+		{
+			name:          "with actual value",
+			key:           Key,
+			value:         "2h",
+			defaultValue:  DefaultValue,
+			expectedValue: time.Hour * 2,
+		},
+	} {
+		tc := tc
+
+		t.Run(tc.name, func(t *testing.T) {
+			if tc.key != "" {
+				tc.key = fmt.Sprintf("TEST_%d_%s", rand.Intn(256), tc.key) // #nosec G404
+
+				t.Setenv(tc.key, fmt.Sprint(tc.value))
+			}
+
+			actual := envflag.Duration(tc.key, tc.defaultValue)
 			if actual != tc.expectedValue {
 				t.Errorf("expected: %d, got: %d", tc.expectedValue, actual)
 			}

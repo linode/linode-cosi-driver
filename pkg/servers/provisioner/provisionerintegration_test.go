@@ -1,4 +1,4 @@
-// Copyright 2023-2024 Akamai Technologies, Inc.
+// Copyright 2023 Akamai Technologies, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ package provisioner_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"testing"
@@ -28,8 +29,8 @@ import (
 
 	"github.com/linode/linode-cosi-driver/pkg/envflag"
 	"github.com/linode/linode-cosi-driver/pkg/linodeclient"
+	"github.com/linode/linode-cosi-driver/pkg/linodeclient/cache"
 	"github.com/linode/linode-cosi-driver/pkg/servers/provisioner"
-	"github.com/linode/linode-cosi-driver/pkg/testutils"
 	"github.com/linode/linode-cosi-driver/pkg/version"
 )
 
@@ -64,7 +65,16 @@ func TestHappyPath(t *testing.T) {
 		return
 	}
 
-	srv, err := provisioner.New(slog.Default(), client)
+	testCache := cache.New(slog.Default(), client, cache.DefaultTTL)
+	go func() {
+		if err := testCache.Start(t.Context()); err != nil {
+			if !errors.Is(err, context.Canceled) {
+				t.Errorf("expected context.Canceled, got %v", err)
+			}
+		}
+	}()
+
+	srv, err := provisioner.New(slog.Default(), client, testCache)
 	if err != nil {
 		t.Errorf("failed to provisioner: %v", err.Error())
 		return
@@ -91,7 +101,7 @@ type suite struct {
 }
 
 func (s *suite) DriverCreateBucket(t *testing.T) {
-	ctx, cancel := testutils.ContextFromTimeout(context.Background(), t, 30*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 	defer cancel()
 
 	req := &cosi.DriverCreateBucketRequest{
@@ -113,7 +123,7 @@ func (s *suite) DriverCreateBucket(t *testing.T) {
 }
 
 func (s *suite) DriverDeleteBucket(t *testing.T) {
-	ctx, cancel := testutils.ContextFromTimeout(context.Background(), t, 30*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 	defer cancel()
 
 	if !s.finishedCreateBucket {
@@ -132,7 +142,7 @@ func (s *suite) DriverDeleteBucket(t *testing.T) {
 }
 
 func (s *suite) DriverGrantBucketAccess(t *testing.T) {
-	ctx, cancel := testutils.ContextFromTimeout(context.Background(), t, 30*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 	defer cancel()
 
 	if !s.finishedCreateBucket {
@@ -159,7 +169,7 @@ func (s *suite) DriverGrantBucketAccess(t *testing.T) {
 }
 
 func (s *suite) DriverRevokeBucketAccess(t *testing.T) {
-	ctx, cancel := testutils.ContextFromTimeout(context.Background(), t, 30*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 	defer cancel()
 
 	if !s.finishedCreateBucket || !s.finishedGrantBucketAccess {

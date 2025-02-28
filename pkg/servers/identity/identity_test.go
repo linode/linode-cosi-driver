@@ -1,4 +1,4 @@
-// Copyright 2023-2024 Akamai Technologies, Inc.
+// Copyright 2023 Akamai Technologies, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,9 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build !integration
-// +build !integration
-
 package identity_test
 
 import (
@@ -22,8 +19,9 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/linode/linode-cosi-driver/pkg/servers/identity"
 	cosi "sigs.k8s.io/container-object-storage-interface-spec"
+
+	"github.com/linode/linode-cosi-driver/pkg/servers/identity"
 )
 
 func TestNew(t *testing.T) {

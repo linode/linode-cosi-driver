@@ -1,4 +1,4 @@
-// Copyright 2023-2025 Akamai Technologies, Inc.
+// Copyright 2023 Akamai Technologies, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -40,9 +40,13 @@ func bucketInfo(region string) *cosi.Protocol {
 	}
 }
 
-func credentials(region, label, accessKey, secretKey string) map[string]*cosi.CredentialDetails {
+func credentials(region, endpoint, label, accessKey, secretKey string) map[string]*cosi.CredentialDetails {
 	if region == "" {
 		panic("region cannot be empty")
+	}
+
+	if endpoint == "" {
+		panic("endpoint cannot be empty")
 	}
 
 	if label == "" {
@@ -57,7 +61,7 @@ func credentials(region, label, accessKey, secretKey string) map[string]*cosi.Cr
 		S3: {
 			Secrets: map[string]string{
 				S3Region:                region,
-				S3Endpoint:              fmt.Sprintf("%s.%s.linodeobjects.com", label, region),
+				S3Endpoint:              fmt.Sprintf("https://%s.%s", label, endpoint),
 				S3SecretAccessKeyID:     accessKey,
 				S3SecretAccessSecretKey: secretKey,
 			},

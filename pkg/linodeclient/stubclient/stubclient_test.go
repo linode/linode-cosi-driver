@@ -1,4 +1,4 @@
-// Copyright 2023-2024 Akamai Technologies, Inc.
+// Copyright 2023 Akamai Technologies, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -11,9 +11,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
-//go:build !integration
-// +build !integration
 
 package stubclient_test
 
@@ -179,7 +176,7 @@ func TestCreateObjectStorageBucket(t *testing.T) {
 			testName: "unexpected failure",
 			client:   stubclient.New(),
 			ctx: context.WithValue(
-				context.Background(),
+				t.Context(),
 				stubclient.ForcedFailure, //nolint:staticcheck
 				"",
 			),
@@ -189,7 +186,7 @@ func TestCreateObjectStorageBucket(t *testing.T) {
 			testName: "simulated internal server error",
 			client:   stubclient.New(),
 			ctx: context.WithValue(
-				context.Background(),
+				t.Context(),
 				stubclient.ForcedFailure, //nolint:staticcheck
 				test500Error,
 			),
@@ -202,10 +199,10 @@ func TestCreateObjectStorageBucket(t *testing.T) {
 			t.Parallel()
 
 			if tc.ctx == nil {
-				tc.ctx = context.Background()
+				tc.ctx = t.Context()
 			}
 
-			ctx, cancel := testutils.ContextFromT(tc.ctx, t)
+			ctx, cancel := context.WithCancel(tc.ctx)
 			defer cancel()
 
 			actual, err := tc.client.CreateObjectStorageBucket(ctx, tc.opts)
@@ -254,7 +251,7 @@ func TestGetObjectStorageBucket(t *testing.T) {
 			testName: "unexpected failure",
 			client:   stubclient.New(),
 			ctx: context.WithValue(
-				context.Background(),
+				t.Context(),
 				stubclient.ForcedFailure, //nolint:staticcheck
 				"",
 			),
@@ -264,7 +261,7 @@ func TestGetObjectStorageBucket(t *testing.T) {
 			testName: "simulated internal server error",
 			client:   stubclient.New(),
 			ctx: context.WithValue(
-				context.Background(),
+				t.Context(),
 				stubclient.ForcedFailure, //nolint:staticcheck
 				test500Error,
 			),
@@ -277,10 +274,10 @@ func TestGetObjectStorageBucket(t *testing.T) {
 			t.Parallel()
 
 			if tc.ctx == nil {
-				tc.ctx = context.Background()
+				tc.ctx = t.Context()
 			}
 
-			ctx, cancel := testutils.ContextFromT(tc.ctx, t)
+			ctx, cancel := context.WithCancel(tc.ctx)
 			defer cancel()
 
 			actual, err := tc.client.GetObjectStorageBucket(ctx, tc.region, tc.label)
@@ -339,7 +336,7 @@ func TestDeleteObjectStorageBucket(t *testing.T) {
 			testName: "unexpected failure",
 			client:   stubclient.New(),
 			ctx: context.WithValue(
-				context.Background(),
+				t.Context(),
 				stubclient.ForcedFailure, //nolint:staticcheck
 				"",
 			),
@@ -349,7 +346,7 @@ func TestDeleteObjectStorageBucket(t *testing.T) {
 			testName: "simulated internal server error",
 			client:   stubclient.New(),
 			ctx: context.WithValue(
-				context.Background(),
+				t.Context(),
 				stubclient.ForcedFailure, //nolint:staticcheck
 				test500Error,
 			),
@@ -362,10 +359,10 @@ func TestDeleteObjectStorageBucket(t *testing.T) {
 			t.Parallel()
 
 			if tc.ctx == nil {
-				tc.ctx = context.Background()
+				tc.ctx = t.Context()
 			}
 
-			ctx, cancel := testutils.ContextFromT(tc.ctx, t)
+			ctx, cancel := context.WithCancel(tc.ctx)
 			defer cancel()
 
 			err := tc.client.DeleteObjectStorageBucket(ctx, tc.region, tc.label)
@@ -410,7 +407,7 @@ func TestGetObjectStorageBucketAccess(t *testing.T) {
 			testName: "unexpected failure",
 			client:   stubclient.New(),
 			ctx: context.WithValue(
-				context.Background(),
+				t.Context(),
 				stubclient.ForcedFailure, //nolint:staticcheck
 				"",
 			),
@@ -420,7 +417,7 @@ func TestGetObjectStorageBucketAccess(t *testing.T) {
 			testName: "simulated internal server error",
 			client:   stubclient.New(),
 			ctx: context.WithValue(
-				context.Background(),
+				t.Context(),
 				stubclient.ForcedFailure, //nolint:staticcheck
 				test500Error,
 			),
@@ -433,10 +430,10 @@ func TestGetObjectStorageBucketAccess(t *testing.T) {
 			t.Parallel()
 
 			if tc.ctx == nil {
-				tc.ctx = context.Background()
+				tc.ctx = t.Context()
 			}
 
-			ctx, cancel := testutils.ContextFromT(tc.ctx, t)
+			ctx, cancel := context.WithCancel(tc.ctx)
 			defer cancel()
 
 			actual, err := tc.client.GetObjectStorageBucketAccess(ctx, tc.region, tc.label)
@@ -514,7 +511,7 @@ func TestUpdateObjectStorageBucketAccess(t *testing.T) {
 			testName: "unexpected failure",
 			client:   stubclient.New(),
 			ctx: context.WithValue(
-				context.Background(),
+				t.Context(),
 				stubclient.ForcedFailure, //nolint:staticcheck
 				"",
 			),
@@ -524,7 +521,7 @@ func TestUpdateObjectStorageBucketAccess(t *testing.T) {
 			testName: "simulated internal server error",
 			client:   stubclient.New(),
 			ctx: context.WithValue(
-				context.Background(),
+				t.Context(),
 				stubclient.ForcedFailure, //nolint:staticcheck
 				test500Error,
 			),
@@ -537,10 +534,10 @@ func TestUpdateObjectStorageBucketAccess(t *testing.T) {
 			t.Parallel()
 
 			if tc.ctx == nil {
-				tc.ctx = context.Background()
+				tc.ctx = t.Context()
 			}
 
-			ctx, cancel := testutils.ContextFromT(tc.ctx, t)
+			ctx, cancel := context.WithCancel(tc.ctx)
 			defer cancel()
 
 			err := tc.client.UpdateObjectStorageBucketAccess(ctx, tc.region, tc.label, tc.opts)
@@ -592,7 +589,7 @@ func TestCreateObjectStorageKey(t *testing.T) {
 			testName: "unexpected failure",
 			client:   stubclient.New(),
 			ctx: context.WithValue(
-				context.Background(),
+				t.Context(),
 				stubclient.ForcedFailure, //nolint:staticcheck
 				"",
 			),
@@ -602,7 +599,7 @@ func TestCreateObjectStorageKey(t *testing.T) {
 			testName: "simulated internal server error",
 			client:   stubclient.New(),
 			ctx: context.WithValue(
-				context.Background(),
+				t.Context(),
 				stubclient.ForcedFailure, //nolint:staticcheck
 				test500Error,
 			),
@@ -615,10 +612,10 @@ func TestCreateObjectStorageKey(t *testing.T) {
 			t.Parallel()
 
 			if tc.ctx == nil {
-				tc.ctx = context.Background()
+				tc.ctx = t.Context()
 			}
 
-			ctx, cancel := testutils.ContextFromT(tc.ctx, t)
+			ctx, cancel := context.WithCancel(tc.ctx)
 			defer cancel()
 
 			actual, err := tc.client.CreateObjectStorageKey(ctx, tc.opts)
@@ -720,7 +717,7 @@ func TestListObjectStorageKeys(t *testing.T) {
 			testName: "unexpected failure",
 			client:   stubclient.New(),
 			ctx: context.WithValue(
-				context.Background(),
+				t.Context(),
 				stubclient.ForcedFailure, //nolint:staticcheck
 				"",
 			),
@@ -730,7 +727,7 @@ func TestListObjectStorageKeys(t *testing.T) {
 			testName: "simulated internal server error",
 			client:   stubclient.New(),
 			ctx: context.WithValue(
-				context.Background(),
+				t.Context(),
 				stubclient.ForcedFailure, //nolint:staticcheck
 				test500Error,
 			),
@@ -743,10 +740,10 @@ func TestListObjectStorageKeys(t *testing.T) {
 			t.Parallel()
 
 			if tc.ctx == nil {
-				tc.ctx = context.Background()
+				tc.ctx = t.Context()
 			}
 
-			ctx, cancel := testutils.ContextFromT(tc.ctx, t)
+			ctx, cancel := context.WithCancel(tc.ctx)
 			defer cancel()
 
 			actual, err := tc.client.ListObjectStorageKeys(ctx, tc.opts)
@@ -792,7 +789,7 @@ func TestGetObjectStorageKey(t *testing.T) {
 			testName: "unexpected failure",
 			client:   stubclient.New(),
 			ctx: context.WithValue(
-				context.Background(),
+				t.Context(),
 				stubclient.ForcedFailure, //nolint:staticcheck
 				"",
 			),
@@ -802,7 +799,7 @@ func TestGetObjectStorageKey(t *testing.T) {
 			testName: "simulated internal server error",
 			client:   stubclient.New(),
 			ctx: context.WithValue(
-				context.Background(),
+				t.Context(),
 				stubclient.ForcedFailure, //nolint:staticcheck
 				test500Error,
 			),
@@ -815,10 +812,10 @@ func TestGetObjectStorageKey(t *testing.T) {
 			t.Parallel()
 
 			if tc.ctx == nil {
-				tc.ctx = context.Background()
+				tc.ctx = t.Context()
 			}
 
-			ctx, cancel := testutils.ContextFromT(tc.ctx, t)
+			ctx, cancel := context.WithCancel(tc.ctx)
 			defer cancel()
 
 			actual, err := tc.client.GetObjectStorageKey(ctx, tc.keyID)
@@ -861,7 +858,7 @@ func TestDeleteObjectStorageKey(t *testing.T) {
 			testName: "unexpected failure",
 			client:   stubclient.New(),
 			ctx: context.WithValue(
-				context.Background(),
+				t.Context(),
 				stubclient.ForcedFailure, //nolint:staticcheck
 				"",
 			),
@@ -871,7 +868,7 @@ func TestDeleteObjectStorageKey(t *testing.T) {
 			testName: "simulated internal server error",
 			client:   stubclient.New(),
 			ctx: context.WithValue(
-				context.Background(),
+				t.Context(),
 				stubclient.ForcedFailure, //nolint:staticcheck
 				test500Error,
 			),
@@ -884,10 +881,10 @@ func TestDeleteObjectStorageKey(t *testing.T) {
 			t.Parallel()
 
 			if tc.ctx == nil {
-				tc.ctx = context.Background()
+				tc.ctx = t.Context()
 			}
 
-			ctx, cancel := testutils.ContextFromT(tc.ctx, t)
+			ctx, cancel := context.WithCancel(tc.ctx)
 			defer cancel()
 
 			err := tc.client.DeleteObjectStorageKey(ctx, tc.keyID)

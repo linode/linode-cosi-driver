@@ -1,4 +1,4 @@
-// Copyright 2023-2024 Akamai Technologies, Inc.
+// Copyright 2023 Akamai Technologies, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -44,5 +44,12 @@ func WithBucketAccess(bucketAccess *linodego.ObjectStorageBucketAccess, region, 
 	return func(c *Client) {
 		id := fmt.Sprintf("%s/%s", region, label)
 		c.objectStorageBucketAccesses[id] = bucketAccess
+	}
+}
+
+// WithEndpoint is an option to configure the stub client with Object Storage endpoints.
+func WithEndpoint(endpoint linodego.ObjectStorageEndpoint) Option {
+	return func(c *Client) {
+		c.objectStorageEndpoints = append(c.objectStorageEndpoints, endpoint)
 	}
 }

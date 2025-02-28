@@ -1,4 +1,4 @@
-// Copyright 2023-2025 Akamai Technologies, Inc.
+// Copyright 2023 Akamai Technologies, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@ func TestCredentials(t *testing.T) {
 
 	for name, tc := range map[string]struct {
 		region      string
+		endpoint    string
 		label       string
 		accessKey   string
 		secretKey   string
@@ -33,15 +34,16 @@ func TestCredentials(t *testing.T) {
 		shouldPanic bool
 	}{
 		"valid_credentials": {
-			region:    "us-east-1",
+			region:    "us-east",
+			endpoint:  "us-east-1.linodeobjects.com",
 			label:     "test-label",
 			accessKey: "TESTACCESSKEY",
 			secretKey: "TESTSECRETKEY",
 			expected: map[string]*cosi.CredentialDetails{
 				S3: {
 					Secrets: map[string]string{
-						S3Region:                "us-east-1",
-						S3Endpoint:              "test-label.us-east-1.linodeobjects.com",
+						S3Region:                "us-east",
+						S3Endpoint:              "https://test-label.us-east-1.linodeobjects.com",
 						S3SecretAccessKeyID:     "TESTACCESSKEY",
 						S3SecretAccessSecretKey: "TESTSECRETKEY",
 					},
@@ -50,27 +52,39 @@ func TestCredentials(t *testing.T) {
 		},
 		"missing_region": {
 			region:      "",
+			endpoint:    "us-east-1.linodeobjects.com",
+			label:       "test-bucket",
+			accessKey:   "TESTACCESSKEY",
+			secretKey:   "TESTSECRETKEY",
+			shouldPanic: true,
+		},
+		"missing_endpoint": {
+			region:      "us-east",
+			endpoint:    "",
 			label:       "test-bucket",
 			accessKey:   "TESTACCESSKEY",
 			secretKey:   "TESTSECRETKEY",
 			shouldPanic: true,
 		},
 		"missing_label": {
-			region:      "us-east-1",
+			region:      "us-east",
+			endpoint:    "us-east-1.linodeobjects.com",
 			label:       "",
 			accessKey:   "TESTACCESSKEY",
 			secretKey:   "TESTSECRETKEY",
 			shouldPanic: true,
 		},
 		"missing_accessKey": {
-			region:      "us-east-1",
+			region:      "us-east",
+			endpoint:    "us-east-1.linodeobjects.com",
 			label:       "test-bucket",
 			accessKey:   "",
 			secretKey:   "TESTSECRETKEY",
 			shouldPanic: true,
 		},
 		"missing_secretKey": {
-			region:      "us-east-1",
+			region:      "us-east",
+			endpoint:    "us-east-1.linodeobjects.com",
 			label:       "test-bucket",
 			accessKey:   "TESTACCESSKEY",
 			secretKey:   "",
@@ -90,7 +104,7 @@ func TestCredentials(t *testing.T) {
 				}
 			}()
 
-			actual := credentials(tc.region, tc.label, tc.accessKey, tc.secretKey)
+			actual := credentials(tc.region, tc.endpoint, tc.label, tc.accessKey, tc.secretKey)
 			if !reflect.DeepEqual(actual, tc.expected) {
 				t.Fatalf("expected %+v, got %+v", tc.expected, actual)
 			}

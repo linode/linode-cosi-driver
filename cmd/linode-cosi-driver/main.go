@@ -1,4 +1,4 @@
-// Copyright 2023-2024 Akamai Technologies, Inc.
+// Copyright 2023 Akamai Technologies, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -36,6 +36,7 @@ import (
 	"github.com/linode/linode-cosi-driver/pkg/envflag"
 	grpchandlers "github.com/linode/linode-cosi-driver/pkg/grpc"
 	"github.com/linode/linode-cosi-driver/pkg/linodeclient"
+	"github.com/linode/linode-cosi-driver/pkg/linodeclient/cache"
 	"github.com/linode/linode-cosi-driver/pkg/logutils"
 	"github.com/linode/linode-cosi-driver/pkg/servers/identity"
 	"github.com/linode/linode-cosi-driver/pkg/servers/provisioner"
@@ -55,6 +56,7 @@ func main() {
 		linodeURL        = envflag.String("LINODE_API_URL", "")
 		linodeAPIVersion = envflag.String("LINODE_API_VERSION", "")
 		cosiEndpoint     = envflag.String("COSI_ENDPOINT", "unix:///var/lib/cosi/cosi.sock")
+		cacheTTL         = envflag.Duration("LINODE_OBJECT_STORAGE_CACHE_TTL", cache.DefaultTTL)
 	)
 
 	// TODO: any logger settup must be done here, before first log call.
@@ -65,6 +67,7 @@ func main() {
 		linodeToken:      linodeToken,
 		linodeURL:        linodeURL,
 		linodeAPIVersion: linodeAPIVersion,
+		cacheTTL:         cacheTTL,
 	},
 	); err != nil {
 		slog.Error("Critical failure", "error", err)
@@ -77,6 +80,7 @@ type mainOptions struct {
 	linodeToken      string
 	linodeURL        string
 	linodeAPIVersion string
+	cacheTTL         time.Duration
 }
 
 func run(ctx context.Context, log *slog.Logger, opts mainOptions) error {
@@ -110,10 +114,20 @@ func run(ctx context.Context, log *slog.Logger, opts mainOptions) error {
 
 	client.SetLogger(logutils.ForResty(log))
 
+	epc := cache.New(log, client, opts.cacheTTL)
+	go func() {
+		if err := epc.Start(ctx); err != nil {
+			if !errors.Is(err, context.Canceled) {
+				log.Error("Cache failure", "error", err)
+			}
+		}
+	}()
+
 	// create provisioner server
 	prvSrv, err := provisioner.New(
 		log,
 		client,
+		epc,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create provisioner server: %w", err)
