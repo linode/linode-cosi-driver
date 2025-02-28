@@ -13,8 +13,8 @@
 # limitations under the License.
 
 # Image URL to use all building/pushing image targets
-IMG ?= docker.io/linode/linode-cosi-driver
-TAG ?= dev-v$(shell date +%y%m%d-%H%M%S)-$(shell git rev-parse HEAD | cut -c1-6)
+IMG ?= localhost:5005/linode-cosi-driver
+TAG ?= dev-$(shell git describe --match='' --always --abbrev=6 --dirty)
 PLATFORM ?= linux/$(shell go env GOARCH)
 CHAINSAW_ARGS ?=
 

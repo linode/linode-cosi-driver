@@ -27,8 +27,8 @@ import (
 )
 
 const (
-	DefaultTTL     = time.Second * 10
-	defaultTimeout = time.Second * 3
+	DefaultTTL     = time.Second * 30
+	defaultTimeout = time.Second * 15
 )
 
 type EndpointCache struct {
@@ -41,7 +41,7 @@ type EndpointCache struct {
 }
 
 func New(logger *slog.Logger, client linodeclient.Client, cacheTTL time.Duration) *EndpointCache {
-	if cacheTTL == 0 {
+	if cacheTTL == 0 || cacheTTL < DefaultTTL {
 		cacheTTL = DefaultTTL
 	}
 
