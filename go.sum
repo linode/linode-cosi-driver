@@ -1304,8 +1304,8 @@ github.com/theupdateframework/notary v0.7.0 h1:QyagRZ7wlSpjT5N2qQAh/pN+DVqgekv4D
 github.com/theupdateframework/notary v0.7.0/go.mod h1:c9DRxcmhHmVLDay4/2fUYdISnHqbFDGRSlXPO0AhYWw=
 github.com/tilt-dev/clusterid v0.1.4 h1:uQ/oDrFf+5ZPe/qcC4loq78Ri9PvgfTzvtsSxaFdhSI=
 github.com/tilt-dev/clusterid v0.1.4/go.mod h1:MV6q698Z7LEbu9i7p+JwqGsu2EkiiaQViIrL6gd8XiI=
-github.com/tilt-dev/ctlptl v0.8.38 h1:VIxn740xmFlWAUz1BobvYug/kz8aSkjs6FEJVZCbyO8=
-github.com/tilt-dev/ctlptl v0.8.38/go.mod h1:wWi1S4qUCbfjZMQro9DidK73MwsoFDY/ZdksTdUKlbI=
+github.com/tilt-dev/ctlptl v0.8.39 h1:tyxIErZGrZlGB4fAbgWm9zD6M6AobZ/dCi+sFvyOa3s=
+github.com/tilt-dev/ctlptl v0.8.39/go.mod h1:UewDf99lC3OO6Xcm8wgYaadiZXCaMVYEGa3GbTmgigc=
 github.com/tilt-dev/localregistry-go v0.0.0-20201021185044-ffc4c827f097 h1:CiCHb20O+poFO331eFOiXRscunvAhKBfDmDoY2mf45A=
 github.com/tilt-dev/localregistry-go v0.0.0-20201021185044-ffc4c827f097/go.mod h1:SX7bKYACP+RsddxA+NBkfVzr5DOr5ranTirgT7xlxjA=
 github.com/tilt-dev/wmclient v0.0.0-20201109174454-1839d0355fbc h1:wGkAoZhrvnmq93B4W2v+agiPl7xzqUaxXkxmKrwJ6bc=
