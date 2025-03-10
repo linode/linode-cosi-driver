@@ -2,6 +2,17 @@ apiVersion: v1
 entries:
   linode-cosi-driver:
   - apiVersion: v2
+    appVersion: v0.7.1
+    created: "2025-03-10T23:30:46.738879496Z"
+    description: A Kubernetes Container Object Storage Interface (COSI) Driver for
+      Linode
+    digest: 56cff054ad35f967e74d02ba36897e29812f3a20fc37cd288caed7fcc7d30d19
+    name: linode-cosi-driver
+    type: application
+    urls:
+    - https://github.com/linode/linode-cosi-driver/releases/download/linode-cosi-driver-0.4.4/linode-cosi-driver-0.4.4.tgz
+    version: 0.4.4
+  - apiVersion: v2
     appVersion: v0.7.0
     created: "2025-02-28T12:53:13.776543417Z"
     description: A Kubernetes Container Object Storage Interface (COSI) Driver for
@@ -34,4 +45,4 @@ entries:
     urls:
     - https://github.com/linode/linode-cosi-driver/releases/download/linode-cosi-driver-0.4.1/linode-cosi-driver-0.4.1.tgz
     version: 0.4.1
-generated: "2025-02-28T12:53:13.776555299Z"
+generated: "2025-03-10T23:30:46.738914172Z"
