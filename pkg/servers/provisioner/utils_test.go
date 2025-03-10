@@ -43,7 +43,7 @@ func TestCredentials(t *testing.T) {
 				S3: {
 					Secrets: map[string]string{
 						S3Region:                "us-east",
-						S3Endpoint:              "https://test-label.us-east-1.linodeobjects.com",
+						S3Endpoint:              "us-east-1.linodeobjects.com",
 						S3SecretAccessKeyID:     "TESTACCESSKEY",
 						S3SecretAccessSecretKey: "TESTSECRETKEY",
 					},
