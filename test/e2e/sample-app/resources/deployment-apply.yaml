@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cosi-sample-app
+  labels:
+    cosi.linode.com/test: cosi-sample-app
+spec:
+  selector:
+    matchLabels:
+      app: uploader
+  template:
+    metadata:
+      labels:
+        app: uploader
+    spec:
+      containers:
+      - args:
+        - --upload-interval=10
+        - --file=/mnt/logs/log.txt
+        - --bucket-info=/cosi/BucketInfo
+        image: ghcr.io/anza-labs/cosi-sample-app:v0.1.3
+        name: uploader
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+        securityContext:
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+        volumeMounts:
+        - mountPath: /mnt/logs
+          name: logs
+        - mountPath: /cosi
+          name: cosi-secret
+      initContainers:
+      - args:
+        - -c
+        - |
+          #!/bin/ash
+          while true; do
+              echo "$(date +'%Y-%m-%d %H:%M:%S') - Log entry" | tee -a "$LOG_FILE"
+              # Check file size and trim if needed
+              if [ -f "$LOG_FILE" ] && [ $(stat -c %s "$LOG_FILE") -gt $MAX_SIZE ]; then
+                  echo "$(date +'%Y-%m-%d %H:%M:%S') - Rotating" | tee -a "$LOG_FILE.tmp"
+                  mv "$LOG_FILE.tmp" "$LOG_FILE"
+              fi
+              sleep 1
+          done
+        command:
+        - sh
+        env:
+        - name: LOG_FILE
+          value: /mnt/logs/log.txt
+        - name: MAX_SIZE
+          value: "4194304"
+        image: alpine:3.21
+        name: logger
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+        restartPolicy: Always
+        securityContext:
+          readOnlyRootFilesystem: true
+          runAsGroup: 1000
+          runAsNonRoot: true
+          runAsUser: 1000
+        volumeMounts:
+        - mountPath: /mnt/logs
+          name: logs
+      volumes:
+      - name: cosi-secret
+        secret:
+          secretName: s3-credentials
+      - emptyDir: {}
+        name: logs

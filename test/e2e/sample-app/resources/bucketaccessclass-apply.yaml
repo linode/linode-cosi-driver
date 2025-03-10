@@ -1,0 +1,8 @@
+apiVersion: objectstorage.k8s.io/v1alpha1
+kind: BucketAccessClass
+metadata:
+  name: linode-objectstorage
+driverName: objectstorage.cosi.linode.com
+authenticationType: Key
+parameters:
+  cosi.linode.com/v1/permissions: read_write

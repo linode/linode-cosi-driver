@@ -1,0 +1,8 @@
+apiVersion: objectstorage.k8s.io/v1alpha1
+kind: BucketClaim
+metadata:
+  name: cosi-sample-app
+spec:
+  bucketClassName: linode-objectstorage
+  protocols:
+  - S3

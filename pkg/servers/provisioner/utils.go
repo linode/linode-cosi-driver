@@ -15,7 +15,6 @@
 package provisioner
 
 import (
-	"fmt"
 	"strings"
 
 	cosi "sigs.k8s.io/container-object-storage-interface-spec"
@@ -61,7 +60,7 @@ func credentials(region, endpoint, label, accessKey, secretKey string) map[strin
 		S3: {
 			Secrets: map[string]string{
 				S3Region:                region,
-				S3Endpoint:              fmt.Sprintf("https://%s.%s", label, endpoint),
+				S3Endpoint:              endpoint,
 				S3SecretAccessKeyID:     accessKey,
 				S3SecretAccessSecretKey: secretKey,
 			},

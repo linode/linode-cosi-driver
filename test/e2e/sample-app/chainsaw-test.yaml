@@ -1,0 +1,81 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/kyverno/chainsaw/main/.schemas/json/test-chainsaw-v1alpha1.json
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: sample-app
+spec:
+  template: true
+  steps:
+
+  - name: Check if COSI Controller exist
+    try:
+    - assert:
+        resource:
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: container-object-storage-controller
+            namespace: container-object-storage-system
+          status:
+            availableReplicas: 1
+
+  - name: Create test BucketClass and BucketAccessClass
+    try:
+    - apply:
+        file: ./resources/bucketclass-apply.yaml
+    - apply:
+        file: ./resources/bucketaccessclass-apply.yaml
+
+  - name: Create BucketClaim
+    try:
+    - apply:
+        file: ./resources/bucketclaim-apply.yaml
+  - name: Check if BucketClaim is ready
+    try:
+    - assert:
+        file: ./resources/bucketclaim-assert.yaml
+
+  - name: Create BucketAccess
+    try:
+    - apply:
+        file: ./resources/bucketaccess-apply.yaml
+  - name: Check if BucketAccess is granted
+    try:
+    - assert:
+        file: ./resources/bucketaccess-assert.yaml
+  - name: Check if Secret exists
+    try:
+    - assert:
+        resource:
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: s3-credentials
+
+  - name: Create sample app
+    try:
+    - apply:
+        file: ./resources/deployment-apply.yaml
+  - name: Check if app is running
+    try:
+    - assert:
+        file: ./resources/deployment-assert.yaml
+  - name: Wait for app execution
+    try:
+    - sleep:
+        duration: 30s
+  - name:
+    try:
+    - script:
+        env:
+        - name: NAMESPACE
+          value: ($namespace)
+        content: |
+          LOGS=$(kubectl logs -n "${NAMESPACE}" deployment/cosi-sample-app 2>&1)
+          ERROR_LINES=$(echo "$LOGS" | grep "\[ERROR\]" || true)
+          if [[ -n "${ERROR_LINES}" ]]; then
+            echo "${ERROR_LINES}" >&2; exit 1
+          fi
+        check:
+         ($error != null): false
