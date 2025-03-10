@@ -1,0 +1,9 @@
+apiVersion: objectstorage.k8s.io/v1alpha1
+kind: BucketAccess
+metadata:
+  name: cosi-sample-app
+spec:
+  bucketAccessClassName: linode-objectstorage
+  bucketClaimName: cosi-sample-app
+  credentialsSecretName: s3-credentials
+  protocol: S3
