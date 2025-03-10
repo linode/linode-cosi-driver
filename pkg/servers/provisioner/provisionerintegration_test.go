@@ -19,7 +19,6 @@ package provisioner_test
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"testing"
@@ -66,13 +65,10 @@ func TestHappyPath(t *testing.T) {
 	}
 
 	testCache := cache.New(slog.Default(), client, cache.DefaultTTL)
-	go func() {
-		if err := testCache.Start(t.Context()); err != nil {
-			if !errors.Is(err, context.Canceled) {
-				t.Errorf("expected context.Canceled, got %v", err)
-			}
-		}
-	}()
+	if err := testCache.Refresh(t.Context()); err != nil {
+		t.Errorf("failed to refresh cache: %v", err.Error())
+		return
+	}
 
 	srv, err := provisioner.New(slog.Default(), client, testCache)
 	if err != nil {
