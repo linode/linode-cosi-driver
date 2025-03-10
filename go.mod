@@ -15,7 +15,7 @@ require (
 require (
 	github.com/golangci/golangci-lint v1.64.5
 	github.com/kyverno/chainsaw v0.2.12
-	github.com/losisin/helm-values-schema-json v1.7.0
+	github.com/losisin/helm-values-schema-json v1.7.2
 	github.com/norwoodj/helm-docs v1.14.2
 	github.com/tilt-dev/ctlptl v0.8.39
 	golang.stackrox.io/kube-linter v0.7.1
