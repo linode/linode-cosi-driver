@@ -68,8 +68,11 @@ spec:
   - name:
     try:
     - script:
+        env:
+        - name: NAMESPACE
+          value: ($namespace)
         content: |
-          LOGS=$(kubectl logs -n ($namespace) deployment/cosi-sample-app 2>&1)
+          LOGS=$(kubectl logs -n "${NAMESPACE}" deployment/cosi-sample-app 2>&1)
           ERROR_LINES=$(echo "$LOGS" | grep "\[ERROR\]" || true)
           if [[ -n "${ERROR_LINES}" ]]; then
             echo "${ERROR_LINES}" >&2; exit 1

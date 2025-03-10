@@ -2,6 +2,8 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: cosi-sample-app
+  labels:
+    cosi.linode.com/test: cosi-sample-app
 spec:
   selector:
     matchLabels:
@@ -15,7 +17,8 @@ spec:
       - args:
         - --upload-interval=10
         - --file=/mnt/logs/log.txt
-        image: app
+        - --bucket-info=/cosi/BucketInfo
+        image: ghcr.io/anza-labs/cosi-sample-app:v0.1.3
         name: uploader
         resources:
           requests:
