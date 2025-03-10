@@ -19,8 +19,7 @@ PLATFORM ?= linux/$(shell go env GOARCH)
 CHAINSAW_ARGS ?=
 
 # Versions of COSI dependencies
-CRD_VERSION := 7ddc93baaa3f08c9c8990a17c7b958955d93c044
-CONTROLLER_VERSION := 7ddc93baaa3f08c9c8990a17c7b958955d93c044
+COSI_VERSION := 7ddc93baaa3f08c9c8990a17c7b958955d93c044
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -170,13 +169,11 @@ cluster-reset: kind ctlptl
 
 .PHONY: deploy-deps
 deploy-deps: ## Deploy all dependencies of Linode COSI Driver. This step installs CRDs and Controller.
-	kubectl apply -k github.com/kubernetes-sigs/container-object-storage-interface/?ref=${CRD_VERSION}
-	kubectl apply -k github.com/kubernetes-sigs/container-object-storage-interface//controller?ref=${CONTROLLER_VERSION}
+	kubectl apply -k github.com/kubernetes-sigs/container-object-storage-interface/?ref=${COSI_VERSION}
 
 .PHONY: undeploy-deps
 undeploy-deps: ## Deploy all dependencies of Linode COSI Driver. This step installs CRDs and Controller.
-	kubectl delete -k github.com/kubernetes-sigs/container-object-storage-interface/?ref=${CONTROLLER_VERSION}
-	kubectl delete -k github.com/kubernetes-sigs/container-object-storage-interface//controller?ref=${CRD_VERSION}
+	kubectl delete -k github.com/kubernetes-sigs/container-object-storage-interface/?ref=${COSI_VERSION}
 
 .PHONY: deploy
 deploy: helm ## Deploy driver to the K8s cluster specified in ~/.kube/config.
@@ -195,63 +192,63 @@ undeploy: helm ## Undeploy driver from the K8s cluster specified in ~/.kube/conf
 
 ## Tool Binaries
 KUBECTL ?= kubectl
-CHAINSAW ?= $(LOCALBIN)/chainsaw
-CTLPTL ?= $(LOCALBIN)/ctlptl
-GOLANGCI_LINT ?= $(LOCALBIN)/golangci-lint
-HELM ?= $(LOCALBIN)/helm
-HELM_DOCS ?= $(LOCALBIN)/helm-docs
+CHAINSAW                ?= $(LOCALBIN)/chainsaw
+CTLPTL                  ?= $(LOCALBIN)/ctlptl
+GOLANGCI_LINT           ?= $(LOCALBIN)/golangci-lint
+HELM                    ?= $(LOCALBIN)/helm
+HELM_DOCS               ?= $(LOCALBIN)/helm-docs
 HELM_VALUES_SCHEMA_JSON ?= $(LOCALBIN)/helm-values-schema-json
-KIND ?= $(LOCALBIN)/kind
-KUBE_LINTER ?= $(LOCALBIN)/kube-linter
+KIND                    ?= $(LOCALBIN)/kind
+KUBE_LINTER             ?= $(LOCALBIN)/kube-linter
 
 ## Tool Versions
-CHAINSAW_VERSION ?= $(shell grep 'github.com/kyverno/chainsaw ' ./go.mod | cut -d ' ' -f 2)
-CTLPTL_VERSION ?= $(shell grep 'github.com/tilt-dev/ctlptl ' ./go.mod | cut -d ' ' -f 2)
-GOLANGCI_LINT_VERSION ?= $(shell grep 'github.com/golangci/golangci-lint ' ./go.mod | cut -d ' ' -f 2)
-HELM_VERSION ?= $(shell grep 'helm.sh/helm/v3 ' ./go.mod | cut -d ' ' -f 2)
-HELM_DOCS_VERSION ?= $(shell grep 'github.com/norwoodj/helm-docs ' ./go.mod | cut -d ' ' -f 2)
-HELM_VALUES_SCHEMA_JSON_VERSION ?= $(shell grep 'github.com/losisin/helm-values-schema-json ' ./go.mod | cut -d ' ' -f 2)
-KIND_VERSION ?= $(shell grep 'sigs.k8s.io/kind ' ./go.mod | cut -d ' ' -f 2)
-KUBE_LINTER_VERSION ?= $(shell grep 'golang.stackrox.io/kube-linter ' ./go.mod | cut -d ' ' -f 2)
+CHAINSAW_VERSION                ?= v0.2.12
+CTLPTL_VERSION                  ?= v0.8.39
+GOLANGCI_LINT_VERSION           ?= v1.64.5
+HELM_VERSION                    ?= v3.17.1
+HELM_DOCS_VERSION               ?= v1.14.2
+HELM_VALUES_SCHEMA_JSON_VERSION ?= v1.7.0
+KIND_VERSION                    ?= v0.27.0
+KUBE_LINTER_VERSION             ?= v0.7.1
 
 .PHONY: chainsaw
-chainsaw: $(CHAINSAW)$(CHAINSAW_VERSION) ## Download chainsaw locally if necessary.
-$(CHAINSAW)$(CHAINSAW_VERSION): $(LOCALBIN)
+chainsaw: $(CHAINSAW)-$(CHAINSAW_VERSION) ## Download chainsaw locally if necessary.
+$(CHAINSAW)-$(CHAINSAW_VERSION): $(LOCALBIN)
 	$(call go-install-tool,$(CHAINSAW),github.com/kyverno/chainsaw,$(CHAINSAW_VERSION))
 
 .PHONY: ctlptl
-ctlptl: $(CTLPTL)$(CTLPTL_VERSION) ## Download ctlptl locally if necessary.
-$(CTLPTL)$(CTLPTL_VERSION): $(LOCALBIN)
+ctlptl: $(CTLPTL)-$(CTLPTL_VERSION) ## Download ctlptl locally if necessary.
+$(CTLPTL)-$(CTLPTL_VERSION): $(LOCALBIN)
 	$(call go-install-tool,$(CTLPTL),github.com/tilt-dev/ctlptl/cmd/ctlptl,$(CTLPTL_VERSION))
 
 .PHONY: golangci-lint
-golangci-lint: $(GOLANGCI_LINT)$(GOLANGCI_LINT_VERSION) ## Download golangci-lint locally if necessary.
-$(GOLANGCI_LINT)$(GOLANGCI_LINT_VERSION): $(LOCALBIN)
+golangci-lint: $(GOLANGCI_LINT)-$(GOLANGCI_LINT_VERSION) ## Download golangci-lint locally if necessary.
+$(GOLANGCI_LINT)-$(GOLANGCI_LINT_VERSION): $(LOCALBIN)
 	$(call go-install-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/cmd/golangci-lint,$(GOLANGCI_LINT_VERSION))
 
 .PHONY: helm
-helm: $(HELM)$(HELM_VERSION) ## Download helm locally if necessary.
-$(HELM)$(HELM_VERSION): $(LOCALBIN)
+helm: $(HELM)-$(HELM_VERSION) ## Download helm locally if necessary.
+$(HELM)-$(HELM_VERSION): $(LOCALBIN)
 	$(call go-install-tool,$(HELM),helm.sh/helm/v3/cmd/helm,$(HELM_VERSION))
 
 .PHONY: helm-docs
-helm-docs: $(HELM_DOCS)$(HELM_DOCS_VERSION) ## Download helm-docs locally if necessary.
-$(HELM_DOCS)$(HELM_DOCS_VERSION): $(LOCALBIN)
+helm-docs: $(HELM_DOCS)-$(HELM_DOCS_VERSION) ## Download helm-docs locally if necessary.
+$(HELM_DOCS)-$(HELM_DOCS_VERSION): $(LOCALBIN)
 	$(call go-install-tool,$(HELM_DOCS),github.com/norwoodj/helm-docs/cmd/helm-docs,$(HELM_DOCS_VERSION))
 
 .PHONY: helm-values-schema-json
-helm-values-schema-json: $(HELM_VALUES_SCHEMA_JSON)$(HELM_VALUES_SCHEMA_JSON_VERSION) ## Download helm-values-schema-json locally if necessary.
-$(HELM_VALUES_SCHEMA_JSON)$(HELM_VALUES_SCHEMA_JSON_VERSION): $(LOCALBIN)
+helm-values-schema-json: $(HELM_VALUES_SCHEMA_JSON)-$(HELM_VALUES_SCHEMA_JSON_VERSION) ## Download helm-values-schema-json locally if necessary.
+$(HELM_VALUES_SCHEMA_JSON)-$(HELM_VALUES_SCHEMA_JSON_VERSION): $(LOCALBIN)
 	$(call go-install-tool,$(HELM_VALUES_SCHEMA_JSON),github.com/losisin/helm-values-schema-json,$(HELM_VALUES_SCHEMA_JSON_VERSION))
 
 .PHONY: kind
-kind: $(KIND)$(KIND_VERSION) ## Download kind locally if necessary.
-$(KIND)$(KIND_VERSION): $(LOCALBIN)
+kind: $(KIND)-$(KIND_VERSION) ## Download kind locally if necessary.
+$(KIND)-$(KIND_VERSION): $(LOCALBIN)
 	$(call go-install-tool,$(KIND),sigs.k8s.io/kind,$(KIND_VERSION))
 
 .PHONY: kube-linter
-kube-linter: $(KUBE_LINTER)$(KUBE_LINTER_VERSION) ## Download kube-linter locally if necessary.
-$(KUBE_LINTER)$(KUBE_LINTER_VERSION): $(LOCALBIN)
+kube-linter: $(KUBE_LINTER)-$(KUBE_LINTER_VERSION) ## Download kube-linter locally if necessary.
+$(KUBE_LINTER)-$(KUBE_LINTER_VERSION): $(LOCALBIN)
 	$(call go-install-tool,$(KUBE_LINTER),golang.stackrox.io/kube-linter/cmd/kube-linter,$(KUBE_LINTER_VERSION))
 
 # go-install-tool will 'go install' any package with custom target and name of binary, if it doesn't exist

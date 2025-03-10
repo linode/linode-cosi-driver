@@ -81,7 +81,7 @@ var (
 		provisioner.S3: {
 			Secrets: map[string]string{
 				provisioner.S3Region:                testRegion,
-				provisioner.S3Endpoint:              fmt.Sprintf("https://%s.%s", testBucketName, testEndpoint),
+				provisioner.S3Endpoint:              testEndpoint,
 				provisioner.S3SecretAccessKeyID:     stubclient.TestAccessKey,
 				provisioner.S3SecretAccessSecretKey: stubclient.TestSecretKey,
 			},
