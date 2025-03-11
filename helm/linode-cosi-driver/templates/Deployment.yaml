@@ -52,9 +52,20 @@ spec:
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+          env:
+            - name: LINODE_OBJECT_STORAGE_ENDPOINT_CACHE_TTL
+              value: "{{ .Values.driver.cacheTTL }}"
+            - name: S3_CLIENT_EPHEMERAL_CREDENTIALS
+              value: "{{ .Values.s3.ephemeralCredentials }}"
+            - name: S3_CLIENT_SSL_ENABLED
+              value: "{{ .Values.s3.ssl }}"
           envFrom:
             - secretRef:
                 name: {{ include "linode-cosi-driver.secretName" . }}
+            {{- if not .Values.s3.ephemeralCredentials }}
+            - secretRef:
+                name: {{ include "linode-cosi-driver.s3secretName" . }}
+            {{- end }}
           volumeMounts:
             - name: cosi-socket-dir
               mountPath: /var/lib/cosi

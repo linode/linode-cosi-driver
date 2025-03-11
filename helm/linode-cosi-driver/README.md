@@ -1,6 +1,6 @@
 # linode-cosi-driver
 
-![Version: 0.4.4](https://img.shields.io/badge/Version-0.4.4-informational?style=flat) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat) ![AppVersion: v0.7.1](https://img.shields.io/badge/AppVersion-v0.7.1-informational?style=flat)
+![Version: 0.5.0](https://img.shields.io/badge/Version-0.5.0-informational?style=flat) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat) ![AppVersion: v0.8.0](https://img.shields.io/badge/AppVersion-v0.8.0-informational?style=flat)
 
 A Kubernetes Container Object Storage Interface (COSI) Driver for Linode
 
@@ -10,6 +10,7 @@ A Kubernetes Container Object Storage Interface (COSI) Driver for Linode
 |-----|------|---------|-------------|
 | affinity | object | `{}` | Node affinity rules for pod assignment. |
 | apiToken | string | `""` | Linode API token. This field is **required** unless secret is created before deployment (see `secret.ref` value). |
+| driver.cacheTTL | string | `"30s"` | TTL of the Object Storage region/endpoint cache. |
 | driver.image.pullPolicy | string | `"IfNotPresent"` | Driver container image pull policy. |
 | driver.image.repository | string | `"docker.io/linode/linode-cosi-driver"` | Driver container image repository. |
 | driver.image.tag | string | `""` | Overrides the image tag whose default is the chart appVersion. |
@@ -26,6 +27,12 @@ A Kubernetes Container Object Storage Interface (COSI) Driver for Linode
 | rbac.name | string | `""` | The name of the service account, cluster role, and cluster role binding to use. If not set, a name is generated using the fullname template. |
 | replicaCount | int | `1` | Number of pod replicas. |
 | resources | object | `{}` | Specify CPU and memory resource limits if needed. The value defined for CPU limits affects the number of threads used in the driver. The number of CPU seconds allocated above 1 is rounded using floor operation, so it should be done in integer steps (e.g. from 1 to 2). This means that assigning CPU limit of 1.5 will result in only one CPU being used at a time. |
+| s3.accessKey | string | `""` | S3 Access Key. This field is **required** unless secret is created before deployment (see `s3.secret.ref` value) or ephemeral credentials are enabled (see `s3.ephemeralCredentials` value). |
+| s3.ephemeralCredentials | bool | `true` | Generate ephemeral credentials, that are used in s3 client. Those might not be properly cleaned up if the container exits unexpectedly. |
+| s3.secret.annotations | object | `{}` | Annotations to add to the secret. |
+| s3.secret.ref | string | `""` | Name of existing secret. If not set, a new secret is created. |
+| s3.secretKey | string | `""` | S3 Secret Key. This field is **required** unless secret is created before deployment (see `s3.secret.ref` value) or ephemeral credentials are enabled (see `s3.ephemeralCredentials` value). |
+| s3.ssl | bool | `true` | Enable or disable SSL in S3 client. |
 | secret.annotations | object | `{}` | Annotations to add to the secret. |
 | secret.ref | string | `""` | Name of existing secret. If not set, a new secret is created. |
 | securityContext.readOnlyRootFilesystem | bool | `true` | Container runs with a read-only root filesystem. |

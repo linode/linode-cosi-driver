@@ -61,7 +61,7 @@ func main() {
 		linodeURL              = envflag.String("LINODE_API_URL", "")
 		linodeAPIVersion       = envflag.String("LINODE_API_VERSION", "")
 		cosiEndpoint           = envflag.String("COSI_ENDPOINT", "unix:///var/lib/cosi/cosi.sock")
-		cacheTTL               = envflag.Duration("LINODE_OBJECT_STORAGE_CACHE_TTL", cache.DefaultTTL)
+		cacheTTL               = envflag.Duration("LINODE_OBJECT_STORAGE_ENDPOINT_CACHE_TTL", cache.DefaultTTL)
 		s3SSL                  = envflag.Bool("S3_CLIENT_SSL_ENABLED", true)
 		s3EphemeralCredentials = envflag.Bool("S3_CLIENT_EPHEMERAL_CREDENTIALS", true)
 		s3AccessKey            = envflag.String("S3_ACCESS_KEY", "")
