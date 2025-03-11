@@ -83,11 +83,12 @@ Here’s the updated table with descriptions added:
 
 ### BucketClass
 
-| Parameter                   | Default    | Values                                                                        | Description                                                                            |
-|-----------------------------|------------|-------------------------------------------------------------------------------|----------------------------------------------------------------------------------------|
-| `cosi.linode.com/v1/region` |            | https://techdocs.akamai.com/linode-api/reference/get-object-storage-endpoints | **REQUIRED** The region where the object storage bucket will be created.               |
-| `cosi.linode.com/v1/acl`    | `private`  | `private`, `public-read`, `authenticated-read`, `public-read-write`           | The access control list (ACL) policy that defines who can read or write to the bucket. |
-| `cosi.linode.com/v1/cors`   | `disabled` | `disabled`, `enabled`                                                         | Enables or disables Cross-Origin Resource Sharing (CORS) for the bucket.               |
+| Parameter                   | Default    | Values                                                                                               | Description                                                                            |
+|-----------------------------|------------|------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------|
+| `cosi.linode.com/v1/region` |            | https://techdocs.akamai.com/linode-api/reference/get-object-storage-endpoints                        | **REQUIRED** The region where the object storage bucket will be created.               |
+| `cosi.linode.com/v1/acl`    | `private`  | `private`, `public-read`, `authenticated-read`, `public-read-write`                                  | The access control list (ACL) policy that defines who can read or write to the bucket. |
+| `cosi.linode.com/v1/cors`   | `disabled` | `disabled`, `enabled`                                                                                | Enables or disables Cross-Origin Resource Sharing (CORS) for the bucket.               |
+| `cosi.linode.com/v1/policy` |            | https://techdocs.akamai.com/cloud-computing/docs/define-access-and-permissions-using-bucket-policies | Defines custom bucket policies for fine-grained access control and permissions.        |
 
 ### BucketAccessClass
 
