@@ -31,8 +31,6 @@ spec:
     try:
     - apply:
         file: ./resources/bucketclaim-apply.yaml
-  - name: Check if BucketClaim is ready
-    try:
     - assert:
         file: ./resources/bucketclaim-assert.yaml
 
@@ -40,12 +38,8 @@ spec:
     try:
     - apply:
         file: ./resources/bucketaccess-apply.yaml
-  - name: Check if BucketAccess is granted
-    try:
     - assert:
         file: ./resources/bucketaccess-assert.yaml
-  - name: Check if Secret exists
-    try:
     - assert:
         resource:
           apiVersion: v1
@@ -53,20 +47,14 @@ spec:
           metadata:
             name: s3-credentials
 
-  - name: Create sample app
+  - name: Create sample app and execute it
     try:
     - apply:
         file: ./resources/deployment-apply.yaml
-  - name: Check if app is running
-    try:
     - assert:
         file: ./resources/deployment-assert.yaml
-  - name: Wait for app execution
-    try:
     - sleep:
         duration: 30s
-  - name:
-    try:
     - script:
         env:
         - name: NAMESPACE
@@ -79,3 +67,12 @@ spec:
           fi
         check:
          ($error != null): false
+    - delete:
+        file: ./resources/deployment-apply.yaml
+
+  - name: Run cleanup
+    try:
+    - apply:
+        file: ./resources/job-apply.yaml
+    - assert:
+        file: ./resources/job-assert.yaml

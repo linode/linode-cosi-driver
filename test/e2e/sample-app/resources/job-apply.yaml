@@ -1,0 +1,37 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: cosi-sample-app-cleanup
+spec:
+  template:
+    spec:
+      containers:
+      - name: mc
+        image: ghcr.io/anza-labs/library/mc:sha-65e877b
+        command:
+        - /bin/sh
+        - -c
+        - |
+          set -ex
+
+          # Extract credentials from the mounted Secret
+          BUCKET_NAME=$(cat /cosi/BucketInfo | jq -r '.spec.bucketName')
+          ENDPOINT=$(cat /cosi/BucketInfo | jq -r '.spec.secretS3.endpoint')
+          ACCESS_KEY=$(cat /cosi/BucketInfo | jq -r '.spec.secretS3.accessKeyID')
+          SECRET_KEY=$(cat /cosi/BucketInfo | jq -r '.spec.secretS3.accessSecretKey')
+
+          # Configure MinIO client alias and region
+          mc alias set cosi https://$ENDPOINT $ACCESS_KEY $SECRET_KEY
+
+          # Remove all objects in the bucket
+          mc rm --recursive --force cosi/$BUCKET_NAME/
+        volumeMounts:
+        - name: s3-credentials
+          mountPath: /cosi
+          readOnly: true
+      volumes:
+      - name: s3-credentials
+        secret:
+          secretName: s3-credentials
+      restartPolicy: Never
+  backoffLimit: 1

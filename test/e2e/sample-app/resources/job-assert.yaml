@@ -1,0 +1,6 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: cosi-sample-app-cleanup
+status:
+  succeeded: 1

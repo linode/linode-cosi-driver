@@ -8,6 +8,9 @@ The Linode COSI Driver is an implementation of the Kubernetes Container Object S
 
 - [Linode COSI Driver](#linode-cosi-driver)
   - [Getting Started](#getting-started)
+  - [Configuration](#configuration)
+    - [BucketClass](#bucketclass)
+    - [BucketAccessClass](#bucketaccessclass)
   - [License](#license)
   - [Support](#support)
   - [Contributing](#contributing)
@@ -19,12 +22,7 @@ Follow these steps to get started with Linode COSI Driver:
 1. **Prerequisites:**
     1. Install COSI Custom Resource Definitions.
     ```sh
-    kubectl create -k github.com/kubernetes-sigs/container-object-storage-interface-api
-    ```
-
-    2. Install COSI Controller.
-    ```sh
-    kubectl create -k github.com/kubernetes-sigs/container-object-storage-interface-controller
+    kubectl create -k 'github.com/kubernetes-sigs/container-object-storage-interface/?ref=v0.2.0'
     ```
 
 2. **Installation:**
@@ -76,8 +74,26 @@ Follow these steps to get started with Linode COSI Driver:
                 secretName: example-secret
                 items:
                   - key: BucketInfo
-                    path: BucketInfo.json
+                    path: BucketInfo # this is JSON formatted document
     ```
+
+## Configuration
+
+Here’s the updated table with descriptions added:
+
+### BucketClass
+
+| Parameter                   | Default    | Values                                                                        | Description                                                                            |
+|-----------------------------|------------|-------------------------------------------------------------------------------|----------------------------------------------------------------------------------------|
+| `cosi.linode.com/v1/region` |            | https://techdocs.akamai.com/linode-api/reference/get-object-storage-endpoints | **REQUIRED** The region where the object storage bucket will be created.               |
+| `cosi.linode.com/v1/acl`    | `private`  | `private`, `public-read`, `authenticated-read`, `public-read-write`           | The access control list (ACL) policy that defines who can read or write to the bucket. |
+| `cosi.linode.com/v1/cors`   | `disabled` | `disabled`, `enabled`                                                         | Enables or disables Cross-Origin Resource Sharing (CORS) for the bucket.               |
+
+### BucketAccessClass
+
+| Parameter                        | Default     | Values                    | Description                                                                                                             |
+|----------------------------------|-------------|---------------------------|-------------------------------------------------------------------------------------------------------------------------|
+| `cosi.linode.com/v1/permissions` | `read_only` | `read_only`, `read_write` | Defines the access permissions for the bucket, specifying whether users can only read data or also write to the bucket. |
 
 ## License
 
