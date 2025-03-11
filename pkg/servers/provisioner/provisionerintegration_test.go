@@ -29,6 +29,7 @@ import (
 	"github.com/linode/linode-cosi-driver/pkg/envflag"
 	"github.com/linode/linode-cosi-driver/pkg/linodeclient"
 	"github.com/linode/linode-cosi-driver/pkg/linodeclient/cache"
+	"github.com/linode/linode-cosi-driver/pkg/s3"
 	"github.com/linode/linode-cosi-driver/pkg/servers/provisioner"
 	"github.com/linode/linode-cosi-driver/pkg/version"
 )
@@ -70,9 +71,30 @@ func TestHappyPath(t *testing.T) {
 		return
 	}
 
-	srv, err := provisioner.New(slog.Default(), client, testCache)
+	creds, cleanup, err := linodeclient.NewEphemeralS3Credentials(context.Background(), client)
 	if err != nil {
-		t.Errorf("failed to provisioner: %v", err.Error())
+		t.Errorf("failed to create ephemeral s3 credentials: %v", err.Error())
+		return
+	}
+
+	defer func() {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+		defer cancel()
+
+		if err := cleanup(ctx); err != nil {
+			t.Errorf("unable to cleanup ephemeral credentials: %v", err)
+		}
+	}()
+
+	s3cli := s3.New(
+		testCache,
+		creds.AccessKey, creds.SecretKey,
+		true,
+	)
+
+	srv, err := provisioner.New(slog.Default(), client, testCache, s3cli)
+	if err != nil {
+		t.Errorf("failed to create provisioner: %v", err.Error())
 		return
 	}
 

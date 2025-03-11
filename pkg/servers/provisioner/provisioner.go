@@ -27,12 +27,10 @@ import (
 	cosi "sigs.k8s.io/container-object-storage-interface-spec"
 
 	"github.com/linode/linode-cosi-driver/pkg/linodeclient"
+	"github.com/linode/linode-cosi-driver/pkg/linodeclient/cache"
+	"github.com/linode/linode-cosi-driver/pkg/s3"
 	"github.com/linode/linodego"
 )
-
-type Cache interface {
-	Get(key string) (string, bool)
-}
 
 // Server implements cosi.ProvisionerServer interface.
 type Server struct {
@@ -40,18 +38,25 @@ type Server struct {
 	once sync.Once
 
 	client linodeclient.Client
-	cache  Cache
+	cache  cache.Cache
+	s3cli  s3.Client
 }
 
 // Interface guards.
 var _ cosi.ProvisionerServer = (*Server)(nil)
 
 // New returns provisioner.Server with default values.
-func New(logger *slog.Logger, client linodeclient.Client, cache Cache) (*Server, error) {
+func New(
+	logger *slog.Logger,
+	client linodeclient.Client,
+	cache cache.Cache,
+	s3cli s3.Client,
+) (*Server, error) {
 	srv := &Server{
 		log:    logger,
 		client: client,
 		cache:  cache,
+		s3cli:  s3cli,
 	}
 
 	return srv, nil
@@ -76,6 +81,7 @@ func (s *Server) DriverCreateBucket(ctx context.Context, req *cosi.DriverCreateB
 	label := req.GetName()
 	region := req.GetParameters()[ParamRegion]
 	cors := ParamCORSValue(req.GetParameters()[ParamCORS])
+	policyTemplate := req.GetParameters()[ParamPolicy]
 
 	acl := linodego.ObjectStorageACL(req.GetParameters()[ParamACL])
 	if acl == "" {
@@ -91,8 +97,22 @@ func (s *Server) DriverCreateBucket(ctx context.Context, req *cosi.DriverCreateB
 
 	if region == "" {
 		log.ErrorContext(ctx, "Required parameter was not provided in the request", "error", ErrMissingRegion)
-
 		return nil, status.Error(codes.InvalidArgument, "region was not provided")
+	}
+
+	var (
+		policy string
+		err    error
+	)
+
+	if policyTemplate == "" {
+		policy, err = s3.ApplyTemplate(policyTemplate, s3.PolicyTemplateParams{
+			BucketName: label,
+		})
+		if err != nil {
+			log.ErrorContext(ctx, "Failed to generate bucket policy", "error", err)
+			return nil, status.Error(codes.Internal, fmt.Sprintf("failed to generate bucket policy: %v", err))
+		}
 	}
 
 	bucket, err := s.client.GetObjectStorageBucket(ctx, region, label)
@@ -119,6 +139,15 @@ func (s *Server) DriverCreateBucket(ctx context.Context, req *cosi.DriverCreateB
 
 		log.InfoContext(ctx, "Bucket created")
 
+		if policy != "" {
+			log.InfoContext(ctx, "Updating policy")
+
+			if err := s.s3cli.SetBucketPolicy(ctx, region, bucket.Label, policy); err != nil {
+				log.ErrorContext(ctx, "Failed to set bucket policy", "error", err)
+				return nil, status.Error(codes.Internal, fmt.Sprintf("failed to set bucket policy: %v", err))
+			}
+		}
+
 		return &cosi.DriverCreateBucketResponse{
 			BucketId:   bucket.Region + "/" + bucket.Label,
 			BucketInfo: bucketInfo(bucket.Region),
@@ -144,6 +173,13 @@ func (s *Server) DriverCreateBucket(ctx context.Context, req *cosi.DriverCreateB
 		return nil, status.Error(codes.AlreadyExists, "bucket exists with different parameters")
 	}
 
+	// Comparing policies is expensive and hard. If every other parameter is equal,
+	// we assume that bucket is valid, and the policy will be applied.
+	if err := s.s3cli.SetBucketPolicy(ctx, region, label, policy); err != nil {
+		log.ErrorContext(ctx, "Failed to set bucket policy", "error", err)
+		return nil, status.Error(codes.Internal, fmt.Sprintf("failed to set bucket policy: %v", err))
+	}
+
 	log.InfoContext(ctx, "Bucket exists")
 
 	return &cosi.DriverCreateBucketResponse{
@@ -158,6 +194,9 @@ func (s *Server) DriverCreateBucket(ctx context.Context, req *cosi.DriverCreateB
 // If the bucket has already been deleted, then no error should be returned.
 func (s *Server) DriverDeleteBucket(ctx context.Context, req *cosi.DriverDeleteBucketRequest) (*cosi.DriverDeleteBucketResponse, error) {
 	region, label := parseBucketID(req.GetBucketId())
+	// TODO(v1alpha2): add the cleanup
+	// cleanup := ParamCleanupValue(req.GetParameters()[ParamCleanup]).Force()
+	cleanup := false
 
 	log := s.logAttr(
 		slog.String(KeyBucketID, req.GetBucketId()),
@@ -166,6 +205,13 @@ func (s *Server) DriverDeleteBucket(ctx context.Context, req *cosi.DriverDeleteB
 	).WithGroup("DriverDeleteBucket")
 
 	log.InfoContext(ctx, "Bucket deletion initiated")
+
+	if cleanup {
+		err := s.s3cli.Prune(ctx, region, label)
+		if err != nil && !s3.IsNotFound(err) {
+			return nil, status.Error(codes.Internal, fmt.Sprintf("failed to cleanup bucket: %v", err))
+		}
+	}
 
 	err := s.client.DeleteObjectStorageBucket(ctx, region, label)
 	if err == nil || errors.Is(err, ErrNotFound) {

@@ -28,7 +28,9 @@ import (
 
 	"github.com/linode/linode-cosi-driver/pkg/linodeclient"
 	"github.com/linode/linode-cosi-driver/pkg/linodeclient/cache"
-	"github.com/linode/linode-cosi-driver/pkg/linodeclient/stubclient"
+	linodestub "github.com/linode/linode-cosi-driver/pkg/linodeclient/stubclient"
+	"github.com/linode/linode-cosi-driver/pkg/s3"
+	s3stub "github.com/linode/linode-cosi-driver/pkg/s3/stubclient"
 	"github.com/linode/linode-cosi-driver/pkg/servers/provisioner"
 	"github.com/linode/linodego"
 )
@@ -82,8 +84,8 @@ var (
 			Secrets: map[string]string{
 				provisioner.S3Region:                testRegion,
 				provisioner.S3Endpoint:              testEndpoint,
-				provisioner.S3SecretAccessKeyID:     stubclient.TestAccessKey,
-				provisioner.S3SecretAccessSecretKey: stubclient.TestSecretKey,
+				provisioner.S3SecretAccessKeyID:     linodestub.TestAccessKey,
+				provisioner.S3SecretAccessSecretKey: linodestub.TestSecretKey,
 			},
 		},
 	}
@@ -95,13 +97,15 @@ func TestDriverCreateBucket(t *testing.T) {
 	for _, tc := range []struct {
 		testName         string
 		client           linodeclient.Client
+		s3cli            s3.Client
 		request          *cosi.DriverCreateBucketRequest
 		expectedResponse *cosi.DriverCreateBucketResponse
 		expectedError    error
 	}{
 		{
 			testName: "base",
-			client:   stubclient.New(),
+			client:   linodestub.New(),
+			s3cli:    s3stub.New(),
 			request: &cosi.DriverCreateBucketRequest{
 				Name:       testBucketName,
 				Parameters: defaultBucketParameters,
@@ -113,10 +117,11 @@ func TestDriverCreateBucket(t *testing.T) {
 		},
 		{
 			testName: "bucket exists",
-			client: stubclient.New(
-				stubclient.WithBucket(defaultLinodegoBucket),
-				stubclient.WithBucketAccess(defaultLinodegoBucketAccess, defaultLinodegoBucket.Region, defaultLinodegoBucket.Label),
+			client: linodestub.New(
+				linodestub.WithBucket(defaultLinodegoBucket),
+				linodestub.WithBucketAccess(defaultLinodegoBucketAccess, defaultLinodegoBucket.Region, defaultLinodegoBucket.Label),
 			),
+			s3cli: s3stub.New(),
 			request: &cosi.DriverCreateBucketRequest{
 				Name:       testBucketName,
 				Parameters: defaultBucketParameters,
@@ -128,7 +133,8 @@ func TestDriverCreateBucket(t *testing.T) {
 		},
 		{
 			testName: "empty map",
-			client:   stubclient.New(),
+			client:   linodestub.New(),
+			s3cli:    s3stub.New(),
 			request: &cosi.DriverCreateBucketRequest{
 				Name:       testBucketName,
 				Parameters: map[string]string{},
@@ -137,7 +143,8 @@ func TestDriverCreateBucket(t *testing.T) {
 		},
 		{
 			testName: "nil map",
-			client:   stubclient.New(),
+			client:   linodestub.New(),
+			s3cli:    s3stub.New(),
 			request: &cosi.DriverCreateBucketRequest{
 				Name: testBucketName,
 			},
@@ -157,7 +164,9 @@ func TestDriverCreateBucket(t *testing.T) {
 				t.Fatalf("failed to refresh cache: %v", err)
 			}
 
-			srv, err := provisioner.New(nil, tc.client, epc)
+			s3stub.SetBucketTracker(tc.s3cli, tc.client)
+
+			srv, err := provisioner.New(nil, tc.client, epc, tc.s3cli)
 			if err != nil {
 				t.Fatalf("failed to create provisioner server: %v", err)
 			}
@@ -185,12 +194,14 @@ func TestDriverDeleteBucket(t *testing.T) {
 	for _, tc := range []struct {
 		testName      string
 		client        linodeclient.Client
+		s3cli         s3.Client
 		request       *cosi.DriverDeleteBucketRequest
 		expectedError error
 	}{
 		{
 			testName: "base",
-			client:   stubclient.New(stubclient.WithBucket(defaultLinodegoBucket)),
+			client:   linodestub.New(linodestub.WithBucket(defaultLinodegoBucket)),
+			s3cli:    s3stub.New(),
 			request: &cosi.DriverDeleteBucketRequest{
 				BucketId: testBucketID,
 			},
@@ -209,7 +220,7 @@ func TestDriverDeleteBucket(t *testing.T) {
 				t.Fatalf("failed to refresh cache: %v", err)
 			}
 
-			srv, err := provisioner.New(nil, tc.client, epc)
+			srv, err := provisioner.New(nil, tc.client, epc, tc.s3cli)
 			if err != nil {
 				t.Fatalf("failed to create provisioner server: %v", err)
 			}
@@ -230,16 +241,18 @@ func TestDriverGrantBucketAccess(t *testing.T) {
 	for _, tc := range []struct {
 		testName         string
 		client           linodeclient.Client
+		s3cli            s3.Client
 		request          *cosi.DriverGrantBucketAccessRequest
 		expectedResponse *cosi.DriverGrantBucketAccessResponse
 		expectedError    error
 	}{
 		{
 			testName: "base",
-			client: stubclient.New(
-				stubclient.WithBucket(defaultLinodegoBucket),
-				stubclient.WithEndpoint(defaultLinodegoEndpoint),
+			client: linodestub.New(
+				linodestub.WithBucket(defaultLinodegoBucket),
+				linodestub.WithEndpoint(defaultLinodegoEndpoint),
 			),
+			s3cli: s3stub.New(),
 			request: &cosi.DriverGrantBucketAccessRequest{
 				BucketId:           testBucketID,
 				Name:               testBucketAccessName,
@@ -253,10 +266,11 @@ func TestDriverGrantBucketAccess(t *testing.T) {
 		},
 		{
 			testName: "IAM Auth",
-			client: stubclient.New(
-				stubclient.WithBucket(defaultLinodegoBucket),
-				stubclient.WithEndpoint(defaultLinodegoEndpoint),
+			client: linodestub.New(
+				linodestub.WithBucket(defaultLinodegoBucket),
+				linodestub.WithEndpoint(defaultLinodegoEndpoint),
 			),
+			s3cli: s3stub.New(),
 			request: &cosi.DriverGrantBucketAccessRequest{
 				BucketId:           testBucketID,
 				Name:               testBucketAccessName,
@@ -270,10 +284,11 @@ func TestDriverGrantBucketAccess(t *testing.T) {
 		},
 		{
 			testName: "invalid permissions",
-			client: stubclient.New(
-				stubclient.WithBucket(defaultLinodegoBucket),
-				stubclient.WithEndpoint(defaultLinodegoEndpoint),
+			client: linodestub.New(
+				linodestub.WithBucket(defaultLinodegoBucket),
+				linodestub.WithEndpoint(defaultLinodegoEndpoint),
 			),
+			s3cli: s3stub.New(),
 			request: &cosi.DriverGrantBucketAccessRequest{
 				BucketId:           testBucketID,
 				Name:               testBucketAccessName,
@@ -301,7 +316,7 @@ func TestDriverGrantBucketAccess(t *testing.T) {
 				t.Fatalf("failed to refresh cache: %v", err)
 			}
 
-			srv, err := provisioner.New(nil, tc.client, epc)
+			srv, err := provisioner.New(nil, tc.client, epc, tc.s3cli)
 			if err != nil {
 				t.Fatalf("failed to create provisioner server: %v", err)
 			}
@@ -329,15 +344,17 @@ func TestDriverRevokeBucketAccess(t *testing.T) {
 	for _, tc := range []struct {
 		testName      string
 		client        linodeclient.Client
+		s3cli         s3.Client
 		request       *cosi.DriverRevokeBucketAccessRequest
 		expectedError error
 	}{
 		{
 			testName: "base",
-			client: stubclient.New(
-				stubclient.WithBucket(defaultLinodegoBucket),
-				stubclient.WithBucketAccess(defaultLinodegoBucketAccess, defaultLinodegoBucket.Region, defaultLinodegoBucket.Label),
+			client: linodestub.New(
+				linodestub.WithBucket(defaultLinodegoBucket),
+				linodestub.WithBucketAccess(defaultLinodegoBucketAccess, defaultLinodegoBucket.Region, defaultLinodegoBucket.Label),
 			),
+			s3cli: s3stub.New(),
 			request: &cosi.DriverRevokeBucketAccessRequest{
 				BucketId:  testBucketID,
 				AccountId: testBucketAccessID,
@@ -357,7 +374,7 @@ func TestDriverRevokeBucketAccess(t *testing.T) {
 				t.Fatalf("failed to refresh cache: %v", err)
 			}
 
-			srv, err := provisioner.New(nil, tc.client, epc)
+			srv, err := provisioner.New(nil, tc.client, epc, tc.s3cli)
 			if err != nil {
 				t.Fatalf("failed to create provisioner server: %v", err)
 			}

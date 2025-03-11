@@ -53,6 +53,9 @@ func TestRun(t *testing.T) {
 
 			defaultOpts := mainOptions{
 				cosiEndpoint: "cosi.sock",
+				s3AccessKey:  "test",
+				s3SecretKey:  "test",
+				s3SSL:        true,
 			}
 
 			for _, opt := range tc.options {

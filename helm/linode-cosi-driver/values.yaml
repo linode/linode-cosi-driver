@@ -25,6 +25,9 @@ driver:
     # -- Overrides the image tag whose default is the chart appVersion.
     tag: ""
 
+  # -- TTL of the Object Storage region/endpoint cache.
+  cacheTTL: 30s
+
 sidecar:
   image:
     # -- Sidecar container image repository.
@@ -62,6 +65,30 @@ secret:
 
   # -- Annotations to add to the secret.
   annotations: {}
+
+s3:
+  secret:
+    # -- Name of existing secret. If not set, a new secret is created.
+    ref: ""
+
+    # -- Annotations to add to the secret.
+    annotations: {}
+
+  # -- Generate ephemeral credentials, that are used in s3 client. Those might not be properly cleaned up if
+  # the container exits unexpectedly.
+  ephemeralCredentials: true
+
+  # -- Enable or disable SSL in S3 client.
+  ssl: true
+
+  # -- S3 Secret Key. This field is **required** unless secret is created before deployment (see `s3.secret.ref` value)
+  # or ephemeral credentials are enabled (see `s3.ephemeralCredentials` value).
+  secretKey: ""
+
+
+  # -- S3 Access Key. This field is **required** unless secret is created before deployment (see `s3.secret.ref` value)
+  # or ephemeral credentials are enabled (see `s3.ephemeralCredentials` value).
+  accessKey: ""
 
 podSecurityContext:
   # -- Run the pod as a non-root user.

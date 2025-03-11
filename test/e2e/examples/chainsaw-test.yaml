@@ -6,15 +6,20 @@ metadata:
   name: examples
 spec:
   steps:
-  - try:
+  - name: Apply example manifests
+    try:
     - apply:
-        file: ../../../examples/example.BucketClass.yaml
+        file: ../../../examples/linode-objectstorage.BucketClass.yaml
     - assert:
-        file: ../../../examples/example.BucketClass.yaml
+        file: ../../../examples/linode-objectstorage.BucketClass.yaml
     - apply:
-        file: ../../../examples/example.BucketAccessClass.yaml
+        file: ../../../examples/linode-objectstorage-retain.BucketClass.yaml
     - assert:
-        file: ../../../examples/example.BucketAccessClass.yaml
+        file: ../../../examples/linode-objectstorage-retain.BucketClass.yaml
+    - apply:
+        file: ../../../examples/linode-objectstorage.BucketAccessClass.yaml
+    - assert:
+        file: ../../../examples/linode-objectstorage.BucketAccessClass.yaml
     - apply:
         file: ../../../examples/example.BucketAccess.yaml
     - assert:
@@ -23,14 +28,14 @@ spec:
         file: ../../../examples/example.BucketClaim.yaml
     - assert:
         file: ./example.BucketClaim.yaml
-  - try:
+  - name: Run bucket-test pod
+    try:
     - create:
         resource:
           apiVersion: v1
           kind: Pod
           metadata:
             name: bucket-test
-            namespace: default
           spec:
             terminationGracePeriodSeconds: 0
             containers:
@@ -43,7 +48,7 @@ spec:
             volumes:
             - name: example-secret-vol
               secret:
-                secretName: example-secret
+                secretName: s3-credentials
                 items:
                 - key: BucketInfo
                   path: BucketInfo.json
@@ -53,12 +58,14 @@ spec:
           kind: Pod
           metadata:
             name: bucket-test
-            namespace: default
           status:
             phase: Running
     - command:
+        env:
+        - name: NAMESPACE
+          value: ($namespace)
         entrypoint: kubectl
-        args: [ exec, -n, default, bucket-test, --, head, -c12, /conf/BucketInfo.json ]
+        args: [ exec, -n, "$NAMESPACE", bucket-test, --, head, -c12, /conf/BucketInfo.json ]
         check:
           ($error): ~
           (starts_with($stdout, '{"metadata"')): true

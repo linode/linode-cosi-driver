@@ -31,6 +31,10 @@ const (
 	defaultTimeout = time.Second * 15
 )
 
+type Cache interface {
+	Get(key string) (string, bool)
+}
+
 type EndpointCache struct {
 	sync.RWMutex
 

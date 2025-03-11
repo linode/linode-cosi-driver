@@ -10,6 +10,9 @@
     },
     "driver": {
       "properties": {
+        "cacheTTL": {
+          "type": "string"
+        },
         "image": {
           "properties": {
             "pullPolicy": {
@@ -88,6 +91,35 @@
     },
     "resources": {
       "properties": {},
+      "type": "object"
+    },
+    "s3": {
+      "properties": {
+        "accessKey": {
+          "type": "string"
+        },
+        "ephemeralCredentials": {
+          "type": "boolean"
+        },
+        "secret": {
+          "properties": {
+            "annotations": {
+              "properties": {},
+              "type": "object"
+            },
+            "ref": {
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "secretKey": {
+          "type": "string"
+        },
+        "ssl": {
+          "type": "boolean"
+        }
+      },
       "type": "object"
     },
     "secret": {
