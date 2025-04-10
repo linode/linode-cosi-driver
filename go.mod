@@ -5,7 +5,7 @@ go 1.24.0
 require (
 	github.com/go-resty/resty/v2 v2.16.5
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.3.1
-	github.com/linode/linodego v1.48.1
+	github.com/linode/linodego v1.49.0
 	github.com/minio/minio-go/v7 v7.0.90
 	go.uber.org/automaxprocs v1.6.0
 	google.golang.org/grpc v1.71.1
