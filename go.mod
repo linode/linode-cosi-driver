@@ -8,7 +8,7 @@ require (
 	github.com/linode/linodego v1.49.0
 	github.com/minio/minio-go/v7 v7.0.91
 	go.uber.org/automaxprocs v1.6.0
-	google.golang.org/grpc v1.72.0
+	google.golang.org/grpc v1.72.2
 	sigs.k8s.io/container-object-storage-interface-spec v0.1.0
 )
 
