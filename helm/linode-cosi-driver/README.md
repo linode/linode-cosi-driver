@@ -1,6 +1,6 @@
 # linode-cosi-driver
 
-![Version: 0.5.1](https://img.shields.io/badge/Version-0.5.1-informational?style=flat) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat) ![AppVersion: v0.8.1](https://img.shields.io/badge/AppVersion-v0.8.1-informational?style=flat)
+![Version: 0.5.2](https://img.shields.io/badge/Version-0.5.2-informational?style=flat) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat) ![AppVersion: v0.8.2](https://img.shields.io/badge/AppVersion-v0.8.2-informational?style=flat)
 
 A Kubernetes Container Object Storage Interface (COSI) Driver for Linode
 
