@@ -60,8 +60,6 @@ func (c *ClientS3) new(region string) (*minio.Client, error) {
 		return nil, fmt.Errorf("failed to get endpoint for region: %s", region)
 	}
 
-	fmt.Println(endpoint, region, c.s3AccessKey, c.s3SecretKey)
-
 	cli, err := minio.New(endpoint, &minio.Options{
 		Creds:  credentials.NewStaticV4(c.s3AccessKey, c.s3SecretKey, ""),
 		Region: region,
