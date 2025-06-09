@@ -30,8 +30,8 @@ github.com/klauspost/compress v1.18.0/go.mod h1:2Pp+KzxcywXVXMr50+X0Q/Lsb43OQHYW
 github.com/klauspost/cpuid/v2 v2.0.1/go.mod h1:FInQzS24/EEf25PyTYn52gqo7WaD8xa0213Md/qVLRg=
 github.com/klauspost/cpuid/v2 v2.2.10 h1:tBs3QSyvjDyFTq3uoc/9xFpCuOsJQFNPiAhYdw2skhE=
 github.com/klauspost/cpuid/v2 v2.2.10/go.mod h1:hqwkgyIinND0mEev00jJYCxPNVRVXFQeu1XKlok6oO0=
-github.com/linode/linodego v1.51.0 h1:8S0vNQRUZAuumGFe8h/huCzbyExxlvOUR2Uf0oDoJ/8=
-github.com/linode/linodego v1.51.0/go.mod h1:zEN2sX+cSdp67EuRY1HJiyuLujoa7HqvVwNEcJv3iXw=
+github.com/linode/linodego v1.52.1 h1:HJ1cz1n9n3chRP9UrtqmP91+xTi0Q5l+H/4z4tpkwgQ=
+github.com/linode/linodego v1.52.1/go.mod h1:zEN2sX+cSdp67EuRY1HJiyuLujoa7HqvVwNEcJv3iXw=
 github.com/minio/crc64nvme v1.0.1 h1:DHQPrYPdqK7jQG/Ls5CTBZWeex/2FMS3G5XGkycuFrY=
 github.com/minio/crc64nvme v1.0.1/go.mod h1:eVfm2fAzLlxMdUGc0EEBGSMmPwmXD5XiNRpnu9J3bvg=
 github.com/minio/md5-simd v1.1.2 h1:Gdi1DZK69+ZVMoNHRXJyNcxrMA4dSxoYHZSQbirFg34=
