@@ -22,7 +22,7 @@ Follow these steps to get started with Linode COSI Driver:
 1. **Prerequisites:**
     1. Install COSI Custom Resource Definitions.
     ```sh
-    kubectl create -k 'github.com/kubernetes-sigs/container-object-storage-interface/?ref=v0.2.0'
+    kubectl create -k 'github.com/kubernetes-sigs/container-object-storage-interface/?ref=v0.2.1'
     ```
 
 2. **Installation:**
@@ -39,12 +39,12 @@ Follow these steps to get started with Linode COSI Driver:
     ```
 
 3. **Usage:**
-    1. Create Bucket Class (see the [example.BucketClass.yaml](./examples/example.BucketClass.yaml)).
+    1. Create Bucket Class (see the [example.BucketClass.yaml](./examples/linode-objectstorage.BucketClass.yaml)).
     ```sh
     kubectl create -f ./examples/example.BucketClass.yaml
     ```
 
-    2. Create Bucket Access Class (see the [example.BucketAccessClass.yaml](./examples/example.BucketAccessClass.yaml)).
+    2. Create Bucket Access Class (see the [example.BucketAccessClass.yaml](./examples/linode-objectstorage.BucketAccessClass.yaml)).
     ```sh
     kubectl create -f ./examples/example.BucketAccessClass.yaml
     ```
