@@ -29,3 +29,8 @@ release/
 
 # IDE configs
 .vscode
+
+# Intellij config
+.idea
+
+.envrc
