@@ -9,8 +9,8 @@ on:
       - "main"
 
 concurrency:
-  group: ${{ github.workflow }}
-  cancel-in-progress: false
+  group: e2e-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   integration:
@@ -39,12 +39,4 @@ jobs:
       - env:
           LINODE_TOKEN: ${{ secrets.LINODE_TOKEN }}
         run: |
-          export LINODE_TOKEN=${LINODE_TOKEN:?Token not set or empty}
-          make \
-            IMG=localhost:5005/linode-cosi-driver \
-            TAG=e2e \
-            cluster \
-            docker-build docker-push \
-            deploy-deps deploy
-      - run: |
           make test-e2e

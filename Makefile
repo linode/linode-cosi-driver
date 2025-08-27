@@ -21,6 +21,18 @@ CHAINSAW_ARGS ?=
 # Versions of COSI dependencies
 COSI_VERSION := 7ddc93baaa3f08c9c8990a17c7b958955d93c044
 
+OS=$(shell uname -s | tr '[:upper:]' '[:lower:]')
+TILT_OS=$(OS)
+ifeq ($(TILT_OS),darwin)
+TILT_OS=mac
+endif
+ARCH=$(shell uname -m)
+ARCH_SHORT=$(ARCH)
+ifeq ($(ARCH_SHORT),x86_64)
+ARCH_SHORT := amd64
+else ifeq ($(ARCH_SHORT),aarch64)
+ARCH_SHORT := arm64
+endif
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
 GOBIN=$(shell go env GOPATH)/bin
@@ -184,6 +196,10 @@ deploy: helm ## Deploy driver to the K8s cluster specified in ~/.kube/config.
 			--set=driver.image.repository=${IMG} \
 			--set=driver.image.tag=${TAG}
 
+.PHONY: local-deploy
+local-deploy: cluster tilt
+	$(TILT) ci -f Tiltfile
+
 .PHONY: undeploy
 undeploy: helm ## Undeploy driver from the K8s cluster specified in ~/.kube/config.
 	$(HELM) uninstall linode-cosi-driver
@@ -200,6 +216,7 @@ HELM_DOCS               ?= $(LOCALBIN)/helm-docs
 HELM_VALUES_SCHEMA_JSON ?= $(LOCALBIN)/helm-values-schema-json
 KIND                    ?= $(LOCALBIN)/kind
 KUBE_LINTER             ?= $(LOCALBIN)/kube-linter
+TILT           			?= $(LOCALBIN)/tilt
 
 ## Tool Versions
 CHAINSAW_VERSION                ?= v0.2.12
@@ -208,8 +225,9 @@ GOLANGCI_LINT_VERSION           ?= v1.64.5
 HELM_VERSION                    ?= v3.17.1
 HELM_DOCS_VERSION               ?= v1.14.2
 HELM_VALUES_SCHEMA_JSON_VERSION ?= v1.7.0
-KIND_VERSION                    ?= v0.27.0
+KIND_VERSION                    ?= v0.29.0
 KUBE_LINTER_VERSION             ?= v0.7.1
+TILT_VERSION					?= 0.35.0
 
 .PHONY: chainsaw
 chainsaw: $(CHAINSAW)-$(CHAINSAW_VERSION) ## Download chainsaw locally if necessary.
@@ -250,6 +268,11 @@ $(KIND)-$(KIND_VERSION): $(LOCALBIN)
 kube-linter: $(KUBE_LINTER)-$(KUBE_LINTER_VERSION) ## Download kube-linter locally if necessary.
 $(KUBE_LINTER)-$(KUBE_LINTER_VERSION): $(LOCALBIN)
 	$(call go-install-tool,$(KUBE_LINTER),golang.stackrox.io/kube-linter/cmd/kube-linter,$(KUBE_LINTER_VERSION))
+
+.PHONY: tilt
+tilt: $(TILT) ## Download tilt locally if necessary.
+$(TILT): $(LOCALBIN)
+	curl -fsSL https://github.com/tilt-dev/tilt/releases/download/v$(TILT_VERSION)/tilt.$(TILT_VERSION).$(TILT_OS).$(ARCH).tar.gz | tar -xzvm -C $(LOCALBIN) tilt
 
 # go-install-tool will 'go install' any package with custom target and name of binary, if it doesn't exist
 # $1 - target path with name of binary
