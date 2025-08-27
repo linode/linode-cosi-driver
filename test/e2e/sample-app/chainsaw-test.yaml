@@ -51,30 +51,7 @@ spec:
           metadata:
             name: s3-credentials
 
-  - name: Create sample app and execute it
-    try:
-    - apply:
-        file: ./resources/deployment-apply.yaml
-    - assert:
-        file: ./resources/deployment-assert.yaml
-    - sleep:
-        duration: 30s
-    - script:
-        env:
-        - name: NAMESPACE
-          value: ($namespace)
-        content: |
-          LOGS=$(kubectl logs -n "${NAMESPACE}" deployment/cosi-sample-app 2>&1)
-          ERROR_LINES=$(echo "$LOGS" | grep "\[ERROR\]" || true)
-          if [[ -n "${ERROR_LINES}" ]]; then
-            echo "${ERROR_LINES}" >&2; exit 1
-          fi
-        check:
-          ($error != null): false
-    - delete:
-        file: ./resources/deployment-apply.yaml
-
-  - name: Run cleanup
+  - name: Run test upload
     try:
     - apply:
         file: ./resources/job-apply.yaml

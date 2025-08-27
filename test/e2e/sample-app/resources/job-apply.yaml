@@ -1,37 +1,59 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: cosi-sample-app-cleanup
+  name: cosi-sample-upload
 spec:
   template:
     spec:
       containers:
       - name: mc
-        image: ghcr.io/anza-labs/library/mc:sha-65e877b
+        image: minio/mc:latest
         command:
         - /bin/sh
         - -c
         - |
-          set -ex
-
-          # Extract credentials from the mounted Secret
-          BUCKET_NAME=$(cat /cosi/BucketInfo | jq -r '.spec.bucketName')
-          ENDPOINT=$(cat /cosi/BucketInfo | jq -r '.spec.secretS3.endpoint')
-          ACCESS_KEY=$(cat /cosi/BucketInfo | jq -r '.spec.secretS3.accessKeyID')
-          SECRET_KEY=$(cat /cosi/BucketInfo | jq -r '.spec.secretS3.accessSecretKey')
-
-          # Configure MinIO client alias and region
-          mc alias set cosi https://$ENDPOINT $ACCESS_KEY $SECRET_KEY
-
-          # Remove all objects in the bucket
-          mc rm --recursive --force cosi/$BUCKET_NAME/
+           set -ex
+           cat /root/.mc/config.json
+           date | mc pipe "cosi/$(cat /root/.mc//BUCKET_NAME)/test.txt"
         volumeMounts:
         - name: s3-credentials
           mountPath: /cosi
           readOnly: true
+        - name: mc
+          mountPath: /root/.mc
+      initContainers:
+        - name: populate-creds
+          image: busybox:stable
+          command:
+            - 'sh'
+            - '-c'
+            - |
+              set -ex
+              wget -O /usr/bin/jq https://github.com/jqlang/jq/releases/download/jq-1.8.1/jq-linux-amd64
+              chmod +x /usr/bin/jq
+              # Extract credentials from the mounted Secret
+              cat /cosi/BucketInfo | jq -r '.spec.bucketName' > /root/.mc/BUCKET_NAME
+              ENDPOINT="https://$(cat /cosi/BucketInfo | jq -r '.spec.secretS3.endpoint')"
+              ACCESS_KEY=$(cat /cosi/BucketInfo | jq -r '.spec.secretS3.accessKeyID')
+              SECRET_KEY=$(cat /cosi/BucketInfo | jq -r '.spec.secretS3.accessSecretKey')
+              mkdir -p /root/.mc
+
+              jq -n --arg url "${ENDPOINT}" \
+                --arg accessKey "${ACCESS_KEY}" \
+                --arg secretKey "${SECRET_KEY}"  \
+                '{"version": "10", "aliases": {"cosi": {"url": $url, "accessKey": $accessKey, "secretKey": $secretKey, "api": "S3v4", "path": "auto"}}}' > /root/.mc/config.json
+          volumeMounts:
+            - name: s3-credentials
+              mountPath: /cosi
+              readOnly: true
+            - name: mc
+              mountPath: /root/.mc
       volumes:
       - name: s3-credentials
         secret:
           secretName: s3-credentials
+      - name: mc
+        emptyDir:
+          sizeLimit: 50Mi
       restartPolicy: Never
   backoffLimit: 1

@@ -1,6 +1,6 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: cosi-sample-app-cleanup
+  name: cosi-sample-upload
 status:
   succeeded: 1

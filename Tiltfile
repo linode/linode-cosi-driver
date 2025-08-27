@@ -16,7 +16,6 @@ k8s_resource(
 ])
 k8s_yaml(helm( "./helm/linode-cosi-driver",
     "linode-cosi-driver",
-    namespace="linode-cosi-driver",
     set=[
         "apiToken=" + os.getenv("LINODE_TOKEN"),
     ],
