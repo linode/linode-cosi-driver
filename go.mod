@@ -6,7 +6,7 @@ require (
 	github.com/go-resty/resty/v2 v2.16.5
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.3.2
 	github.com/linode/linodego v1.57.0
-	github.com/minio/minio-go/v7 v7.0.94
+	github.com/minio/minio-go/v7 v7.0.95
 	go.uber.org/automaxprocs v1.6.0
 	google.golang.org/grpc v1.75.1
 	sigs.k8s.io/container-object-storage-interface-spec v0.1.0
@@ -20,10 +20,10 @@ require (
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/klauspost/compress v1.18.0 // indirect
-	github.com/klauspost/cpuid/v2 v2.2.10 // indirect
-	github.com/minio/crc64nvme v1.0.1 // indirect
+	github.com/klauspost/cpuid/v2 v2.2.11 // indirect
+	github.com/minio/crc64nvme v1.0.2 // indirect
 	github.com/minio/md5-simd v1.1.2 // indirect
-	github.com/philhofer/fwd v1.1.3-0.20240916144458-20a13a1f6b7c // indirect
+	github.com/philhofer/fwd v1.2.0 // indirect
 	github.com/rs/xid v1.6.0 // indirect
 	github.com/tinylib/msgp v1.3.0 // indirect
 	golang.org/x/crypto v0.41.0 // indirect
