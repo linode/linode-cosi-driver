@@ -21,7 +21,6 @@ checks:
     - "host-pid"
     - "hpa-minimum-three-replicas"
     - "invalid-target-ports"
-    - "latest-tag"
     # - "minimum-three-replicas"
     - "mismatching-selector"
     - "no-anti-affinity"
@@ -66,3 +65,4 @@ checks:
     - "unset-cpu-requirements"
     - "unset-memory-requirements" # NOTE: resources should be set during installation time IF it is required.
     - "use-namespace" # NOTE: namespace is handled by helm.
+    - "latest-tag" # NOTE: tag is handled by helm and only defaults to `latest` while on main.
