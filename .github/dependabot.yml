@@ -10,10 +10,7 @@ updates:
     schedule:
       interval: "weekly"
     commit-message:
-      prefix: "fix"
-      include: "scope"
-    labels:
-      - "area/dependency"
+      prefix: ":seedling:"
     groups:
       k8s-dependencies:
         patterns:
@@ -24,16 +21,10 @@ updates:
     schedule:
       interval: "weekly"
     commit-message:
-      prefix: "fix"
-      include: "scope"
-    labels:
-      - "area/dependency"
+      prefix: ":seedling:"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
     commit-message:
-      prefix: "fix"
-      include: "scope"
-    labels:
-      - "area/dependency"
+      prefix: ":seedling:"
