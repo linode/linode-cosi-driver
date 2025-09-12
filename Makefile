@@ -125,7 +125,7 @@ test-integration: ## Run integration tests.
 		./...
 
 .PHONY: test-e2e
-test-e2e: chainsaw ## Run the e2e tests against a k8s instance using Kyverno Chainsaw.
+test-e2e: local-deploy chainsaw ## Run the e2e tests against a k8s instance using Kyverno Chainsaw.
 	$(CHAINSAW) test ${CHAINSAW_ARGS}
 
 .PHONY: lint

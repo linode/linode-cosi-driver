@@ -57,3 +57,6 @@ spec:
         file: ./resources/job-apply.yaml
     - assert:
         file: ./resources/job-assert.yaml
+    catch:
+      - podLogs:
+          selector: job-name=cosi-sample-upload

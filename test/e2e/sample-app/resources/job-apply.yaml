@@ -15,6 +15,7 @@ spec:
            set -ex
            cat /root/.mc/config.json
            date | mc pipe "cosi/$(cat /root/.mc//BUCKET_NAME)/test.txt"
+           mc rm "cosi/$(cat /root/.mc//BUCKET_NAME)/test.txt"
         volumeMounts:
         - name: s3-credentials
           mountPath: /cosi
