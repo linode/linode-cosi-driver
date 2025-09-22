@@ -141,7 +141,7 @@ func run(ctx context.Context, log *slog.Logger, opts mainOptions) error {
 	}()
 
 	if opts.s3EphemeralCredentials {
-		creds, cleanup, err := linodeclient.NewEphemeralS3Credentials(ctx, client)
+		creds, cleanup, err := linodeclient.NewEphemeralS3Credentials(ctx, log, client)
 		if err != nil {
 			return fmt.Errorf("unable to create ephemeral credentials: %w", err)
 		}

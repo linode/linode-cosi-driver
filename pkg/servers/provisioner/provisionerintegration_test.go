@@ -71,7 +71,7 @@ func TestHappyPath(t *testing.T) {
 		return
 	}
 
-	creds, cleanup, err := linodeclient.NewEphemeralS3Credentials(context.Background(), client)
+	creds, cleanup, err := linodeclient.NewEphemeralS3Credentials(context.Background(), slog.Default(), client)
 	if err != nil {
 		t.Errorf("failed to create ephemeral s3 credentials: %v", err.Error())
 		return
