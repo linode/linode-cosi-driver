@@ -17,7 +17,9 @@ package linodeclient
 import (
 	"context"
 	"fmt"
-	"os"
+	"log/slog"
+
+	"github.com/google/uuid"
 
 	"github.com/linode/linodego"
 )
@@ -60,12 +62,11 @@ func NewLinodeClient(token, ua, apiURL, apiVersion string) (*linodego.Client, er
 
 func NewEphemeralS3Credentials(
 	ctx context.Context,
+	slog *slog.Logger,
 	c *linodego.Client,
 ) (*linodego.ObjectStorageKey, func(context.Context) error, error) {
-	hostname, err := os.Hostname()
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to obtain hostname: %w", err)
-	}
+	keyLabel := fmt.Sprintf("cosi-%s", uuid.New().String())
+	slog.Info(fmt.Sprintf("Generating new ephemeral key: %s", keyLabel))
 
 	clusters, err := c.ListObjectStorageClusters(ctx, &linodego.ListOptions{})
 	if err != nil {
@@ -78,7 +79,7 @@ func NewEphemeralS3Credentials(
 	}
 
 	creds, err := c.CreateObjectStorageKey(ctx, linodego.ObjectStorageKeyCreateOptions{
-		Label:   "linode-cosi-" + hostname,
+		Label:   keyLabel,
 		Regions: regions,
 	})
 	if err != nil {

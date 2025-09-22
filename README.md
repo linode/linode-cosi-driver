@@ -31,8 +31,9 @@ Follow these steps to get started with Linode COSI Driver:
 
     2. Install Linode COSI Driver using Helm.
     ```sh
-    helm install linode-cosi-driver \
-        ./helm/linode-cosi-driver/ \
+    helm repo add linode-cosi-driver https://linode.github.io/linode-cosi-driver
+    helm repo update
+    helm install cosi linode-cosi-driver/linode-cosi-driver \
         --set=apiToken=<YOUR_LINODE_API_TOKEN> \
         --namespace=linode-cosi-driver \
         --create-namespace

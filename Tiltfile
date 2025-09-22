@@ -1,3 +1,4 @@
+load('ext://namespace', 'namespace_inject')
 k8s_yaml(kustomize("./hack/container-object-storage-controller"))
 k8s_resource(
     workload="container-object-storage-controller",
@@ -14,11 +15,13 @@ k8s_resource(
         "container-object-storage-controller:rolebinding",
         "container-object-storage-controller:clusterrolebinding",
 ])
-k8s_yaml(helm( "./helm/linode-cosi-driver",
+k8s_yaml(namespace_inject(
+  helm( "./helm/linode-cosi-driver",
     "linode-cosi-driver",
-    set=[
-        "apiToken=" + os.getenv("LINODE_TOKEN"),
-    ],
+    namespace="linode-cosi-driver",
+    set=["apiToken=" + os.getenv("LINODE_TOKEN")],
+  ),
+  "linode-cosi-driver"
 ))
 
 k8s_resource(
