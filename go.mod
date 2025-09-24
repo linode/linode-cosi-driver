@@ -4,13 +4,13 @@ go 1.25.0
 
 require (
 	github.com/go-resty/resty/v2 v2.16.5
+	github.com/google/uuid v1.6.0
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.3.2
 	github.com/linode/linodego v1.58.0
 	github.com/minio/minio-go/v7 v7.0.95
 	go.uber.org/automaxprocs v1.6.0
 	google.golang.org/grpc v1.75.1
 	sigs.k8s.io/container-object-storage-interface-spec v0.1.0
-	github.com/google/uuid v1.6.0
 )
 
 require (
@@ -19,7 +19,6 @@ require (
 	github.com/goccy/go-json v0.10.5 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
-	github.com/google/uuid v1.6.0 // indirect
 	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.11 // indirect
 	github.com/minio/crc64nvme v1.0.2 // indirect

@@ -26,6 +26,7 @@ rules:
       - update
       - delete
       - list
+      - patch
       - watch
   - apiGroups:
       - coordination.k8s.io
