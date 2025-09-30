@@ -6,7 +6,7 @@ require (
 	github.com/go-resty/resty/v2 v2.16.5
 	github.com/google/uuid v1.6.0
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.3.2
-	github.com/linode/linodego v1.58.0
+	github.com/linode/linodego v1.59.0
 	github.com/minio/minio-go/v7 v7.0.95
 	go.uber.org/automaxprocs v1.6.0
 	google.golang.org/grpc v1.75.1
