@@ -41,23 +41,18 @@ type Client interface {
 	ListObjectStorageEndpoints(context.Context, *linodego.ListOptions) ([]linodego.ObjectStorageEndpoint, error)
 }
 
-// NewLinodeClient takes token, userAgent prefix, and API URL and after initial validation
+// NewLinodeClient takes userAgent prefix after initial validation
 // returns new linodego Client. The client uses linodego built-in http client
 // which supports setting root CA cert.
-func NewLinodeClient(token, ua, apiURL, apiVersion string) (*linodego.Client, error) {
-	linodeClient := linodego.NewClient(nil)
+func NewLinodeClient(ua string) (*linodego.Client, error) {
+	linodeClient, err := linodego.NewClientFromEnv(nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create linode client from env: %w", err)
+	}
+
 	linodeClient.SetUserAgent(ua)
-	linodeClient.SetToken(token)
 
-	if apiURL != "" {
-		linodeClient.SetBaseURL(apiURL)
-	}
-
-	if apiVersion != "" {
-		linodeClient.SetAPIVersion(apiVersion)
-	}
-
-	return &linodeClient, nil
+	return linodeClient, nil
 }
 
 func NewEphemeralS3Credentials(

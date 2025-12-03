@@ -44,10 +44,8 @@ func TestHappyPath(t *testing.T) {
 	t.Parallel()
 
 	var (
-		linodeToken      = envflag.String("LINODE_TOKEN", "")
-		linodeURL        = envflag.String("LINODE_API_URL", "")
-		linodeAPIVersion = envflag.String("LINODE_API_VERSION", "")
-		iterations       = envflag.Int("IDEMPOTENCY_ITERATIONS", 2)
+		linodeToken = envflag.String("LINODE_TOKEN", "")
+		iterations  = envflag.Int("IDEMPOTENCY_ITERATIONS", 2)
 	)
 
 	if linodeToken == "" {
@@ -55,11 +53,7 @@ func TestHappyPath(t *testing.T) {
 		return
 	}
 
-	client, err := linodeclient.NewLinodeClient(
-		linodeToken,
-		fmt.Sprintf("LinodeCOSI/%s+integration", version.Version),
-		linodeURL,
-		linodeAPIVersion)
+	client, err := linodeclient.NewLinodeClient(fmt.Sprintf("LinodeCOSI/%s+integration", version.Version))
 	if err != nil {
 		t.Errorf("failed to create client: %v", err.Error())
 		return

@@ -45,10 +45,8 @@ import (
 )
 
 const (
-	driverName     = "objectstorage.cosi.linode.com"
-	gracePeriod    = 5 * time.Second
-	envK8sNodeName = "K8S_NODE_NAME"
-	envK8sPodName  = "K8S_POD_NAME"
+	driverName  = "objectstorage.cosi.linode.com"
+	gracePeriod = 5 * time.Second
 )
 
 var ErrNoKeySpecified = errors.New("no S3 policy credentials, " +
@@ -57,9 +55,6 @@ var ErrNoKeySpecified = errors.New("no S3 policy credentials, " +
 
 func main() {
 	var (
-		linodeToken            = envflag.String("LINODE_TOKEN", "")
-		linodeURL              = envflag.String("LINODE_API_URL", "")
-		linodeAPIVersion       = envflag.String("LINODE_API_VERSION", "")
 		cosiEndpoint           = envflag.String("COSI_ENDPOINT", "unix:///var/lib/cosi/cosi.sock")
 		cacheTTL               = envflag.Duration("LINODE_OBJECT_STORAGE_ENDPOINT_CACHE_TTL", cache.DefaultTTL)
 		s3SSL                  = envflag.Bool("S3_CLIENT_SSL_ENABLED", true)
@@ -73,9 +68,6 @@ func main() {
 
 	if err := run(context.Background(), log, mainOptions{
 		cosiEndpoint:           cosiEndpoint,
-		linodeToken:            linodeToken,
-		linodeURL:              linodeURL,
-		linodeAPIVersion:       linodeAPIVersion,
 		cacheTTL:               cacheTTL,
 		s3SSL:                  s3SSL,
 		s3EphemeralCredentials: s3EphemeralCredentials,
@@ -90,9 +82,6 @@ func main() {
 
 type mainOptions struct {
 	cosiEndpoint           string
-	linodeToken            string
-	linodeURL              string
-	linodeAPIVersion       string
 	cacheTTL               time.Duration
 	s3SSL                  bool
 	s3EphemeralCredentials bool
@@ -120,11 +109,7 @@ func run(ctx context.Context, log *slog.Logger, opts mainOptions) error {
 	}
 
 	// initialize Linode client
-	client, err := linodeclient.NewLinodeClient(
-		opts.linodeToken,
-		fmt.Sprintf("LinodeCOSI/%s", version.Version),
-		opts.linodeURL,
-		opts.linodeAPIVersion)
+	client, err := linodeclient.NewLinodeClient(fmt.Sprintf("LinodeCOSI/%s", version.Version))
 	if err != nil {
 		return fmt.Errorf("unable to create new client: %w", err)
 	}
