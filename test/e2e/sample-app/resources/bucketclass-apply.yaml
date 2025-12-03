@@ -5,7 +5,7 @@ metadata:
 driverName: objectstorage.cosi.linode.com
 deletionPolicy: Delete
 parameters:
-  cosi.linode.com/v1/region: us-east
+  cosi.linode.com/v1/region: us-ord
   cosi.linode.com/v1/policy: |-
     {
       "Version": "2012-10-17",

@@ -16,6 +16,7 @@ package linodeclient
 
 import (
 	"errors"
+	"os"
 	"testing"
 )
 
@@ -32,14 +33,6 @@ func TestNewLinodeClient(t *testing.T) {
 	}{
 		{
 			testName: "simple",
-		},
-		{
-			testName:  "with user agent",
-			userAgent: "test_UA",
-		},
-		{
-			testName: "with token",
-			token:    "test_TOKEN",
 		},
 		{
 			testName: "with URL",
@@ -72,8 +65,11 @@ func TestNewLinodeClient(t *testing.T) {
 
 		t.Run(tc.testName, func(t *testing.T) {
 			t.Parallel()
+			os.Setenv("LINODE_TOKEN", "TEST_TOKEN")
+			os.Setenv("LINODE_URL", tc.url)
+			os.Setenv("LINODE_API_VERSION", tc.version)
 
-			_, err := NewLinodeClient(tc.token, tc.userAgent, tc.url, tc.version)
+			_, err := NewLinodeClient(tc.userAgent)
 			if !errors.Is(err, tc.expectedError) {
 				t.Errorf("expected error: %v, but got: %v", tc.expectedError, err)
 			}

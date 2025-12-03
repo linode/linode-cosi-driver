@@ -29,7 +29,7 @@ spec:
           driverName: objectstorage.cosi.linode.com
           deletionPolicy: Delete
           parameters:
-            cosi.linode.com/v1/region: us-east
+            cosi.linode.com/v1/region: us-ord
             cosi.linode.com/v1/acl: private
             cosi.linode.com/v1/cors: disabled
     - apply:

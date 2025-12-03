@@ -46,6 +46,8 @@ func TestRun(t *testing.T) {
 		t.Run(tc.testName, func(t *testing.T) {
 			t.Parallel()
 
+			os.Setenv("LINODE_TOKEN", "test")
+
 			noopLog := slog.New(slog.NewTextHandler(
 				io.Discard,
 				&slog.HandlerOptions{Level: slog.LevelError},
