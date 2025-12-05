@@ -22,8 +22,6 @@ import (
 	"os"
 	"testing"
 	"time"
-
-	"github.com/linode/linode-cosi-driver/pkg/testutils"
 )
 
 func TestRun(t *testing.T) {
@@ -46,7 +44,7 @@ func TestRun(t *testing.T) {
 		t.Run(tc.testName, func(t *testing.T) {
 			t.Parallel()
 
-			os.Setenv("LINODE_TOKEN", "test")
+			t.Setenv("LINODE_TOKEN", "test")
 
 			noopLog := slog.New(slog.NewTextHandler(
 				io.Discard,
@@ -67,7 +65,8 @@ func TestRun(t *testing.T) {
 			ctx, cancel := context.WithTimeout(t.Context(), time.Second)
 			defer cancel()
 
-			tmp := testutils.MustMkdirTemp()
+			tmp := t.TempDir()
+
 			defer os.RemoveAll(tmp)
 
 			defaultOpts.cosiEndpoint = "unix://" + tmp + defaultOpts.cosiEndpoint

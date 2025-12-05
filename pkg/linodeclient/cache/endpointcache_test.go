@@ -21,8 +21,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/linode/linode-cosi-driver/pkg/linodeclient/stubclient"
 	"github.com/linode/linodego"
+
+	"github.com/linode/linode-cosi-driver/pkg/linodeclient/stubclient"
 )
 
 var discardLog = slog.New(slog.DiscardHandler)

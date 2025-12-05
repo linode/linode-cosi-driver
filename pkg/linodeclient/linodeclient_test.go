@@ -16,7 +16,6 @@ package linodeclient
 
 import (
 	"errors"
-	"os"
 	"testing"
 )
 
@@ -65,9 +64,9 @@ func TestNewLinodeClient(t *testing.T) {
 
 		t.Run(tc.testName, func(t *testing.T) {
 			t.Parallel()
-			os.Setenv("LINODE_TOKEN", "TEST_TOKEN")
-			os.Setenv("LINODE_URL", tc.url)
-			os.Setenv("LINODE_API_VERSION", tc.version)
+			t.Setenv("LINODE_TOKEN", "TEST_TOKEN")
+			t.Setenv("LINODE_URL", tc.url)
+			t.Setenv("LINODE_API_VERSION", tc.version)
 
 			_, err := NewLinodeClient(tc.userAgent)
 			if !errors.Is(err, tc.expectedError) {

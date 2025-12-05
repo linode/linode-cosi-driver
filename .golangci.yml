@@ -1,60 +1,185 @@
+version: "2"
 run:
-  timeout: 5m
-  tests: true
-  build-tags:
-    - integration
-
+  issues-exit-code: 1
+output:
+  formats:
+    text:
+      path: stdout
+linters:
+  enable:
+    - asasalint
+    - asciicheck
+    - bidichk
+    - bodyclose
+    - containedctx
+    - contextcheck
+    - copyloopvar
+    - cyclop
+    - decorder
+    - depguard
+    - dogsled
+    - dupword
+    - durationcheck
+    - errchkjson
+    - errname
+    - errorlint
+    - exhaustive
+    - forbidigo
+    - forcetypeassert
+    - gocheckcompilerdirectives
+    - gochecksumtype
+    - gocognit
+    - goconst
+    # TODO: enable in gocritic in it's own PR
+#    - gocritic
+    - goprintffuncname
+    - gosec
+    - gosmopolitan
+    - loggercheck
+    - maintidx
+    - makezero
+    - misspell
+    - mnd
+    - musttag
+    - nestif
+    - nilerr
+    - nilnesserr
+    - nilnil
+    - noctx
+    - nolintlint
+    - paralleltest
+    - prealloc
+    - predeclared
+    - protogetter
+    - reassign
+    - recvcheck
+    - rowserrcheck
+    - spancheck
+    - sqlclosecheck
+    - testifylint
+    - thelper
+    - unconvert
+    - unparam
+    - usestdlibvars
+    - usetesting
+    - varnamelen
+    - whitespace
+    - zerologlint
+    - govet
+    - ineffassign
+    - unused
+  settings:
+    exhaustive:
+      default-signifies-exhaustive: true
+    cyclop:
+      max-complexity: 15
+    depguard:
+      rules:
+        main:
+          files:
+            - $all
+            - '!$test'
+          deny:
+            - pkg: reflect
+              desc: Reflection is never clear.
+            - pkg: gob
+              desc: Please convert types manually
+    dupl:
+      threshold: 100
+    errcheck:
+      check-type-assertions: true
+      check-blank: true
+    goconst:
+      min-len: 3
+      min-occurrences: 5
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - experimental
+        - opinionated
+        - performance
+        - style
+      settings:
+        captLocal:
+          paramsOnly: true
+        rangeValCopy:
+          sizeThreshold: 32
+    lll:
+      tab-width: 1
+    nolintlint:
+      require-explanation: true
+      require-specific: true
+    prealloc:
+      simple: true
+      range-loops: true
+      for-loops: false
+    unparam:
+      check-exported: false
+    varnamelen:
+      min-name-length: 2
+  exclusions:
+    generated: lax
+    rules:
+      - linters:
+          - copyloopvar
+          - dupl
+          - errcheck
+          - gocyclo
+          - gosec
+          - maintidx
+          - unparam
+          - containedctx
+        path: _test\.go
+      - linters:
+          - dupl
+        path: _conversion\.go
+      - linters:
+          - gocritic
+        path: _test\.go
+        text: (unnamedResult|exitAfterDefer)
+      - linters:
+          - gocritic
+        text: '(hugeParam|rangeValCopy):'
+      - linters:
+          - staticcheck
+        text: 'SA3000:'
+      - linters:
+          - gosec
+        text: 'G101:'
+      - linters:
+          - gosec
+        text: 'G104:'
+    paths:
+      - cmd/main.go
+      - third_party$
+      - builtin$
+      - examples$
 issues:
   max-issues-per-linter: 0
   max-same-issues: 0
-  uniq-by-line: false
-
-output:
-  sort-results: true
-
-linters:
+  new: false
+formatters:
   enable:
-    - containedctx
-    - contextcheck
-    - dogsled
-    - errcheck
-    - errorlint
     - gci
-    - gosec
-    - gocheckcompilerdirectives
-    - gocognit
-    - goconst
-    - gocritic
-    - gocyclo
-    - godot
-    - gofumpt
-    - gosimple
-    - govet
-    - ineffassign
-    - misspell
-    - mnd
-    - nilerr
-    - nilnil
-    - paralleltest
-    - protogetter
-    - revive
-    - sloglint
-    - staticcheck
-    - unused
-    - wsl
-
-linters-settings:
-  paralleltest:
-    ignore-missing: false
-
-  sloglint:
-    kv-only: true
-    key-naming-case: snake
-
-  gci:
-    sections:
-      - standard
-      - default
-      - blank
-      - dot
-      - prefix(github.com/linode)
+    - gofmt
+    - goimports
+  settings:
+    gci:
+      sections:
+        - standard
+        - default
+        - blank
+        - dot
+        - prefix(github.com/linode/linode-cosi-driver)
+    gofmt:
+      simplify: true
+    goimports:
+      local-prefixes:
+        - github.com/linode/linode-cosi-driver
+  exclusions:
+    generated: lax
+    paths:
+      - cmd/main.go
+      - third_party$
+      - builtin$
+      - examples$
