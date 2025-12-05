@@ -21,11 +21,14 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/linode/linodego"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/linode/linode-cosi-driver/pkg/linodeclient"
 	"github.com/linode/linode-cosi-driver/pkg/linodeclient/stubclient"
-	"github.com/linode/linode-cosi-driver/pkg/testutils"
-	"github.com/linode/linodego"
 )
+
+type ctxKey string
 
 var (
 	testBucket = &linodego.ObjectStorageBucket{
@@ -56,11 +59,13 @@ var (
 		SecretKey: stubclient.TestSecretKey,
 	}
 
-	test500Error = &linodego.Error{
+	err500 = &linodego.Error{
 		Code: http.StatusInternalServerError,
 	}
 
 	testBool = true
+
+	forcedFailureKey ctxKey = "X_Forced_Failure"
 )
 
 func TestNew(t *testing.T) {
@@ -108,7 +113,7 @@ func TestNew(t *testing.T) {
 			t.Run(tc.testName, func(t *testing.T) {
 				t.Parallel()
 
-				testutils.AssertNotPanics(t, func() {
+				assert.NotPanics(t, func() {
 					_ = stubclient.New(tc.input...)
 				})
 			})
@@ -121,7 +126,7 @@ func TestCreateObjectStorageBucket(t *testing.T) {
 
 	for _, tc := range []struct {
 		testName      string
-		ctx           context.Context //nolint:containedctx
+		ctx           context.Context
 		client        linodeclient.Client
 		opts          linodego.ObjectStorageBucketCreateOptions
 		expectedError error
@@ -177,7 +182,7 @@ func TestCreateObjectStorageBucket(t *testing.T) {
 			client:   stubclient.New(),
 			ctx: context.WithValue(
 				t.Context(),
-				stubclient.ForcedFailure, //nolint:staticcheck
+				forcedFailureKey,
 				"",
 			),
 			expectedError: stubclient.ErrUnexpectedError,
@@ -187,10 +192,10 @@ func TestCreateObjectStorageBucket(t *testing.T) {
 			client:   stubclient.New(),
 			ctx: context.WithValue(
 				t.Context(),
-				stubclient.ForcedFailure, //nolint:staticcheck
-				test500Error,
+				forcedFailureKey,
+				err500,
 			),
-			expectedError: test500Error,
+			expectedError: err500,
 		},
 	} {
 		tc := tc
@@ -224,7 +229,7 @@ func TestGetObjectStorageBucket(t *testing.T) {
 
 	for _, tc := range []struct {
 		testName      string
-		ctx           context.Context //nolint:containedctx
+		ctx           context.Context
 		client        linodeclient.Client
 		region        string
 		label         string
@@ -252,7 +257,7 @@ func TestGetObjectStorageBucket(t *testing.T) {
 			client:   stubclient.New(),
 			ctx: context.WithValue(
 				t.Context(),
-				stubclient.ForcedFailure, //nolint:staticcheck
+				forcedFailureKey,
 				"",
 			),
 			expectedError: stubclient.ErrUnexpectedError,
@@ -262,10 +267,10 @@ func TestGetObjectStorageBucket(t *testing.T) {
 			client:   stubclient.New(),
 			ctx: context.WithValue(
 				t.Context(),
-				stubclient.ForcedFailure, //nolint:staticcheck
-				test500Error,
+				forcedFailureKey,
+				err500,
 			),
-			expectedError: test500Error,
+			expectedError: err500,
 		},
 	} {
 		tc := tc
@@ -299,7 +304,7 @@ func TestDeleteObjectStorageBucket(t *testing.T) {
 
 	for _, tc := range []struct {
 		testName      string
-		ctx           context.Context //nolint:containedctx
+		ctx           context.Context
 		client        linodeclient.Client
 		region        string
 		label         string
@@ -337,7 +342,7 @@ func TestDeleteObjectStorageBucket(t *testing.T) {
 			client:   stubclient.New(),
 			ctx: context.WithValue(
 				t.Context(),
-				stubclient.ForcedFailure, //nolint:staticcheck
+				forcedFailureKey,
 				"",
 			),
 			expectedError: stubclient.ErrUnexpectedError,
@@ -347,10 +352,10 @@ func TestDeleteObjectStorageBucket(t *testing.T) {
 			client:   stubclient.New(),
 			ctx: context.WithValue(
 				t.Context(),
-				stubclient.ForcedFailure, //nolint:staticcheck
-				test500Error,
+				forcedFailureKey,
+				err500,
 			),
-			expectedError: test500Error,
+			expectedError: err500,
 		},
 	} {
 		tc := tc
@@ -378,7 +383,7 @@ func TestGetObjectStorageBucketAccess(t *testing.T) {
 
 	for _, tc := range []struct {
 		testName      string
-		ctx           context.Context //nolint:containedctx
+		ctx           context.Context
 		client        linodeclient.Client
 		region        string
 		label         string
@@ -408,7 +413,7 @@ func TestGetObjectStorageBucketAccess(t *testing.T) {
 			client:   stubclient.New(),
 			ctx: context.WithValue(
 				t.Context(),
-				stubclient.ForcedFailure, //nolint:staticcheck
+				forcedFailureKey,
 				"",
 			),
 			expectedError: stubclient.ErrUnexpectedError,
@@ -418,10 +423,10 @@ func TestGetObjectStorageBucketAccess(t *testing.T) {
 			client:   stubclient.New(),
 			ctx: context.WithValue(
 				t.Context(),
-				stubclient.ForcedFailure, //nolint:staticcheck
-				test500Error,
+				forcedFailureKey,
+				err500,
 			),
-			expectedError: test500Error,
+			expectedError: err500,
 		},
 	} {
 		tc := tc
@@ -455,7 +460,7 @@ func TestUpdateObjectStorageBucketAccess(t *testing.T) {
 
 	for _, tc := range []struct {
 		testName      string
-		ctx           context.Context //nolint:containedctx
+		ctx           context.Context
 		client        linodeclient.Client
 		region        string
 		label         string
@@ -512,7 +517,7 @@ func TestUpdateObjectStorageBucketAccess(t *testing.T) {
 			client:   stubclient.New(),
 			ctx: context.WithValue(
 				t.Context(),
-				stubclient.ForcedFailure, //nolint:staticcheck
+				forcedFailureKey,
 				"",
 			),
 			expectedError: stubclient.ErrUnexpectedError,
@@ -522,10 +527,10 @@ func TestUpdateObjectStorageBucketAccess(t *testing.T) {
 			client:   stubclient.New(),
 			ctx: context.WithValue(
 				t.Context(),
-				stubclient.ForcedFailure, //nolint:staticcheck
-				test500Error,
+				forcedFailureKey,
+				err500,
 			),
-			expectedError: test500Error,
+			expectedError: err500,
 		},
 	} {
 		tc := tc
@@ -553,7 +558,7 @@ func TestCreateObjectStorageKey(t *testing.T) {
 
 	for _, tc := range []struct {
 		testName      string
-		ctx           context.Context //nolint:containedctx
+		ctx           context.Context
 		client        linodeclient.Client
 		opts          linodego.ObjectStorageKeyCreateOptions
 		expectedValue *linodego.ObjectStorageKey
@@ -590,7 +595,7 @@ func TestCreateObjectStorageKey(t *testing.T) {
 			client:   stubclient.New(),
 			ctx: context.WithValue(
 				t.Context(),
-				stubclient.ForcedFailure, //nolint:staticcheck
+				forcedFailureKey,
 				"",
 			),
 			expectedError: stubclient.ErrUnexpectedError,
@@ -600,10 +605,10 @@ func TestCreateObjectStorageKey(t *testing.T) {
 			client:   stubclient.New(),
 			ctx: context.WithValue(
 				t.Context(),
-				stubclient.ForcedFailure, //nolint:staticcheck
-				test500Error,
+				forcedFailureKey,
+				err500,
 			),
-			expectedError: test500Error,
+			expectedError: err500,
 		},
 	} {
 		tc := tc
@@ -637,7 +642,7 @@ func TestListObjectStorageKeys(t *testing.T) {
 
 	for _, tc := range []struct {
 		testName      string
-		ctx           context.Context //nolint:containedctx
+		ctx           context.Context
 		client        linodeclient.Client
 		opts          *linodego.ListOptions
 		expectedValue []linodego.ObjectStorageKey
@@ -718,7 +723,7 @@ func TestListObjectStorageKeys(t *testing.T) {
 			client:   stubclient.New(),
 			ctx: context.WithValue(
 				t.Context(),
-				stubclient.ForcedFailure, //nolint:staticcheck
+				forcedFailureKey,
 				"",
 			),
 			expectedError: stubclient.ErrUnexpectedError,
@@ -728,10 +733,10 @@ func TestListObjectStorageKeys(t *testing.T) {
 			client:   stubclient.New(),
 			ctx: context.WithValue(
 				t.Context(),
-				stubclient.ForcedFailure, //nolint:staticcheck
-				test500Error,
+				forcedFailureKey,
+				err500,
 			),
-			expectedError: test500Error,
+			expectedError: err500,
 		},
 	} {
 		tc := tc
@@ -765,7 +770,7 @@ func TestGetObjectStorageKey(t *testing.T) {
 
 	for _, tc := range []struct {
 		testName      string
-		ctx           context.Context //nolint:containedctx
+		ctx           context.Context
 		client        linodeclient.Client
 		keyID         int
 		expectedValue *linodego.ObjectStorageKey
@@ -790,7 +795,7 @@ func TestGetObjectStorageKey(t *testing.T) {
 			client:   stubclient.New(),
 			ctx: context.WithValue(
 				t.Context(),
-				stubclient.ForcedFailure, //nolint:staticcheck
+				forcedFailureKey,
 				"",
 			),
 			expectedError: stubclient.ErrUnexpectedError,
@@ -800,10 +805,10 @@ func TestGetObjectStorageKey(t *testing.T) {
 			client:   stubclient.New(),
 			ctx: context.WithValue(
 				t.Context(),
-				stubclient.ForcedFailure, //nolint:staticcheck
-				test500Error,
+				forcedFailureKey,
+				err500,
 			),
-			expectedError: test500Error,
+			expectedError: err500,
 		},
 	} {
 		tc := tc
@@ -837,7 +842,7 @@ func TestDeleteObjectStorageKey(t *testing.T) {
 
 	for _, tc := range []struct {
 		testName      string
-		ctx           context.Context //nolint:containedctx
+		ctx           context.Context
 		client        linodeclient.Client
 		keyID         int
 		expectedError error
@@ -859,7 +864,7 @@ func TestDeleteObjectStorageKey(t *testing.T) {
 			client:   stubclient.New(),
 			ctx: context.WithValue(
 				t.Context(),
-				stubclient.ForcedFailure, //nolint:staticcheck
+				forcedFailureKey,
 				"",
 			),
 			expectedError: stubclient.ErrUnexpectedError,
@@ -869,10 +874,10 @@ func TestDeleteObjectStorageKey(t *testing.T) {
 			client:   stubclient.New(),
 			ctx: context.WithValue(
 				t.Context(),
-				stubclient.ForcedFailure, //nolint:staticcheck
-				test500Error,
+				forcedFailureKey,
+				err500,
 			),
-			expectedError: test500Error,
+			expectedError: err500,
 		},
 	} {
 		tc := tc

@@ -20,7 +20,6 @@ import (
 	"log/slog"
 
 	"github.com/google/uuid"
-
 	"github.com/linode/linodego"
 )
 
@@ -58,22 +57,22 @@ func NewLinodeClient(ua string) (*linodego.Client, error) {
 func NewEphemeralS3Credentials(
 	ctx context.Context,
 	slog *slog.Logger,
-	c *linodego.Client,
+	client *linodego.Client,
 ) (*linodego.ObjectStorageKey, func(context.Context) error, error) {
 	keyLabel := fmt.Sprintf("cosi-%s", uuid.New().String())
 	slog.Info(fmt.Sprintf("Generating new ephemeral key: %s", keyLabel))
 
-	clusters, err := c.ListObjectStorageClusters(ctx, &linodego.ListOptions{})
+	clusters, err := client.ListObjectStorageClusters(ctx, &linodego.ListOptions{})
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to list ObjectStorage clusters: %w", err)
 	}
 
-	var regions []string
+	var regions = make([]string, 0, len(clusters))
 	for _, cluster := range clusters {
 		regions = append(regions, cluster.Region)
 	}
 
-	creds, err := c.CreateObjectStorageKey(ctx, linodego.ObjectStorageKeyCreateOptions{
+	creds, err := client.CreateObjectStorageKey(ctx, linodego.ObjectStorageKeyCreateOptions{
 		Label:   keyLabel,
 		Regions: regions,
 	})
@@ -82,7 +81,7 @@ func NewEphemeralS3Credentials(
 	}
 
 	cleanup := func(cctx context.Context) error {
-		return c.DeleteObjectStorageKey(cctx, creds.ID)
+		return client.DeleteObjectStorageKey(cctx, creds.ID)
 	}
 
 	return creds, cleanup, nil

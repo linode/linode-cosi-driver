@@ -22,10 +22,10 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/linode/linodego"
 	"github.com/minio/minio-go/v7"
 
 	"github.com/linode/linode-cosi-driver/pkg/s3"
-	"github.com/linode/linodego"
 )
 
 const (
@@ -56,22 +56,22 @@ var _ s3.Client = (*Client)(nil)
 // New creates a new instance of the Client with optional object storage objects.
 // This is a stub function.
 func New(opts ...Option) *Client {
-	c := &Client{
+	client := &Client{
 		policies: make(map[string]string),
 	}
 
 	for _, opt := range opts {
-		opt(c)
+		opt(client)
 	}
 
-	return c
+	return client
 }
 
 func handleForcedFailure(ctx context.Context) error {
-	if v := ctx.Value(ForcedFailure); v != nil {
-		switch v := v.(type) {
+	if val := ctx.Value(ForcedFailure); val != nil {
+		switch vType := val.(type) {
 		case error:
-			return v
+			return vType
 		default:
 			return ErrUnexpectedError
 		}
@@ -137,16 +137,16 @@ func validatePolicy(policy string) bool {
 
 // isValidStringOrSlice ensures the field is either a string or a slice of strings.
 func isValidStringOrSlice(value any) bool {
-	switch v := value.(type) {
+	switch vType := value.(type) {
 	case string:
-		return v != ""
+		return vType != ""
 
 	case []any:
-		if len(v) == 0 {
+		if len(vType) == 0 {
 			return false
 		}
 
-		for _, item := range v {
+		for _, item := range vType {
 			if _, ok := item.(string); !ok {
 				return false
 			}
@@ -161,16 +161,16 @@ func isValidStringOrSlice(value any) bool {
 
 // isValidPrincipal ensures the Principal field is a valid type.
 func isValidPrincipal(value any) bool {
-	switch v := value.(type) {
+	switch vType := value.(type) {
 	case string:
-		return v != ""
+		return vType != ""
 
 	case map[string]any:
-		if len(v) == 0 {
+		if len(vType) == 0 {
 			return false
 		}
 
-		for _, item := range v {
+		for _, item := range vType {
 			if !isValidStringOrSlice(item) {
 				return false
 			}
@@ -179,7 +179,7 @@ func isValidPrincipal(value any) bool {
 		return true
 
 	case []any:
-		return isValidStringOrSlice(v)
+		return isValidStringOrSlice(vType)
 
 	default:
 		return false

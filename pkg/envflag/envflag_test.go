@@ -23,7 +23,6 @@ import (
 	"github.com/linode/linode-cosi-driver/pkg/envflag"
 )
 
-//nolint:paralleltest
 func TestString(t *testing.T) {
 	const (
 		DefaultValue = "Default"
@@ -88,7 +87,6 @@ func TestString(t *testing.T) {
 	}
 }
 
-//nolint:paralleltest
 func TestBool(t *testing.T) {
 	const (
 		Key          = "KEY"
@@ -213,7 +211,6 @@ func TestBool(t *testing.T) {
 	}
 }
 
-//nolint:paralleltest
 func TestInts(t *testing.T) {
 	const (
 		DefaultValue = 1
@@ -261,7 +258,6 @@ func TestInts(t *testing.T) {
 	}
 }
 
-//nolint:paralleltest
 func TestDurations(t *testing.T) {
 	const (
 		DefaultValue = time.Second
@@ -304,7 +300,7 @@ func TestDurations(t *testing.T) {
 			if tc.key != "" {
 				tc.key = fmt.Sprintf("TEST_%d_%s", rand.Intn(256), tc.key) // #nosec G404
 
-				t.Setenv(tc.key, fmt.Sprint(tc.value))
+				t.Setenv(tc.key, tc.value)
 			}
 
 			actual := envflag.Duration(tc.key, tc.defaultValue)
