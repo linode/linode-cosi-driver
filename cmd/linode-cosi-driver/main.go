@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/url"
 	"os"
 	"os/signal"
@@ -32,7 +33,6 @@ import (
 	"google.golang.org/grpc"
 	cosi "sigs.k8s.io/container-object-storage-interface-spec"
 
-	"github.com/linode/linode-cosi-driver/pkg/endpoint"
 	"github.com/linode/linode-cosi-driver/pkg/envflag"
 	grpchandlers "github.com/linode/linode-cosi-driver/pkg/grpc"
 	"github.com/linode/linode-cosi-driver/pkg/linodeclient"
@@ -89,6 +89,7 @@ type mainOptions struct {
 	s3SecretKey            string
 }
 
+//nolint:cyclop //TODO: reduce complexity
 func run(ctx context.Context, log *slog.Logger, opts mainOptions) error {
 	_, err := maxprocs.Set(maxprocs.Logger(logutils.ForMaxprocs(log.Handler())))
 	if err != nil {
@@ -171,15 +172,19 @@ func run(ctx context.Context, log *slog.Logger, opts mainOptions) error {
 		return fmt.Errorf("unable to parse COSI endpoint: %w", err)
 	}
 
-	// create the endpoint handler
-	ep := endpoint.New(endpointURL)
-	defer ep.Close()
-
-	lis, err := ep.Listener(ctx)
-	if err != nil {
-		return fmt.Errorf("unable to create new listener: %w", err)
+	// create the unix socket listener directly
+	if endpointURL.Scheme != "unix" {
+		return fmt.Errorf("only unix scheme is supported for endpoint")
 	}
-	defer lis.Close()
+	listenConfig := net.ListenConfig{}
+	lis, err := listenConfig.Listen(ctx, "unix", endpointURL.Path)
+	if err != nil {
+		return fmt.Errorf("unable to create unix listener: %w", err)
+	}
+	defer func() {
+		lis.Close()                 //nolint:errcheck //ignore close error
+		os.Remove(endpointURL.Path) //nolint:errcheck //ignore close error
+	}()
 
 	// create the grpcServer
 	srv, err := grpcServer(ctx, log, idSrv, prvSrv)
@@ -232,7 +237,7 @@ func grpcServer(ctx context.Context,
 // shutdown handles shutdown with grace period consideration.
 func shutdown(ctx context.Context,
 	wg *sync.WaitGroup,
-	g *grpc.Server,
+	server *grpc.Server,
 ) {
 	<-ctx.Done()
 	defer wg.Done()
@@ -243,22 +248,22 @@ func shutdown(ctx context.Context,
 	dctx, stop := context.WithTimeout(context.Background(), gracePeriod)
 	defer stop()
 
-	c := make(chan struct{})
+	channel := make(chan struct{})
 
-	if g != nil {
+	if server != nil {
 		go func() {
-			g.GracefulStop()
-			c <- struct{}{}
+			server.GracefulStop()
+			channel <- struct{}{}
 		}()
 
 		for {
 			select {
 			case <-dctx.Done():
 				slog.Warn("Forcing shutdown")
-				g.Stop()
+				server.Stop()
 
 				return
-			case <-c:
+			case <-channel:
 				return
 			}
 		}

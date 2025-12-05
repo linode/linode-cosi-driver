@@ -22,6 +22,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/linode/linodego"
 	grpccodes "google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	cosi "sigs.k8s.io/container-object-storage-interface-spec"
@@ -32,7 +33,6 @@ import (
 	"github.com/linode/linode-cosi-driver/pkg/s3"
 	s3stub "github.com/linode/linode-cosi-driver/pkg/s3/stubclient"
 	"github.com/linode/linode-cosi-driver/pkg/servers/provisioner"
-	"github.com/linode/linodego"
 )
 
 const (
@@ -171,7 +171,7 @@ func TestDriverCreateBucket(t *testing.T) {
 				t.Fatalf("failed to create provisioner server: %v", err)
 			}
 
-			for i := 0; i < 2; i++ { // run twice to check idempotency
+			for i := 0; i < 2; i++ { //nolint:varnamelen //simple loop, run twice to check for idepotency
 				actual, err := srv.DriverCreateBucket(ctx, tc.request)
 				if !errors.Is(err, tc.expectedError) {
 					t.Errorf("call %d: expected error: %q, but got: %q", i, tc.expectedError, err)
@@ -321,7 +321,7 @@ func TestDriverGrantBucketAccess(t *testing.T) {
 				t.Fatalf("failed to create provisioner server: %v", err)
 			}
 
-			for i := 0; i < 2; i++ { // run twice to check idempotency
+			for i := 0; i < 2; i++ { //nolint:varnamelen //simple loop, run twice to check for idepotency
 				actual, err := srv.DriverGrantBucketAccess(ctx, tc.request)
 				if !errors.Is(err, tc.expectedError) {
 					t.Errorf("call %d: expected error: %q, but got: %q", i, tc.expectedError, err)

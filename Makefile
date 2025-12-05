@@ -221,7 +221,7 @@ TILT           			?= $(LOCALBIN)/tilt
 ## Tool Versions
 CHAINSAW_VERSION                ?= v0.2.12
 CTLPTL_VERSION                  ?= v0.8.39
-GOLANGCI_LINT_VERSION           ?= v1.64.5
+GOLANGCI_LINT_VERSION           ?= v2.7.1
 HELM_VERSION                    ?= v3.17.1
 HELM_DOCS_VERSION               ?= v1.14.2
 HELM_VALUES_SCHEMA_JSON_VERSION ?= v1.7.0
@@ -242,7 +242,7 @@ $(CTLPTL)-$(CTLPTL_VERSION): $(LOCALBIN)
 .PHONY: golangci-lint
 golangci-lint: $(GOLANGCI_LINT)-$(GOLANGCI_LINT_VERSION) ## Download golangci-lint locally if necessary.
 $(GOLANGCI_LINT)-$(GOLANGCI_LINT_VERSION): $(LOCALBIN)
-	$(call go-install-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/cmd/golangci-lint,$(GOLANGCI_LINT_VERSION))
+	$(call go-install-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/v2/cmd/golangci-lint,$(GOLANGCI_LINT_VERSION))
 
 .PHONY: helm
 helm: $(HELM)-$(HELM_VERSION) ## Download helm locally if necessary.
