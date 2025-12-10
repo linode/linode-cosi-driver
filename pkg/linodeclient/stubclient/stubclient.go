@@ -22,14 +22,19 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/linode/linode-cosi-driver/pkg/linodeclient"
 	"github.com/linode/linodego"
+
+	"github.com/linode/linode-cosi-driver/pkg/linodeclient"
+)
+
+type forcedFailureKeyType struct{}
+
+var (
+	// ForcedFailure is a context key used to simulate forced failures in certain methods.
+	ForcedFailure = forcedFailureKeyType{}
 )
 
 const (
-	// ForcedFailure is a context key used to simulate forced failures in certain methods.
-	ForcedFailure = "X_Forced_Failure"
-
 	TestAccessKey = "TEST_ACCESS_KEY"
 	TestSecretKey = "TEST_SECRET_KEY"
 )
@@ -51,17 +56,17 @@ var _ linodeclient.Client = (*Client)(nil)
 // New creates a new instance of the Client with optional object storage objects.
 // This is a stub function.
 func New(opts ...Option) *Client {
-	c := &Client{
+	client := &Client{
 		objectStorageBuckets:        make(map[string]*linodego.ObjectStorageBucket),
 		objectStorageBucketAccesses: make(map[string]*linodego.ObjectStorageBucketAccess),
 		objectStorageKeys:           make(map[int]*linodego.ObjectStorageKey),
 	}
 
 	for _, opt := range opts {
-		opt(c)
+		opt(client)
 	}
 
-	return c
+	return client
 }
 
 func validateACL(acl linodego.ObjectStorageACL) bool {
@@ -228,10 +233,7 @@ func (c *Client) CreateObjectStorageKey(ctx context.Context, opt linodego.Object
 		return nil, err
 	}
 
-	limited := false
-	if opt.BucketAccess != nil && len(*opt.BucketAccess) != 0 {
-		limited = true
-	}
+	limited := opt.BucketAccess != nil && len(*opt.BucketAccess) != 0
 
 	obj := &linodego.ObjectStorageKey{
 		Label:        opt.Label,

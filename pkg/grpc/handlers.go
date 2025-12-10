@@ -40,7 +40,7 @@ func PanicRecovery(ctx context.Context, handler slog.Handler, callbacks ...func(
 
 	logger := slog.New(handler)
 
-	return func(p any) (err error) {
+	return func(pan any) (err error) {
 		for _, callback := range callbacks {
 			callback(ctx)
 		}
@@ -48,7 +48,7 @@ func PanicRecovery(ctx context.Context, handler slog.Handler, callbacks ...func(
 		if logger != nil {
 			logger.Log(ctx, 0,
 				"Recovered from panic",
-				"panic", p,
+				"panic", pan,
 				"stack", debug.Stack())
 		}
 

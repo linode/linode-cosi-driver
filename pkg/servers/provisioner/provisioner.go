@@ -22,6 +22,7 @@ import (
 	"strconv"
 	"sync"
 
+	"github.com/linode/linodego"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	cosi "sigs.k8s.io/container-object-storage-interface-spec"
@@ -29,7 +30,6 @@ import (
 	"github.com/linode/linode-cosi-driver/pkg/linodeclient"
 	"github.com/linode/linode-cosi-driver/pkg/linodeclient/cache"
 	"github.com/linode/linode-cosi-driver/pkg/s3"
-	"github.com/linode/linodego"
 )
 
 // Server implements cosi.ProvisionerServer interface.
@@ -116,12 +116,12 @@ func (s *Server) DriverCreateBucket(ctx context.Context, req *cosi.DriverCreateB
 	}
 
 	bucket, err := s.client.GetObjectStorageBucket(ctx, region, label)
-	if err != nil {
-		if !errors.Is(err, ErrNotFound) {
-			log.ErrorContext(ctx, "Failed to check if bucket exists", "error", err)
-			return nil, status.Error(codes.Internal, fmt.Sprintf("failed to check if bucket exists: %v", err))
-		}
+	if err != nil && !errors.Is(err, ErrNotFound) {
+		log.ErrorContext(ctx, "Failed to check if bucket exists", "error", err)
+		return nil, status.Error(codes.Internal, fmt.Sprintf("failed to check if bucket exists: %v", err))
+	}
 
+	if bucket == nil {
 		opts := linodego.ObjectStorageBucketCreateOptions{
 			Region:      region,
 			Label:       label,
@@ -153,10 +153,6 @@ func (s *Server) DriverCreateBucket(ctx context.Context, req *cosi.DriverCreateB
 			BucketInfo: bucketInfo(bucket.Region),
 		}, status.Error(codes.OK, "bucket created")
 	}
-
-	log.DebugContext(ctx, "Bucket found, checking bucket access",
-		KeyBucketCreationTimestamp, bucket.Region,
-	)
 
 	access, err := s.client.GetObjectStorageBucketAccess(ctx, region, label)
 	if err != nil {
@@ -195,7 +191,7 @@ func (s *Server) DriverCreateBucket(ctx context.Context, req *cosi.DriverCreateB
 func (s *Server) DriverDeleteBucket(ctx context.Context, req *cosi.DriverDeleteBucketRequest) (*cosi.DriverDeleteBucketResponse, error) {
 	region, label := parseBucketID(req.GetBucketId())
 	// TODO(v1alpha2): add the cleanup
-	// cleanup := ParamCleanupValue(req.GetParameters()[ParamCleanup]).Force()
+	// := ParamCleanupValue(req.GetParameters()[ParamCleanup]).Force()
 	cleanup := false
 
 	log := s.logAttr(
