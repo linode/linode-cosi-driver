@@ -64,7 +64,7 @@ spec:
                 name: {{ include "linode-cosi-driver.secretName" . }}
             {{- if not .Values.s3.ephemeralCredentials }}
             - secretRef:
-                name: {{ include "linode-cosi-driver.s3secretName" . }}
+                name: {{ include "linode-cosi-driver.s3SecretName" . }}
             {{- end }}
           volumeMounts:
             - name: cosi-socket-dir
