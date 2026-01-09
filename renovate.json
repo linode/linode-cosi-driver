@@ -33,7 +33,7 @@
         "golang-version"
       ],
       "matchPackageNames": [
-        "golang",
+        "docker.io/library/golang",
         "go"
       ]
     }
