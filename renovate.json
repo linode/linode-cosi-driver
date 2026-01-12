@@ -29,13 +29,8 @@
       "groupName": "go Version",
       "groupSlug": "go-version",
       "matchDatasources": [
-        "devbox",
         "dockerfile",
         "golang-version"
-      ],
-      "matchPackageNames": [
-        "docker.io/library/golang",
-        "go"
       ]
     }
   ]
