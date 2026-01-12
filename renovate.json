@@ -3,6 +3,7 @@
   "schedule": [
     "* * * * 0,6"
   ],
+  "extends": ["config:recommended"],
   "labels": ["dependencies"],
   "postUpdateOptions": ["gomodTidy"],
   "vulnerabilityAlerts": {
