@@ -17,6 +17,12 @@ jobs:
         with:
           go-version-file: ./go.mod
           cache: false
-      - run: |
-          make \
-            test
+      - run: make test
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: ./coverage.out
+          fail_ci_if_error: false
+          verbose: true
+          token: ${{ secrets.CODECOV_TOKEN }}
+          slug: linode/linode-cosi-driver

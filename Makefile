@@ -113,7 +113,7 @@ generate-schemas: helm-values-schema-json ## Run generate schema for Helm Chart 
 test: ## Run tests.
 	go test \
 		-race \
-		-cover -covermode=atomic -coverprofile=coverage.out \
+		-cover -coverprofile=coverage.out \
 		./...
 
 .PHONY: test-integration
@@ -121,7 +121,7 @@ test-integration: ## Run integration tests.
 	go test \
 		-tags=integration \
 		-race \
-		-cover -covermode=atomic -coverprofile=coverage.out \
+		-cover -coverprofile=coverage.out \
 		./...
 
 .PHONY: test-e2e
