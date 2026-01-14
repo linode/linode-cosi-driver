@@ -121,7 +121,7 @@ test-integration: ## Run integration tests.
 	go test \
 		-tags=integration \
 		-race \
-		-cover -coverprofile=coverage.out \
+		-cover -coverprofile=integration-coverage.out \
 		./...
 
 .PHONY: test-e2e
@@ -220,14 +220,22 @@ TILT           			?= $(LOCALBIN)/tilt
 
 ## Tool Versions
 CHAINSAW_VERSION                ?= v0.2.12
-CTLPTL_VERSION                  ?= v0.8.39
-GOLANGCI_LINT_VERSION           ?= v2.7.1
+# renovate: datasource=go depName=github.com/tilt-dev/ctlptl
+CTLPTL_VERSION                  ?= v0.8.44
+# renovate: datasource=github-tags depName=golangci/golangci-lint
+GOLANGCI_LINT_VERSION           ?= v2.7.2
+# renovate: datasource=go depName=helm.sh/helm/v3/cmd/helm
 HELM_VERSION                    ?= v3.17.1
+# renovate: datasource=go depName=github.com/norwoodj/helm-docs/cmd/helm-docs
 HELM_DOCS_VERSION               ?= v1.14.2
+# renovate: datasource=go depName=github.com/losisin/helm-values-schema-json
 HELM_VALUES_SCHEMA_JSON_VERSION ?= v1.7.0
+# renovate: datasource=go depName=sigs.k8s.io/kind
 KIND_VERSION                    ?= v0.29.0
+# renovate: datasource=go depName=golang.stackrox.io/kube-linter/cmd/kube-linter
 KUBE_LINTER_VERSION             ?= v0.7.1
-TILT_VERSION					?= 0.35.0
+# renovate: datasource=github-tags depName=tilt-dev/tilt
+TILT_VERSION                    ?= 0.36.0
 
 .PHONY: chainsaw
 chainsaw: $(CHAINSAW)-$(CHAINSAW_VERSION) ## Download chainsaw locally if necessary.
