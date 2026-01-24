@@ -221,7 +221,7 @@ TILT           			?= $(LOCALBIN)/tilt
 ## Tool Versions
 CHAINSAW_VERSION                ?= v0.2.12
 # renovate: datasource=go depName=github.com/tilt-dev/ctlptl
-CTLPTL_VERSION                  ?= v0.8.44
+CTLPTL_VERSION                  ?= v0.9.0
 # renovate: datasource=github-tags depName=golangci/golangci-lint
 GOLANGCI_LINT_VERSION           ?= v2.7.2
 # renovate: datasource=go depName=helm.sh/helm/v3/cmd/helm
