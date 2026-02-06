@@ -2,6 +2,17 @@ apiVersion: v1
 entries:
   linode-cosi-driver:
   - apiVersion: v2
+    appVersion: v0.5.6
+    created: "2026-02-06T23:42:46.634817401Z"
+    description: A Kubernetes Container Object Storage Interface (COSI) Driver for
+      Linode
+    digest: 14a831614bfe8490d9a947f8bfc72ce1a4d322145cc208d92df41b8a9d028239
+    name: linode-cosi-driver
+    type: application
+    urls:
+    - https://github.com/linode/linode-cosi-driver/releases/download/helm-v0.5.6/linode-cosi-driver-v0.5.6.tgz
+    version: v0.5.6
+  - apiVersion: v2
     appVersion: v0.5.5
     created: "2025-12-10T17:57:08.24148735Z"
     description: A Kubernetes Container Object Storage Interface (COSI) Driver for
@@ -111,4 +122,4 @@ entries:
     urls:
     - https://github.com/linode/linode-cosi-driver/releases/download/linode-cosi-driver-0.4.1/linode-cosi-driver-0.4.1.tgz
     version: 0.4.1
-generated: "2025-12-10T17:57:08.241549766Z"
+generated: "2026-02-06T23:42:46.63485991Z"
