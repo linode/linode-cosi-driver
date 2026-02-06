@@ -64,7 +64,7 @@ func TestHappyPath(t *testing.T) {
 	var (
 		linodeToken = envflag.String("LINODE_TOKEN", "")
 		iterations  = envflag.Int("IDEMPOTENCY_ITERATIONS", 2)
-		s3Regions   = envflag.String("S3_REGIONS", "")
+		s3Regions   = envflag.String("S3_CLIENT_EPHEMERAL_CREDENTIALS_REGIONS", "")
 	)
 
 	if linodeToken == "" {

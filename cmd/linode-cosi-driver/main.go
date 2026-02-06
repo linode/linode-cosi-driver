@@ -60,7 +60,7 @@ func main() {
 		cacheTTL               = envflag.Duration("LINODE_OBJECT_STORAGE_ENDPOINT_CACHE_TTL", cache.DefaultTTL)
 		s3SSL                  = envflag.Bool("S3_CLIENT_SSL_ENABLED", true)
 		s3EphemeralCredentials = envflag.Bool("S3_CLIENT_EPHEMERAL_CREDENTIALS", true)
-		s3Regions              = envflag.String("S3_REGIONS", "")
+		s3EphemeralRegions     = envflag.String("S3_CLIENT_EPHEMERAL_CREDENTIALS_REGIONS", "")
 		s3AccessKey            = envflag.String("S3_ACCESS_KEY", "")
 		s3SecretKey            = envflag.String("S3_SECRET_KEY", "")
 	)
@@ -73,7 +73,7 @@ func main() {
 		cacheTTL:               cacheTTL,
 		s3SSL:                  s3SSL,
 		s3EphemeralCredentials: s3EphemeralCredentials,
-		s3Regions:              parseRegions(s3Regions),
+		s3Regions:              parseRegions(s3EphemeralRegions),
 		s3AccessKey:            s3AccessKey,
 		s3SecretKey:            s3SecretKey,
 	},

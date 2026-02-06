@@ -81,9 +81,9 @@ s3:
   # -- Enable or disable SSL in S3 client.
   ssl: true
 
-  # -- Optional comma-separated list of Object Storage regions for ephemeral S3 credentials.
+  # -- Optional list of Object Storage regions for ephemeral S3 credentials.
   # If empty, credentials can be used in all regions.
-  regions: ""
+  ephemeralCredentialsRegions: []
 
   # -- S3 Secret Key. This field is **required** unless secret is created before deployment (see `s3.secret.ref` value)
   # or ephemeral credentials are enabled (see `s3.ephemeralCredentials` value).
