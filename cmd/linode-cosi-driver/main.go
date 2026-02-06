@@ -23,6 +23,7 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -59,6 +60,7 @@ func main() {
 		cacheTTL               = envflag.Duration("LINODE_OBJECT_STORAGE_ENDPOINT_CACHE_TTL", cache.DefaultTTL)
 		s3SSL                  = envflag.Bool("S3_CLIENT_SSL_ENABLED", true)
 		s3EphemeralCredentials = envflag.Bool("S3_CLIENT_EPHEMERAL_CREDENTIALS", true)
+		s3Regions              = envflag.String("S3_REGIONS", "")
 		s3AccessKey            = envflag.String("S3_ACCESS_KEY", "")
 		s3SecretKey            = envflag.String("S3_SECRET_KEY", "")
 	)
@@ -71,6 +73,7 @@ func main() {
 		cacheTTL:               cacheTTL,
 		s3SSL:                  s3SSL,
 		s3EphemeralCredentials: s3EphemeralCredentials,
+		s3Regions:              parseRegions(s3Regions),
 		s3AccessKey:            s3AccessKey,
 		s3SecretKey:            s3SecretKey,
 	},
@@ -85,6 +88,7 @@ type mainOptions struct {
 	cacheTTL               time.Duration
 	s3SSL                  bool
 	s3EphemeralCredentials bool
+	s3Regions              []string
 	s3AccessKey            string
 	s3SecretKey            string
 }
@@ -127,7 +131,7 @@ func run(ctx context.Context, log *slog.Logger, opts mainOptions) error {
 	}()
 
 	if opts.s3EphemeralCredentials {
-		creds, cleanup, err := linodeclient.NewEphemeralS3Credentials(ctx, log, client)
+		creds, cleanup, err := linodeclient.NewEphemeralS3Credentials(ctx, log, client, opts.s3Regions)
 		if err != nil {
 			return fmt.Errorf("unable to create ephemeral credentials: %w", err)
 		}
@@ -210,6 +214,24 @@ func run(ctx context.Context, log *slog.Logger, opts mainOptions) error {
 	wg.Wait()
 
 	return nil
+}
+
+func parseRegions(raw string) []string {
+	if raw == "" {
+		return nil
+	}
+
+	parts := strings.Split(raw, ",")
+	regions := make([]string, 0, len(parts))
+	for _, part := range parts {
+		region := strings.TrimSpace(part)
+		if region == "" {
+			continue
+		}
+		regions = append(regions, region)
+	}
+
+	return regions
 }
 
 func grpcServer(ctx context.Context,

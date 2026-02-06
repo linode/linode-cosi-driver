@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strings"
 	"testing"
 	"time"
 
@@ -39,12 +40,31 @@ func idempotentRun(t *testing.T, n int, name string, run func(t *testing.T)) {
 	}
 }
 
+func parseRegions(raw string) []string {
+	if raw == "" {
+		return nil
+	}
+
+	parts := strings.Split(raw, ",")
+	regions := make([]string, 0, len(parts))
+	for _, part := range parts {
+		region := strings.TrimSpace(part)
+		if region == "" {
+			continue
+		}
+		regions = append(regions, region)
+	}
+
+	return regions
+}
+
 func TestHappyPath(t *testing.T) {
 	t.Parallel()
 
 	var (
 		linodeToken = envflag.String("LINODE_TOKEN", "")
 		iterations  = envflag.Int("IDEMPOTENCY_ITERATIONS", 2)
+		s3Regions   = envflag.String("S3_REGIONS", "")
 	)
 
 	if linodeToken == "" {
@@ -64,7 +84,12 @@ func TestHappyPath(t *testing.T) {
 		return
 	}
 
-	creds, cleanup, err := linodeclient.NewEphemeralS3Credentials(context.Background(), slog.Default(), client)
+	creds, cleanup, err := linodeclient.NewEphemeralS3Credentials(
+		context.Background(),
+		slog.Default(),
+		client,
+		parseRegions(s3Regions),
+	)
 	if err != nil {
 		t.Errorf("failed to create ephemeral s3 credentials: %v", err.Error())
 		return
