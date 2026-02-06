@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/linode/linodego"
@@ -62,7 +63,7 @@ func NewEphemeralS3Credentials(
 	keyLabel := fmt.Sprintf("cosi-%s", uuid.New().String())
 	slog.Info(fmt.Sprintf("Generating new ephemeral key: %s", keyLabel))
 
-	clusters, err := client.ListObjectStorageClusters(ctx, &linodego.ListOptions{})
+	clusters, err := client.ListObjectStorageEndpoints(ctx, &linodego.ListOptions{})
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to list ObjectStorage clusters: %w", err)
 	}
@@ -77,7 +78,7 @@ func NewEphemeralS3Credentials(
 		Regions: regions,
 	})
 	if err != nil {
-		return nil, nil, fmt.Errorf("unable to create object storage key: %w", err)
+		return nil, nil, fmt.Errorf("unable to create object storage key: %w. requested regions were: %s", err, strings.Join(regions, ", "))
 	}
 
 	cleanup := func(cctx context.Context) error {
