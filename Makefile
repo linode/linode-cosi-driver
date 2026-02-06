@@ -225,7 +225,7 @@ CTLPTL_VERSION                  ?= v0.8.44
 # renovate: datasource=github-tags depName=golangci/golangci-lint
 GOLANGCI_LINT_VERSION           ?= v2.7.2
 # renovate: datasource=go depName=helm.sh/helm/v3/cmd/helm
-HELM_VERSION                    ?= v3.17.1
+HELM_VERSION                    ?= v3.20.0
 # renovate: datasource=go depName=github.com/norwoodj/helm-docs/cmd/helm-docs
 HELM_DOCS_VERSION               ?= v1.14.2
 # renovate: datasource=go depName=github.com/losisin/helm-values-schema-json
