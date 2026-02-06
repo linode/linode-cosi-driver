@@ -63,17 +63,15 @@ func NewEphemeralS3Credentials(
 	keyLabel := fmt.Sprintf("cosi-%s", uuid.New().String())
 	log.Info("Generating new ephemeral key", "label", keyLabel)
 
-	clusters, err := client.ListObjectStorageClusters(ctx, &linodego.ListOptions{})
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to list ObjectStorage clusters: %w", err)
-	}
-
 	keyRegions := make([]string, 0, 1)
-	if len(regions) == 0 {
-		for _, cluster := range clusters {
-			keyRegions = append(keyRegions, cluster.Region)
+	var clusters []linodego.ObjectStorageCluster
+	if len(regions) > 0 {
+		var err error
+		clusters, err = client.ListObjectStorageClusters(ctx, &linodego.ListOptions{})
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to list ObjectStorage clusters: %w", err)
 		}
-	} else {
+
 		requested := make(map[string]struct{}, len(regions))
 		for _, region := range regions {
 			requested[region] = struct{}{}
@@ -88,14 +86,15 @@ func NewEphemeralS3Credentials(
 		}
 	}
 
-	if len(keyRegions) == 0 {
-		return nil, nil, fmt.Errorf("no regions available for object storage key creation")
-	}
-
-	creds, err := client.CreateObjectStorageKey(ctx, linodego.ObjectStorageKeyCreateOptions{
+	opts := linodego.ObjectStorageKeyCreateOptions{
 		Label:   keyLabel,
 		Regions: keyRegions,
-	})
+	}
+	if len(regions) == 0 {
+		opts.Regions = nil
+	}
+
+	creds, err := client.CreateObjectStorageKey(ctx, opts)
 	if err != nil {
 		return nil, nil, fmt.Errorf("unable to create object storage key: %w", err)
 	}

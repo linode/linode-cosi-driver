@@ -84,46 +84,71 @@ func TestHappyPath(t *testing.T) {
 		return
 	}
 
-	creds, cleanup, err := linodeclient.NewEphemeralS3Credentials(
-		context.Background(),
-		slog.Default(),
-		client,
-		parseRegions(s3Regions),
-	)
-	if err != nil {
-		t.Errorf("failed to create ephemeral s3 credentials: %v", err.Error())
-		return
+	testCases := []struct {
+		name    string
+		regions []string
+	}{
+		{
+			name:    "with_regions",
+			regions: parseRegions(s3Regions),
+		},
+		{
+			name:    "without_regions",
+			regions: nil,
+		},
 	}
 
-	defer func() {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
-		defer cancel()
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			regions := tc.regions
+			if tc.name == "with_regions" && len(regions) == 0 {
+				regions = []string{"us-east"}
+			}
 
-		if err := cleanup(ctx); err != nil {
-			t.Errorf("unable to cleanup ephemeral credentials: %v", err)
-		}
-	}()
+			creds, cleanup, err := linodeclient.NewEphemeralS3Credentials(
+				context.Background(),
+				slog.Default(),
+				client,
+				regions,
+			)
+			if err != nil {
+				t.Errorf("failed to create ephemeral s3 credentials: %v", err.Error())
+				return
+			}
 
-	s3cli := s3.New(
-		testCache,
-		creds.AccessKey, creds.SecretKey,
-		true,
-	)
+			defer func() {
+				ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+				defer cancel()
 
-	srv, err := provisioner.New(slog.Default(), client, testCache, s3cli)
-	if err != nil {
-		t.Errorf("failed to create provisioner: %v", err.Error())
-		return
+				if err := cleanup(ctx); err != nil {
+					t.Errorf("unable to cleanup ephemeral credentials: %v", err)
+				}
+			}()
+
+			s3cli := s3.New(
+				testCache,
+				creds.AccessKey, creds.SecretKey,
+				true,
+			)
+
+			srv, err := provisioner.New(slog.Default(), client, testCache, s3cli)
+			if err != nil {
+				t.Errorf("failed to create provisioner: %v", err.Error())
+				return
+			}
+
+			suite := suite{
+				server:     srv,
+				bucketName: fmt.Sprintf("integration-%s", tc.name),
+			}
+
+			idempotentRun(t, iterations, "DriverCreateBucket", suite.DriverCreateBucket)
+			idempotentRun(t, iterations, "DriverGrantBucketAccess", suite.DriverGrantBucketAccess)
+			idempotentRun(t, iterations, "DriverRevokeBucketAccess", suite.DriverRevokeBucketAccess)
+			idempotentRun(t, iterations, "DriverDeleteBucket", suite.DriverDeleteBucket)
+		})
 	}
-
-	suite := suite{
-		server: srv,
-	}
-
-	idempotentRun(t, iterations, "DriverCreateBucket", suite.DriverCreateBucket)
-	idempotentRun(t, iterations, "DriverGrantBucketAccess", suite.DriverGrantBucketAccess)
-	idempotentRun(t, iterations, "DriverRevokeBucketAccess", suite.DriverRevokeBucketAccess)
-	idempotentRun(t, iterations, "DriverDeleteBucket", suite.DriverDeleteBucket)
 }
 
 type suite struct {
@@ -132,8 +157,9 @@ type suite struct {
 	finishedCreateBucket      bool
 	finishedGrantBucketAccess bool
 
-	bucketID  string
-	accountID string
+	bucketID   string
+	accountID  string
+	bucketName string
 }
 
 func (s *suite) DriverCreateBucket(t *testing.T) {
@@ -141,7 +167,7 @@ func (s *suite) DriverCreateBucket(t *testing.T) {
 	defer cancel()
 
 	req := &cosi.DriverCreateBucketRequest{
-		Name: "integration",
+		Name: s.bucketName,
 		Parameters: map[string]string{
 			provisioner.ParamRegion: "us-east",
 			provisioner.ParamACL:    "private",
@@ -188,7 +214,7 @@ func (s *suite) DriverGrantBucketAccess(t *testing.T) {
 
 	req := &cosi.DriverGrantBucketAccessRequest{
 		BucketId:           s.bucketID,
-		Name:               "integration",
+		Name:               s.bucketName,
 		AuthenticationType: cosi.AuthenticationType_Key,
 		Parameters: map[string]string{
 			provisioner.ParamPermissions: string(provisioner.ParamPermissionsValueReadWrite),
