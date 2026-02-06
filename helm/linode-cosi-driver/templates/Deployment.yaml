@@ -59,6 +59,10 @@ spec:
               value: "{{ .Values.s3.ephemeralCredentials }}"
             - name: S3_CLIENT_SSL_ENABLED
               value: "{{ .Values.s3.ssl }}"
+            {{- if .Values.s3.regions }}
+            - name: S3_REGIONS
+              value: "{{ .Values.s3.regions }}"
+            {{- end }}
           envFrom:
             - secretRef:
                 name: {{ include "linode-cosi-driver.secretName" . }}
