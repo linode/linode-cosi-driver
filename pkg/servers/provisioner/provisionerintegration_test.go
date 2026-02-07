@@ -64,28 +64,7 @@ func TestHappyPath(t *testing.T) {
 		return
 	}
 
-	creds, cleanup, err := linodeclient.NewEphemeralS3Credentials(context.Background(), slog.Default(), client)
-	if err != nil {
-		t.Errorf("failed to create ephemeral s3 credentials: %v", err.Error())
-		return
-	}
-
-	defer func() {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
-		defer cancel()
-
-		if err := cleanup(ctx); err != nil {
-			t.Errorf("unable to cleanup ephemeral credentials: %v", err)
-		}
-	}()
-
-	s3cli := s3.New(
-		testCache,
-		creds.AccessKey, creds.SecretKey,
-		true,
-	)
-
-	srv, err := provisioner.New(slog.Default(), client, testCache, s3cli)
+	srv, err := provisioner.New(slog.Default(), client, testCache, nil, true)
 	if err != nil {
 		t.Errorf("failed to create provisioner: %v", err.Error())
 		return

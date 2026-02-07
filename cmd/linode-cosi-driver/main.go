@@ -126,34 +126,18 @@ func run(ctx context.Context, log *slog.Logger, opts mainOptions) error {
 		}
 	}()
 
-	if opts.s3EphemeralCredentials {
-		creds, cleanup, err := linodeclient.NewEphemeralS3Credentials(ctx, log, client)
-		if err != nil {
-			return fmt.Errorf("unable to create ephemeral credentials: %w", err)
+	var s3cli s3.Client
+	if !opts.s3EphemeralCredentials {
+		if opts.s3AccessKey == "" || opts.s3SecretKey == "" {
+			return ErrNoKeySpecified
 		}
 
-		defer func() { //nolint:contextcheck // this is secondary context
-			ctx, cancel := context.WithTimeout(context.Background(), gracePeriod)
-			defer cancel()
-
-			if err := cleanup(ctx); err != nil {
-				log.Error("unable to cleanup ephemeral credentials", "error", err)
-			}
-		}()
-
-		opts.s3AccessKey = creds.AccessKey
-		opts.s3SecretKey = creds.SecretKey
+		s3cli = s3.New(
+			epc,
+			opts.s3AccessKey, opts.s3SecretKey,
+			opts.s3SSL,
+		)
 	}
-
-	if opts.s3AccessKey == "" || opts.s3SecretKey == "" {
-		return ErrNoKeySpecified
-	}
-
-	s3cli := s3.New(
-		epc,
-		opts.s3AccessKey, opts.s3SecretKey,
-		opts.s3SSL,
-	)
 
 	// create provisioner server
 	prvSrv, err := provisioner.New(
@@ -161,6 +145,7 @@ func run(ctx context.Context, log *slog.Logger, opts mainOptions) error {
 		client,
 		epc,
 		s3cli,
+		opts.s3SSL,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create provisioner server: %w", err)

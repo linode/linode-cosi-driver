@@ -22,6 +22,7 @@ import (
 	"strconv"
 	"sync"
 
+	"github.com/google/uuid"
 	"github.com/linode/linodego"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -40,6 +41,7 @@ type Server struct {
 	client linodeclient.Client
 	cache  cache.Cache
 	s3cli  s3.Client
+	s3SSL  bool
 }
 
 // Interface guards.
@@ -51,15 +53,46 @@ func New(
 	client linodeclient.Client,
 	cache cache.Cache,
 	s3cli s3.Client,
+	s3SSL bool,
 ) (*Server, error) {
 	srv := &Server{
 		log:    logger,
 		client: client,
 		cache:  cache,
 		s3cli:  s3cli,
+		s3SSL:  s3SSL,
 	}
 
 	return srv, nil
+}
+
+func (s *Server) s3ClientForBucket(ctx context.Context, region, label string) (s3.Client, func(context.Context) error, error) {
+	if s.s3cli != nil {
+		return s.s3cli, func(context.Context) error { return nil }, nil
+	}
+
+	keyLabel := fmt.Sprintf("cosi-bucket-%s", uuid.NewString())
+	opts := linodego.ObjectStorageKeyCreateOptions{
+		Label: keyLabel,
+		BucketAccess: &[]linodego.ObjectStorageKeyBucketAccess{
+			{
+				Region:      region,
+				BucketName:  label,
+				Permissions: string(ParamPermissionsValueReadWrite),
+			},
+		},
+	}
+
+	key, err := s.client.CreateObjectStorageKey(ctx, opts)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to create object storage key for bucket: %w", err)
+	}
+
+	cleanup := func(cctx context.Context) error {
+		return s.client.DeleteObjectStorageKey(cctx, key.ID)
+	}
+
+	return s3.New(s.cache, key.AccessKey, key.SecretKey, s.s3SSL), cleanup, nil
 }
 
 func (s *Server) logAttr(attr ...slog.Attr) *slog.Logger {
@@ -142,7 +175,18 @@ func (s *Server) DriverCreateBucket(ctx context.Context, req *cosi.DriverCreateB
 		if policy != "" {
 			log.InfoContext(ctx, "Updating policy")
 
-			if err := s.s3cli.SetBucketPolicy(ctx, region, bucket.Label, policy); err != nil {
+			s3cli, cleanup, err := s.s3ClientForBucket(ctx, region, bucket.Label)
+			if err != nil {
+				log.ErrorContext(ctx, "Failed to create bucket-scoped credentials", "error", err)
+				return nil, status.Error(codes.Internal, fmt.Sprintf("failed to create bucket-scoped credentials: %v", err))
+			}
+			defer func() {
+				if cerr := cleanup(context.Background()); cerr != nil {
+					log.ErrorContext(ctx, "Failed to cleanup bucket-scoped credentials", "error", cerr)
+				}
+			}()
+
+			if err := s3cli.SetBucketPolicy(ctx, region, bucket.Label, policy); err != nil {
 				log.ErrorContext(ctx, "Failed to set bucket policy", "error", err)
 				return nil, status.Error(codes.Internal, fmt.Sprintf("failed to set bucket policy: %v", err))
 			}
@@ -171,7 +215,18 @@ func (s *Server) DriverCreateBucket(ctx context.Context, req *cosi.DriverCreateB
 
 	// Comparing policies is expensive and hard. If every other parameter is equal,
 	// we assume that bucket is valid, and the policy will be applied.
-	if err := s.s3cli.SetBucketPolicy(ctx, region, label, policy); err != nil {
+	s3cli, cleanup, err := s.s3ClientForBucket(ctx, region, label)
+	if err != nil {
+		log.ErrorContext(ctx, "Failed to create bucket-scoped credentials", "error", err)
+		return nil, status.Error(codes.Internal, fmt.Sprintf("failed to create bucket-scoped credentials: %v", err))
+	}
+	defer func() {
+		if cerr := cleanup(context.Background()); cerr != nil {
+			log.ErrorContext(ctx, "Failed to cleanup bucket-scoped credentials", "error", cerr)
+		}
+	}()
+
+	if err := s3cli.SetBucketPolicy(ctx, region, label, policy); err != nil {
 		log.ErrorContext(ctx, "Failed to set bucket policy", "error", err)
 		return nil, status.Error(codes.Internal, fmt.Sprintf("failed to set bucket policy: %v", err))
 	}
@@ -203,7 +258,18 @@ func (s *Server) DriverDeleteBucket(ctx context.Context, req *cosi.DriverDeleteB
 	log.InfoContext(ctx, "Bucket deletion initiated")
 
 	if cleanup {
-		err := s.s3cli.Prune(ctx, region, label)
+		s3cli, keyCleanup, err := s.s3ClientForBucket(ctx, region, label)
+		if err != nil {
+			log.ErrorContext(ctx, "Failed to create bucket-scoped credentials", "error", err)
+			return nil, status.Error(codes.Internal, fmt.Sprintf("failed to create bucket-scoped credentials: %v", err))
+		}
+		defer func() {
+			if cerr := keyCleanup(context.Background()); cerr != nil {
+				log.ErrorContext(ctx, "Failed to cleanup bucket-scoped credentials", "error", cerr)
+			}
+		}()
+
+		err = s3cli.Prune(ctx, region, label)
 		if err != nil && !s3.IsNotFound(err) {
 			return nil, status.Error(codes.Internal, fmt.Sprintf("failed to cleanup bucket: %v", err))
 		}
