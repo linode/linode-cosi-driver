@@ -23,12 +23,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/credentials"
 	cosi "sigs.k8s.io/container-object-storage-interface-spec"
 
 	"github.com/linode/linode-cosi-driver/pkg/envflag"
 	"github.com/linode/linode-cosi-driver/pkg/linodeclient"
 	"github.com/linode/linode-cosi-driver/pkg/linodeclient/cache"
-	"github.com/linode/linode-cosi-driver/pkg/s3"
 	"github.com/linode/linode-cosi-driver/pkg/servers/provisioner"
 	"github.com/linode/linode-cosi-driver/pkg/version"
 )
@@ -78,6 +79,140 @@ func TestHappyPath(t *testing.T) {
 	idempotentRun(t, iterations, "DriverGrantBucketAccess", suite.DriverGrantBucketAccess)
 	idempotentRun(t, iterations, "DriverRevokeBucketAccess", suite.DriverRevokeBucketAccess)
 	idempotentRun(t, iterations, "DriverDeleteBucket", suite.DriverDeleteBucket)
+}
+
+func TestBucketScopedKeyIsolation(t *testing.T) {
+	t.Parallel()
+
+	var (
+		linodeToken = envflag.String("LINODE_TOKEN", "")
+		region      = envflag.String("OBJ_TEST_REGION", "us-east")
+	)
+
+	if linodeToken == "" {
+		t.Errorf("LINODE_TOKEN not set")
+		return
+	}
+
+	client, err := linodeclient.NewLinodeClient(fmt.Sprintf("LinodeCOSI/%s+integration", version.Version))
+	if err != nil {
+		t.Errorf("failed to create client: %v", err.Error())
+		return
+	}
+
+	testCache := cache.New(slog.Default(), client, cache.DefaultTTL)
+	if err := testCache.Refresh(t.Context()); err != nil {
+		t.Errorf("failed to refresh cache: %v", err.Error())
+		return
+	}
+
+	srv, err := provisioner.New(slog.Default(), client, testCache, nil, true)
+	if err != nil {
+		t.Errorf("failed to create provisioner: %v", err.Error())
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(t.Context(), 60*time.Second)
+	defer cancel()
+
+	bucketA := fmt.Sprintf("integration-a-%d", time.Now().UnixNano())
+	bucketB := fmt.Sprintf("integration-b-%d", time.Now().UnixNano())
+
+	createBucket := func(name string) {
+		req := &cosi.DriverCreateBucketRequest{
+			Name: name,
+			Parameters: map[string]string{
+				provisioner.ParamRegion: region,
+				provisioner.ParamACL:    "private",
+				provisioner.ParamCORS:   string(provisioner.ParamCORSValueEnabled),
+			},
+		}
+		if _, err := srv.DriverCreateBucket(ctx, req); err != nil {
+			t.Fatalf("failed to create bucket %s: %v", name, err)
+		}
+	}
+
+	deleteBucket := func(name string) {
+		req := &cosi.DriverDeleteBucketRequest{
+			BucketId: fmt.Sprintf("%s/%s", region, name),
+		}
+		if _, err := srv.DriverDeleteBucket(ctx, req); err != nil {
+			t.Errorf("failed to delete bucket %s: %v", name, err)
+		}
+	}
+
+	createBucket(bucketA)
+	createBucket(bucketB)
+	defer deleteBucket(bucketA)
+	defer deleteBucket(bucketB)
+
+	grantReq := &cosi.DriverGrantBucketAccessRequest{
+		BucketId:           fmt.Sprintf("%s/%s", region, bucketA),
+		Name:               "integration-access",
+		AuthenticationType: cosi.AuthenticationType_Key,
+		Parameters: map[string]string{
+			provisioner.ParamPermissions: string(provisioner.ParamPermissionsValueReadWrite),
+		},
+	}
+
+	grantRes, err := srv.DriverGrantBucketAccess(ctx, grantReq)
+	if err != nil {
+		t.Fatalf("failed to grant bucket access: %v", err)
+	}
+	defer func() {
+		revokeReq := &cosi.DriverRevokeBucketAccessRequest{
+			BucketId:  fmt.Sprintf("%s/%s", region, bucketA),
+			AccountId: grantRes.GetAccountId(),
+		}
+		if _, err := srv.DriverRevokeBucketAccess(ctx, revokeReq); err != nil {
+			t.Errorf("failed to revoke bucket access: %v", err)
+		}
+	}()
+
+	endpoint, ok := testCache.Get(region)
+	if !ok || endpoint == "" {
+		t.Fatalf("failed to get endpoint for region: %s", region)
+	}
+
+	creds := grantRes.GetCredentials()[provisioner.S3]
+	if creds == nil {
+		t.Fatalf("missing s3 credentials in response")
+	}
+	accessKey := creds.Secrets[provisioner.S3SecretAccessKeyID]
+	secretKey := creds.Secrets[provisioner.S3SecretAccessSecretKey]
+	if accessKey == "" || secretKey == "" {
+		t.Fatalf("missing access credentials in response")
+	}
+
+	s3cli, err := minio.New(endpoint, &minio.Options{
+		Creds:  credentials.NewStaticV4(accessKey, secretKey, ""),
+		Region: region,
+		Secure: true,
+	})
+	if err != nil {
+		t.Fatalf("failed to create s3 client: %v", err)
+	}
+
+	if err := listObjectsErr(ctx, s3cli, bucketA); err != nil {
+		t.Fatalf("expected access to bucketA, got error: %v", err)
+	}
+
+	err = listObjectsErr(ctx, s3cli, bucketB)
+	if err == nil {
+		t.Fatalf("expected access denied for bucketB, got nil")
+	}
+	if resp := minio.ToErrorResponse(err); resp.StatusCode != 0 && resp.StatusCode != 403 {
+		t.Fatalf("expected access denied for bucketB, got: %v", err)
+	}
+}
+
+func listObjectsErr(ctx context.Context, cli *minio.Client, bucket string) error {
+	for obj := range cli.ListObjects(ctx, bucket, minio.ListObjectsOptions{Recursive: true}) {
+		if obj.Err != nil {
+			return obj.Err
+		}
+	}
+	return nil
 }
 
 type suite struct {
