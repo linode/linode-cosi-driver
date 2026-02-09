@@ -21,6 +21,7 @@ import (
 	"log/slog"
 	"strconv"
 	"sync"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/linode/linodego"
@@ -105,11 +106,24 @@ func (s *Server) logAttr(attr ...slog.Attr) *slog.Logger {
 	return slog.New(s.log.Handler().WithAttrs(attr))
 }
 
+const keyCleanupTimeout = 3 * time.Second
+
+func cleanupWithTimeout(ctx context.Context, log *slog.Logger, cleanup func(context.Context) error) {
+	cctx, cancel := context.WithTimeout(ctx, keyCleanupTimeout)
+	defer cancel()
+
+	if err := cleanup(cctx); err != nil {
+		log.ErrorContext(ctx, "Failed to cleanup bucket-scoped credentials", "error", err)
+	}
+}
+
 // DriverCreateBucket call is made to create the bucket in the backend.
 //
 // NOTE: this call needs to be idempotent.
 //  1. If a bucket that matches both name and parameters already exists, then OK (success) must be returned.
 //  2. If a bucket by same name, but different parameters is provided, then the appropriate error code ALREADY_EXISTS must be returned.
+//
+//nolint:cyclop,nestif // branching required for idempotent create/validate flow
 func (s *Server) DriverCreateBucket(ctx context.Context, req *cosi.DriverCreateBucketRequest) (*cosi.DriverCreateBucketResponse, error) {
 	label := req.GetName()
 	region := req.GetParameters()[ParamRegion]
@@ -180,11 +194,7 @@ func (s *Server) DriverCreateBucket(ctx context.Context, req *cosi.DriverCreateB
 				log.ErrorContext(ctx, "Failed to create bucket-scoped credentials", "error", err)
 				return nil, status.Error(codes.Internal, fmt.Sprintf("failed to create bucket-scoped credentials: %v", err))
 			}
-			defer func() {
-				if cerr := cleanup(context.Background()); cerr != nil {
-					log.ErrorContext(ctx, "Failed to cleanup bucket-scoped credentials", "error", cerr)
-				}
-			}()
+			defer cleanupWithTimeout(ctx, log, cleanup)
 
 			if err := s3cli.SetBucketPolicy(ctx, region, bucket.Label, policy); err != nil {
 				log.ErrorContext(ctx, "Failed to set bucket policy", "error", err)
@@ -220,11 +230,7 @@ func (s *Server) DriverCreateBucket(ctx context.Context, req *cosi.DriverCreateB
 		log.ErrorContext(ctx, "Failed to create bucket-scoped credentials", "error", err)
 		return nil, status.Error(codes.Internal, fmt.Sprintf("failed to create bucket-scoped credentials: %v", err))
 	}
-	defer func() {
-		if cerr := cleanup(context.Background()); cerr != nil {
-			log.ErrorContext(ctx, "Failed to cleanup bucket-scoped credentials", "error", cerr)
-		}
-	}()
+	defer cleanupWithTimeout(ctx, log, cleanup)
 
 	if err := s3cli.SetBucketPolicy(ctx, region, label, policy); err != nil {
 		log.ErrorContext(ctx, "Failed to set bucket policy", "error", err)
@@ -263,11 +269,7 @@ func (s *Server) DriverDeleteBucket(ctx context.Context, req *cosi.DriverDeleteB
 			log.ErrorContext(ctx, "Failed to create bucket-scoped credentials", "error", err)
 			return nil, status.Error(codes.Internal, fmt.Sprintf("failed to create bucket-scoped credentials: %v", err))
 		}
-		defer func() {
-			if cerr := keyCleanup(context.Background()); cerr != nil {
-				log.ErrorContext(ctx, "Failed to cleanup bucket-scoped credentials", "error", cerr)
-			}
-		}()
+		defer cleanupWithTimeout(ctx, log, keyCleanup)
 
 		err = s3cli.Prune(ctx, region, label)
 		if err != nil && !s3.IsNotFound(err) {

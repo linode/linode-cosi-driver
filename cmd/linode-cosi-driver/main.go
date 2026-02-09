@@ -89,7 +89,6 @@ type mainOptions struct {
 	s3SecretKey            string
 }
 
-//nolint:cyclop //TODO: reduce complexity
 func run(ctx context.Context, log *slog.Logger, opts mainOptions) error {
 	_, err := maxprocs.Set(maxprocs.Logger(logutils.ForMaxprocs(log.Handler())))
 	if err != nil {
