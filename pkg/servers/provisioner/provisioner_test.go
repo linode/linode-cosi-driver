@@ -166,7 +166,7 @@ func TestDriverCreateBucket(t *testing.T) {
 
 			s3stub.SetBucketTracker(tc.s3cli, tc.client)
 
-			srv, err := provisioner.New(nil, tc.client, epc, tc.s3cli)
+			srv, err := provisioner.New(nil, tc.client, epc, tc.s3cli, true)
 			if err != nil {
 				t.Fatalf("failed to create provisioner server: %v", err)
 			}
@@ -220,7 +220,7 @@ func TestDriverDeleteBucket(t *testing.T) {
 				t.Fatalf("failed to refresh cache: %v", err)
 			}
 
-			srv, err := provisioner.New(nil, tc.client, epc, tc.s3cli)
+			srv, err := provisioner.New(nil, tc.client, epc, tc.s3cli, true)
 			if err != nil {
 				t.Fatalf("failed to create provisioner server: %v", err)
 			}
@@ -316,7 +316,7 @@ func TestDriverGrantBucketAccess(t *testing.T) {
 				t.Fatalf("failed to refresh cache: %v", err)
 			}
 
-			srv, err := provisioner.New(nil, tc.client, epc, tc.s3cli)
+			srv, err := provisioner.New(nil, tc.client, epc, tc.s3cli, true)
 			if err != nil {
 				t.Fatalf("failed to create provisioner server: %v", err)
 			}
@@ -374,7 +374,7 @@ func TestDriverRevokeBucketAccess(t *testing.T) {
 				t.Fatalf("failed to refresh cache: %v", err)
 			}
 
-			srv, err := provisioner.New(nil, tc.client, epc, tc.s3cli)
+			srv, err := provisioner.New(nil, tc.client, epc, tc.s3cli, true)
 			if err != nil {
 				t.Fatalf("failed to create provisioner server: %v", err)
 			}
