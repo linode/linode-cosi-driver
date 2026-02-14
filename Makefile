@@ -231,7 +231,7 @@ HELM_DOCS_VERSION               ?= v1.14.2
 # renovate: datasource=go depName=github.com/losisin/helm-values-schema-json
 HELM_VALUES_SCHEMA_JSON_VERSION ?= v1.9.2
 # renovate: datasource=go depName=sigs.k8s.io/kind
-KIND_VERSION                    ?= v0.29.0
+KIND_VERSION                    ?= v0.31.0
 # renovate: datasource=go depName=golang.stackrox.io/kube-linter/cmd/kube-linter
 KUBE_LINTER_VERSION             ?= v0.7.1
 # renovate: datasource=github-tags depName=tilt-dev/tilt
