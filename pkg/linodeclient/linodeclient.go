@@ -55,6 +55,17 @@ func NewLinodeClient(ua string) (*linodego.Client, error) {
 	return linodeClient, nil
 }
 
+// NewLinodeClientWithToken returns a Linode client using the provided token.
+func NewLinodeClientWithToken(ua, token string) (*linodego.Client, error) {
+	if strings.TrimSpace(token) == "" {
+		return nil, fmt.Errorf("linode token is empty")
+	}
+	linodeClient := linodego.NewClient(nil)
+	linodeClient.SetToken(token)
+	linodeClient.SetUserAgent(ua)
+	return linodeClient, nil
+}
+
 func NewEphemeralS3Credentials(
 	ctx context.Context,
 	slog *slog.Logger,

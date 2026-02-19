@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -27,6 +28,11 @@ import (
 	"github.com/linode/linodego"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/kubernetes"
 	cosi "sigs.k8s.io/container-object-storage-interface-spec"
 
 	"github.com/linode/linode-cosi-driver/pkg/linodeclient"
@@ -39,10 +45,13 @@ type Server struct {
 	log  *slog.Logger
 	once sync.Once
 
-	client linodeclient.Client
-	cache  cache.Cache
-	s3cli  s3.Client
-	s3SSL  bool
+	client     linodeclient.Client
+	cache      cache.Cache
+	s3cli      s3.Client
+	s3SSL      bool
+	kubeClient kubernetes.Interface
+	dynClient  dynamic.Interface
+	userAgent  string
 }
 
 // Interface guards.
@@ -55,19 +64,25 @@ func New(
 	cache cache.Cache,
 	s3cli s3.Client,
 	s3SSL bool,
+	kubeClient kubernetes.Interface,
+	dynClient dynamic.Interface,
+	userAgent string,
 ) (*Server, error) {
 	srv := &Server{
-		log:    logger,
-		client: client,
-		cache:  cache,
-		s3cli:  s3cli,
-		s3SSL:  s3SSL,
+		log:        logger,
+		client:     client,
+		cache:      cache,
+		s3cli:      s3cli,
+		s3SSL:      s3SSL,
+		kubeClient: kubeClient,
+		dynClient:  dynClient,
+		userAgent:  userAgent,
 	}
 
 	return srv, nil
 }
 
-func (s *Server) s3ClientForBucket(ctx context.Context, region, label string) (s3.Client, func(context.Context) error, error) {
+func (s *Server) s3ClientForBucket(ctx context.Context, client linodeclient.Client, region, label string) (s3.Client, func(context.Context) error, error) {
 	if s.s3cli != nil {
 		return s.s3cli, func(context.Context) error { return nil }, nil
 	}
@@ -84,13 +99,13 @@ func (s *Server) s3ClientForBucket(ctx context.Context, region, label string) (s
 		},
 	}
 
-	key, err := s.client.CreateObjectStorageKey(ctx, opts)
+	key, err := client.CreateObjectStorageKey(ctx, opts)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create object storage key for bucket: %w", err)
 	}
 
 	cleanup := func(cctx context.Context) error {
-		return s.client.DeleteObjectStorageKey(cctx, key.ID)
+		return client.DeleteObjectStorageKey(cctx, key.ID)
 	}
 
 	return s3.New(s.cache, key.AccessKey, key.SecretKey, s.s3SSL), cleanup, nil
@@ -106,7 +121,144 @@ func (s *Server) logAttr(attr ...slog.Attr) *slog.Logger {
 	return slog.New(s.log.Handler().WithAttrs(attr))
 }
 
+func (s *Server) clientForRequest(ctx context.Context, bucketName, bucketID string, params map[string]string) (linodeclient.Client, error) {
+	token, err := s.tokenForRequest(ctx, bucketName, bucketID, params)
+	if err != nil {
+		return nil, err
+	}
+	if token == "" {
+		return s.client, nil
+	}
+	if s.userAgent == "" {
+		return nil, fmt.Errorf("user agent not set for token-based client")
+	}
+	return linodeclient.NewLinodeClientWithToken(s.userAgent, token)
+}
+
+func (s *Server) tokenForRequest(ctx context.Context, bucketName, bucketID string, params map[string]string) (string, error) {
+	name := ""
+	namespace := ""
+	if params != nil {
+		name = params[ParamLinodeTokenSecretName]
+		namespace = params[ParamLinodeTokenSecretNamespace]
+	}
+	if name != "" {
+		return s.tokenFromSecret(ctx, namespace, name)
+	}
+	if bucketName != "" {
+		return s.tokenFromBucketClaimName(ctx, bucketName)
+	}
+	if bucketID == "" {
+		return "", nil
+	}
+	return s.tokenFromBucketID(ctx, bucketID)
+}
+
+func (s *Server) tokenFromSecret(ctx context.Context, namespace, name string) (string, error) {
+	if name == "" {
+		return "", nil
+	}
+	if s.kubeClient == nil {
+		return "", fmt.Errorf("kubernetes client not configured for secret lookup")
+	}
+	if namespace == "" {
+		return "", fmt.Errorf("secret namespace is required")
+	}
+	secret, err := s.kubeClient.CoreV1().Secrets(namespace).Get(ctx, name, v1.GetOptions{})
+	if err != nil {
+		return "", fmt.Errorf("get linode token secret %s/%s: %w", namespace, name, err)
+	}
+	token := strings.TrimSpace(string(secret.Data[linodeTokenSecretKey]))
+	if token == "" {
+		return "", fmt.Errorf("secret %s/%s missing %s", namespace, name, linodeTokenSecretKey)
+	}
+	return token, nil
+}
+
+func (s *Server) tokenFromBucketID(ctx context.Context, bucketID string) (string, error) {
+	if s.dynClient == nil {
+		return "", nil
+	}
+	_, label := parseBucketID(bucketID)
+	if label != "" {
+		token, err := s.tokenFromBucketClaimName(ctx, label)
+		if err != nil || token != "" {
+			return token, err
+		}
+	}
+	buckets, err := s.dynClient.Resource(bucketGVR).List(ctx, v1.ListOptions{})
+	if err != nil {
+		return "", fmt.Errorf("list buckets: %w", err)
+	}
+	for _, item := range buckets.Items {
+		id, _, _ := unstructured.NestedString(item.Object, "status", "bucketID")
+		if id != bucketID {
+			continue
+		}
+		className, _, _ := unstructured.NestedString(item.Object, "spec", "bucketClassName")
+		if className == "" {
+			return "", nil
+		}
+		return s.tokenFromBucketClass(ctx, className)
+	}
+	return "", nil
+}
+
+func (s *Server) tokenFromBucketClaimName(ctx context.Context, claimName string) (string, error) {
+	if claimName == "" || s.dynClient == nil {
+		return "", nil
+	}
+	list, err := s.dynClient.Resource(bucketClaimGVR).List(ctx, v1.ListOptions{
+		FieldSelector: "metadata.name=" + claimName,
+	})
+	if err != nil {
+		return "", fmt.Errorf("list bucketclaims: %w", err)
+	}
+	if len(list.Items) == 0 {
+		return "", nil
+	}
+	if len(list.Items) > 1 {
+		return "", fmt.Errorf("multiple bucketclaims named %s", claimName)
+	}
+	item := list.Items[0]
+	annotations, _, _ := unstructured.NestedStringMap(item.Object, "metadata", "annotations")
+	name := annotations[AnnotationLinodeTokenSecretName]
+	if name == "" {
+		return "", nil
+	}
+	namespace := annotations[AnnotationLinodeTokenSecretNamespace]
+	if namespace == "" {
+		namespace, _, _ = unstructured.NestedString(item.Object, "metadata", "namespace")
+	}
+	return s.tokenFromSecret(ctx, namespace, name)
+}
+
+func (s *Server) tokenFromBucketClass(ctx context.Context, className string) (string, error) {
+	if s.dynClient == nil {
+		return "", nil
+	}
+	classObj, err := s.dynClient.Resource(bucketClassGVR).Get(ctx, className, v1.GetOptions{})
+	if err != nil {
+		return "", fmt.Errorf("get bucketclass %s: %w", className, err)
+	}
+	params, _, _ := unstructured.NestedStringMap(classObj.Object, "parameters")
+	name := params[ParamLinodeTokenSecretName]
+	namespace := params[ParamLinodeTokenSecretNamespace]
+	if name == "" {
+		return "", nil
+	}
+	return s.tokenFromSecret(ctx, namespace, name)
+}
+
 const keyCleanupTimeout = 3 * time.Second
+
+const linodeTokenSecretKey = "LINODE_TOKEN"
+
+var (
+	bucketGVR = schema.GroupVersionResource{Group: "objectstorage.k8s.io", Version: "v1alpha1", Resource: "buckets"}
+	bucketClaimGVR = schema.GroupVersionResource{Group: "objectstorage.k8s.io", Version: "v1alpha1", Resource: "bucketclaims"}
+	bucketClassGVR = schema.GroupVersionResource{Group: "objectstorage.k8s.io", Version: "v1alpha1", Resource: "bucketclasses"}
+)
 
 func cleanupWithTimeout(ctx context.Context, log *slog.Logger, cleanup func(context.Context) error) {
 	cctx, cancel := context.WithTimeout(ctx, keyCleanupTimeout)
@@ -127,6 +279,10 @@ func (s *Server) DriverCreateBucket(ctx context.Context, req *cosi.DriverCreateB
 	region := req.GetParameters()[ParamRegion]
 	cors := ParamCORSValue(req.GetParameters()[ParamCORS])
 	policyTemplate := req.GetParameters()[ParamPolicy]
+	client, err := s.clientForRequest(ctx, label, "", req.GetParameters())
+	if err != nil {
+		return nil, status.Error(codes.Internal, fmt.Sprintf("failed to resolve linode client: %v", err))
+	}
 
 	acl := linodego.ObjectStorageACL(req.GetParameters()[ParamACL])
 	if acl == "" {
@@ -151,7 +307,7 @@ func (s *Server) DriverCreateBucket(ctx context.Context, req *cosi.DriverCreateB
 		return nil, status.Error(codes.Internal, fmt.Sprintf("failed to generate bucket policy: %v", err))
 	}
 
-	bucket, err := s.client.GetObjectStorageBucket(ctx, region, label)
+	bucket, err := client.GetObjectStorageBucket(ctx, region, label)
 	if err != nil && !errors.Is(err, ErrNotFound) {
 		log.ErrorContext(ctx, "Failed to check if bucket exists", "error", err)
 		return nil, status.Error(codes.Internal, fmt.Sprintf("failed to check if bucket exists: %v", err))
@@ -159,11 +315,11 @@ func (s *Server) DriverCreateBucket(ctx context.Context, req *cosi.DriverCreateB
 
 	if bucket == nil {
 		// Create the bucket if it doesn't exist, then apply policy if provided.
-		return s.createBucketAndApplyPolicy(ctx, log, region, label, acl, cors, policy)
+		return s.createBucketAndApplyPolicy(ctx, client, log, region, label, acl, cors, policy)
 	}
 
 	// Bucket exists: validate parameters and re-apply policy for idempotency.
-	return s.ensureExistingBucket(ctx, log, region, label, acl, cors, policy)
+	return s.ensureExistingBucket(ctx, client, log, region, label, acl, cors, policy)
 }
 
 func (s *Server) buildBucketPolicy(policyTemplate, label string) (string, error) {
@@ -177,6 +333,7 @@ func (s *Server) buildBucketPolicy(policyTemplate, label string) (string, error)
 
 func (s *Server) createBucketAndApplyPolicy(
 	ctx context.Context,
+	client linodeclient.Client,
 	log *slog.Logger,
 	region, label string,
 	acl linodego.ObjectStorageACL,
@@ -192,7 +349,7 @@ func (s *Server) createBucketAndApplyPolicy(
 
 	log.InfoContext(ctx, "Creating bucket")
 
-	bucket, err := s.client.CreateObjectStorageBucket(ctx, opts)
+	bucket, err := client.CreateObjectStorageBucket(ctx, opts)
 	if err != nil {
 		log.ErrorContext(ctx, "Failed to create bucket", "error", err)
 		return nil, status.Error(codes.Internal, fmt.Sprintf("failed to create bucket: %v", err))
@@ -203,7 +360,7 @@ func (s *Server) createBucketAndApplyPolicy(
 	if policy != "" {
 		log.InfoContext(ctx, "Updating policy")
 
-		if err := s.applyBucketPolicy(ctx, log, region, bucket.Label, policy); err != nil {
+		if err := s.applyBucketPolicy(ctx, client, log, region, bucket.Label, policy); err != nil {
 			log.ErrorContext(ctx, "Failed to set bucket policy", "error", err)
 			return nil, status.Error(codes.Internal, fmt.Sprintf("failed to set bucket policy: %v", err))
 		}
@@ -217,13 +374,14 @@ func (s *Server) createBucketAndApplyPolicy(
 
 func (s *Server) ensureExistingBucket(
 	ctx context.Context,
+	client linodeclient.Client,
 	log *slog.Logger,
 	region, label string,
 	acl linodego.ObjectStorageACL,
 	cors ParamCORSValue,
 	policy string,
 ) (*cosi.DriverCreateBucketResponse, error) {
-	access, err := s.client.GetObjectStorageBucketAccess(ctx, region, label)
+	access, err := client.GetObjectStorageBucketAccess(ctx, region, label)
 	if err != nil {
 		log.ErrorContext(ctx, "Failed to check bucket access", "error", err)
 		return nil, status.Error(codes.Internal, fmt.Sprintf("failed to check bucket access: %v", err))
@@ -240,7 +398,7 @@ func (s *Server) ensureExistingBucket(
 
 	// Comparing policies is expensive and hard. If every other parameter is equal,
 	// we assume that bucket is valid, and the policy will be applied.
-	if err := s.applyBucketPolicy(ctx, log, region, label, policy); err != nil {
+	if err := s.applyBucketPolicy(ctx, client, log, region, label, policy); err != nil {
 		log.ErrorContext(ctx, "Failed to set bucket policy", "error", err)
 		return nil, status.Error(codes.Internal, fmt.Sprintf("failed to set bucket policy: %v", err))
 	}
@@ -253,8 +411,8 @@ func (s *Server) ensureExistingBucket(
 	}, status.Error(codes.OK, "bucket exists")
 }
 
-func (s *Server) applyBucketPolicy(ctx context.Context, log *slog.Logger, region, label, policy string) error {
-	s3cli, cleanup, err := s.s3ClientForBucket(ctx, region, label)
+func (s *Server) applyBucketPolicy(ctx context.Context, client linodeclient.Client, log *slog.Logger, region, label, policy string) error {
+	s3cli, cleanup, err := s.s3ClientForBucket(ctx, client, region, label)
 	if err != nil {
 		return err
 	}
@@ -269,6 +427,10 @@ func (s *Server) applyBucketPolicy(ctx context.Context, log *slog.Logger, region
 // If the bucket has already been deleted, then no error should be returned.
 func (s *Server) DriverDeleteBucket(ctx context.Context, req *cosi.DriverDeleteBucketRequest) (*cosi.DriverDeleteBucketResponse, error) {
 	region, label := parseBucketID(req.GetBucketId())
+	client, err := s.clientForRequest(ctx, label, req.GetBucketId(), nil)
+	if err != nil {
+		return nil, status.Error(codes.Internal, fmt.Sprintf("failed to resolve linode client: %v", err))
+	}
 	// TODO(v1alpha2): add the cleanup
 	// := ParamCleanupValue(req.GetParameters()[ParamCleanup]).Force()
 	cleanup := false
@@ -282,7 +444,7 @@ func (s *Server) DriverDeleteBucket(ctx context.Context, req *cosi.DriverDeleteB
 	log.InfoContext(ctx, "Bucket deletion initiated")
 
 	if cleanup {
-		s3cli, keyCleanup, err := s.s3ClientForBucket(ctx, region, label)
+		s3cli, keyCleanup, err := s.s3ClientForBucket(ctx, client, region, label)
 		if err != nil {
 			log.ErrorContext(ctx, "Failed to create bucket-scoped credentials", "error", err)
 			return nil, status.Error(codes.Internal, fmt.Sprintf("failed to create bucket-scoped credentials: %v", err))
@@ -295,7 +457,7 @@ func (s *Server) DriverDeleteBucket(ctx context.Context, req *cosi.DriverDeleteB
 		}
 	}
 
-	err := s.client.DeleteObjectStorageBucket(ctx, region, label)
+	err = client.DeleteObjectStorageBucket(ctx, region, label)
 	if err == nil || errors.Is(err, ErrNotFound) {
 		log.InfoContext(ctx, "Bucket deleted")
 		return &cosi.DriverDeleteBucketResponse{}, status.Error(codes.OK, "bucket deleted")
@@ -317,6 +479,10 @@ func (s *Server) DriverGrantBucketAccess(ctx context.Context, req *cosi.DriverGr
 	name := req.GetName()
 	auth := req.GetAuthenticationType()
 	perms := ParamPermissionsValue(req.GetParameters()[ParamPermissions])
+	client, err := s.clientForRequest(ctx, label, req.GetBucketId(), req.GetParameters())
+	if err != nil {
+		return nil, status.Error(codes.Internal, fmt.Sprintf("failed to resolve linode client: %v", err))
+	}
 
 	if perms == "" {
 		perms = ParamPermissionsValueReadOnly
@@ -354,7 +520,7 @@ func (s *Server) DriverGrantBucketAccess(ctx context.Context, req *cosi.DriverGr
 
 	log.InfoContext(ctx, "Creating object storage key")
 
-	key, err := s.client.CreateObjectStorageKey(ctx, opts)
+	key, err := client.CreateObjectStorageKey(ctx, opts)
 	if err != nil {
 		log.ErrorContext(ctx, "Failed to create object storage key", "error", err)
 		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("failed to create object storage key: %v", err))
@@ -380,6 +546,10 @@ func (s *Server) DriverGrantBucketAccess(ctx context.Context, req *cosi.DriverGr
 func (s *Server) DriverRevokeBucketAccess(ctx context.Context, req *cosi.DriverRevokeBucketAccessRequest) (*cosi.DriverRevokeBucketAccessResponse, error) {
 	region, label := parseBucketID(req.GetBucketId())
 	id, err := strconv.Atoi(req.GetAccountId())
+	client, clientErr := s.clientForRequest(ctx, label, req.GetBucketId(), nil)
+	if clientErr != nil {
+		return nil, status.Error(codes.Internal, fmt.Sprintf("failed to resolve linode client: %v", clientErr))
+	}
 
 	log := s.logAttr(
 		slog.String(KeyBucketID, req.GetBucketId()),
@@ -394,7 +564,7 @@ func (s *Server) DriverRevokeBucketAccess(ctx context.Context, req *cosi.DriverR
 		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("account id is invalid: %v", err))
 	}
 
-	err = s.client.DeleteObjectStorageKey(ctx, id)
+	err = client.DeleteObjectStorageKey(ctx, id)
 	if err == nil || errors.Is(err, ErrNotFound) {
 		log.InfoContext(ctx, "Key deleted")
 		return &cosi.DriverRevokeBucketAccessResponse{}, status.Error(codes.OK, "key deleted")

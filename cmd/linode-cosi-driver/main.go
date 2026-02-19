@@ -31,6 +31,9 @@ import (
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/recovery"
 	"go.uber.org/automaxprocs/maxprocs"
 	"google.golang.org/grpc"
+	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	cosi "sigs.k8s.io/container-object-storage-interface-spec"
 
 	"github.com/linode/linode-cosi-driver/pkg/envflag"
@@ -109,7 +112,8 @@ func run(ctx context.Context, log *slog.Logger, opts mainOptions) error {
 	}
 
 	// initialize Linode client
-	client, err := linodeclient.NewLinodeClient(fmt.Sprintf("LinodeCOSI/%s", version.Version))
+	userAgent := fmt.Sprintf("LinodeCOSI/%s", version.Version)
+	client, err := linodeclient.NewLinodeClient(userAgent)
 	if err != nil {
 		return fmt.Errorf("unable to create new client: %w", err)
 	}
@@ -138,6 +142,22 @@ func run(ctx context.Context, log *slog.Logger, opts mainOptions) error {
 		)
 	}
 
+	var kubeClient kubernetes.Interface
+	var dynClient dynamic.Interface
+	restCfg, err := rest.InClusterConfig()
+	if err != nil {
+		log.Warn("Unable to load in-cluster config, bucketclaim annotations will not be used", "error", err)
+	} else {
+		kubeClient, err = kubernetes.NewForConfig(restCfg)
+		if err != nil {
+			return fmt.Errorf("failed to create kubernetes client: %w", err)
+		}
+		dynClient, err = dynamic.NewForConfig(restCfg)
+		if err != nil {
+			return fmt.Errorf("failed to create dynamic kubernetes client: %w", err)
+		}
+	}
+
 	// create provisioner server
 	prvSrv, err := provisioner.New(
 		log,
@@ -145,6 +165,9 @@ func run(ctx context.Context, log *slog.Logger, opts mainOptions) error {
 		epc,
 		s3cli,
 		opts.s3SSL,
+		kubeClient,
+		dynClient,
+		userAgent,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create provisioner server: %w", err)

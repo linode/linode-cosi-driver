@@ -28,6 +28,14 @@ const (
 	ParamPermissions = prefix + "permissions"
 	ParamPolicy      = prefix + "policy"
 	ParamRegion      = prefix + "region"
+	// ParamLinodeTokenSecretName points to a Secret containing LINODE_TOKEN.
+	ParamLinodeTokenSecretName = prefix + "linode-token-secret-name"
+	// ParamLinodeTokenSecretNamespace is the namespace of ParamLinodeTokenSecretName.
+	ParamLinodeTokenSecretNamespace = prefix + "linode-token-secret-namespace"
+	// AnnotationLinodeTokenSecretName allows BucketClaim annotations to specify a Secret containing LINODE_TOKEN.
+	AnnotationLinodeTokenSecretName = ParamLinodeTokenSecretName
+	// AnnotationLinodeTokenSecretNamespace is the namespace of AnnotationLinodeTokenSecretName.
+	AnnotationLinodeTokenSecretNamespace = ParamLinodeTokenSecretNamespace
 )
 
 // TODO(v1alpha2): add the cleanup:
