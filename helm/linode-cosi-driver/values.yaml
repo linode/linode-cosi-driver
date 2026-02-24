@@ -28,6 +28,10 @@ driver:
   # -- TTL of the Object Storage region/endpoint cache.
   cacheTTL: 30s
 
+  # -- Enable per-bucket LINODE_TOKEN lookup from BucketClaim annotations or BucketClass parameters.
+  # When false, the driver uses the token provided via its deployment secret (default behavior).
+  perBucketTokens: false
+
 sidecar:
   image:
     # -- Sidecar container image repository.

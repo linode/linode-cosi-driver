@@ -64,6 +64,7 @@ func main() {
 		s3EphemeralCredentials = envflag.Bool("S3_CLIENT_EPHEMERAL_CREDENTIALS", true)
 		s3AccessKey            = envflag.String("S3_ACCESS_KEY", "")
 		s3SecretKey            = envflag.String("S3_SECRET_KEY", "")
+		perBucketTokens        = envflag.Bool("LINODE_PER_BUCKET_TOKENS", false)
 	)
 
 	// TODO: any logger settup must be done here, before first log call.
@@ -76,6 +77,7 @@ func main() {
 		s3EphemeralCredentials: s3EphemeralCredentials,
 		s3AccessKey:            s3AccessKey,
 		s3SecretKey:            s3SecretKey,
+		perBucketTokens:        perBucketTokens,
 	},
 	); err != nil {
 		slog.Error("Critical failure", "error", err)
@@ -90,6 +92,7 @@ type mainOptions struct {
 	s3EphemeralCredentials bool
 	s3AccessKey            string
 	s3SecretKey            string
+	perBucketTokens        bool
 }
 
 func run(ctx context.Context, log *slog.Logger, opts mainOptions) error {
@@ -165,6 +168,7 @@ func run(ctx context.Context, log *slog.Logger, opts mainOptions) error {
 		epc,
 		s3cli,
 		opts.s3SSL,
+		opts.perBucketTokens,
 		kubeClient,
 		dynClient,
 		userAgent,

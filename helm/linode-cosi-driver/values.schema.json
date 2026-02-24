@@ -13,6 +13,9 @@
         "cacheTTL": {
           "type": "string"
         },
+        "perBucketTokens": {
+          "type": "boolean"
+        },
         "image": {
           "properties": {
             "pullPolicy": {

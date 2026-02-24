@@ -65,7 +65,7 @@ func TestHappyPath(t *testing.T) {
 		return
 	}
 
-	srv, err := provisioner.New(slog.Default(), client, testCache, nil, true, nil, nil, "test")
+	srv, err := provisioner.New(slog.Default(), client, testCache, nil, true, false, nil, nil, "test")
 	if err != nil {
 		t.Errorf("failed to create provisioner: %v", err.Error())
 		return
@@ -106,7 +106,7 @@ func TestBucketScopedKeyIsolation(t *testing.T) {
 		return
 	}
 
-	srv, err := provisioner.New(slog.Default(), client, testCache, nil, true, nil, nil, "test")
+	srv, err := provisioner.New(slog.Default(), client, testCache, nil, true, false, nil, nil, "test")
 	if err != nil {
 		t.Errorf("failed to create provisioner: %v", err.Error())
 		return

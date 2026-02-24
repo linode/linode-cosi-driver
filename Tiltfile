@@ -19,6 +19,8 @@ namespace_create("linode-cosi-driver")
 args = ["apiToken=" + os.getenv("LINODE_TOKEN")]
 if os.getenv("LINODE_URL"):
     args.append("linodeApiUrl=" + os.getenv("LINODE_URL"))
+if os.getenv("LINODE_PER_BUCKET_TOKENS", "false") == "true":
+    args.append("driver.perBucketTokens=true")
 
 k8s_yaml(helm( "./helm/linode-cosi-driver",
     "linode-cosi-driver",

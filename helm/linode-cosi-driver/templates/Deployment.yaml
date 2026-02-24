@@ -55,6 +55,8 @@ spec:
           env:
             - name: LINODE_OBJECT_STORAGE_ENDPOINT_CACHE_TTL
               value: "{{ .Values.driver.cacheTTL }}"
+            - name: LINODE_PER_BUCKET_TOKENS
+              value: "{{ .Values.driver.perBucketTokens }}"
             - name: S3_CLIENT_EPHEMERAL_CREDENTIALS
               value: "{{ .Values.s3.ephemeralCredentials }}"
             - name: S3_CLIENT_SSL_ENABLED

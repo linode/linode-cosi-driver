@@ -45,13 +45,14 @@ type Server struct {
 	log  *slog.Logger
 	once sync.Once
 
-	client     linodeclient.Client
-	cache      cache.Cache
-	s3cli      s3.Client
-	s3SSL      bool
-	kubeClient kubernetes.Interface
-	dynClient  dynamic.Interface
-	userAgent  string
+	client          linodeclient.Client
+	cache           cache.Cache
+	s3cli           s3.Client
+	s3SSL           bool
+	perBucketTokens bool
+	kubeClient      kubernetes.Interface
+	dynClient       dynamic.Interface
+	userAgent       string
 }
 
 // Interface guards.
@@ -64,19 +65,21 @@ func New(
 	cache cache.Cache,
 	s3cli s3.Client,
 	s3SSL bool,
+	perBucketTokens bool,
 	kubeClient kubernetes.Interface,
 	dynClient dynamic.Interface,
 	userAgent string,
 ) (*Server, error) {
 	srv := &Server{
-		log:        logger,
-		client:     client,
-		cache:      cache,
-		s3cli:      s3cli,
-		s3SSL:      s3SSL,
-		kubeClient: kubeClient,
-		dynClient:  dynClient,
-		userAgent:  userAgent,
+		log:             logger,
+		client:          client,
+		cache:           cache,
+		s3cli:           s3cli,
+		s3SSL:           s3SSL,
+		perBucketTokens: perBucketTokens,
+		kubeClient:      kubeClient,
+		dynClient:       dynClient,
+		userAgent:       userAgent,
 	}
 
 	return srv, nil
@@ -136,6 +139,9 @@ func (s *Server) clientForRequest(ctx context.Context, bucketName, bucketID stri
 }
 
 func (s *Server) tokenForRequest(ctx context.Context, bucketName, bucketID string, params map[string]string) (string, error) {
+	if !s.perBucketTokens {
+		return "", nil
+	}
 	name := ""
 	namespace := ""
 	if params != nil {

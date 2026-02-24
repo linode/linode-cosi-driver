@@ -11,6 +11,7 @@ A Kubernetes Container Object Storage Interface (COSI) Driver for Linode
 | affinity | object | `{}` | Node affinity rules for pod assignment. |
 | apiToken | string | `""` | Linode API token. This field is **required** unless secret is created before deployment (see `secret.ref` value). |
 | driver.cacheTTL | string | `"30s"` | TTL of the Object Storage region/endpoint cache. |
+| driver.perBucketTokens | bool | `false` | Enable per-bucket LINODE_TOKEN lookup from BucketClaim annotations or BucketClass parameters. |
 | driver.image.pullPolicy | string | `"IfNotPresent"` | Driver container image pull policy. |
 | driver.image.repository | string | `"docker.io/linode/linode-cosi-driver"` | Driver container image repository. |
 | driver.image.tag | string | `""` | Overrides the image tag whose default is the chart appVersion. |
@@ -41,4 +42,3 @@ A Kubernetes Container Object Storage Interface (COSI) Driver for Linode
 | sidecar.image.tag | string | `"v20230921-v0.1.0-27-g8e23092"` | Sidecar container image tag. |
 | sidecar.logVerbosity | int | `4` | Log verbosity level for the sidecar container. |
 | tolerations | list | `[]` | Tolerations for pod assignment. |
-
