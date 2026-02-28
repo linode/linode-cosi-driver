@@ -3,7 +3,7 @@ module github.com/linode/linode-cosi-driver
 go 1.25.4
 
 require (
-	github.com/go-resty/resty/v2 v2.17.1
+	github.com/go-resty/resty/v2 v2.17.2
 	github.com/google/uuid v1.6.0
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.3.3
 	github.com/linode/linodego v1.64.0
