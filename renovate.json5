@@ -1,7 +1,7 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "schedule": [
-    "* * * * 0,6"
+    "* 0 1,15 * *",
   ],
   "extends": ["config:recommended"],
   "labels": ["dependencies"],
@@ -10,6 +10,7 @@
     "enabled": true
   },
   "osvVulnerabilityAlerts": true,
+  "platformAutomerge": true,
   "customManagers": [
     {
       "customType": "regex",
@@ -25,6 +26,10 @@
     }
   ],
   "packageRules": [
+    {
+      "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
+      "automerge": true,
+    },
     {
       "groupName": "go Version",
       "groupSlug": "go-version",
