@@ -167,7 +167,7 @@ func (s *Server) DriverCreateBucket(ctx context.Context, req *cosi.DriverCreateB
 }
 
 func (s *Server) buildBucketPolicy(policyTemplate, label string) (string, error) {
-	if policyTemplate != "" {
+	if policyTemplate == "" {
 		return "", nil
 	}
 	return s3.ApplyTemplate(policyTemplate, s3.PolicyTemplateParams{
@@ -239,10 +239,12 @@ func (s *Server) ensureExistingBucket(
 	}
 
 	// Comparing policies is expensive and hard. If every other parameter is equal,
-	// we assume that bucket is valid, and the policy will be applied.
-	if err := s.applyBucketPolicy(ctx, log, region, label, policy); err != nil {
-		log.ErrorContext(ctx, "Failed to set bucket policy", "error", err)
-		return nil, status.Error(codes.Internal, fmt.Sprintf("failed to set bucket policy: %v", err))
+	// we assume that bucket is valid, and apply policy only when one was provided.
+	if policy != "" {
+		if err := s.applyBucketPolicy(ctx, log, region, label, policy); err != nil {
+			log.ErrorContext(ctx, "Failed to set bucket policy", "error", err)
+			return nil, status.Error(codes.Internal, fmt.Sprintf("failed to set bucket policy: %v", err))
+		}
 	}
 
 	log.InfoContext(ctx, "Bucket exists")

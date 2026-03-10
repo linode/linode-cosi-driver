@@ -36,11 +36,33 @@ import (
 )
 
 const (
-	testRegion           = "test-region"
-	testBucketName       = "test-bucket"
-	testBucketID         = testRegion + "/" + testBucketName
-	testBucketAccessName = "test-bucket-access"
-	testBucketAccessID   = "0"
+	testRegion               = "test-region"
+	testBucketName           = "test-bucket"
+	testBucketID             = testRegion + "/" + testBucketName
+	testBucketAccessName     = "test-bucket-access"
+	testBucketAccessID       = "0"
+	testBucketPolicyTemplate = `{
+	"Version":"2012-10-17",
+	"Statement":[
+		{
+			"Effect":"Allow",
+			"Action":"s3:GetObject",
+			"Resource":"arn:aws:s3:::{{ .BucketName }}/*",
+			"Principal":"*"
+		}
+	]
+}`
+	testBucketPolicy = `{
+	"Version":"2012-10-17",
+	"Statement":[
+		{
+			"Effect":"Allow",
+			"Action":"s3:GetObject",
+			"Resource":"arn:aws:s3:::test-bucket/*",
+			"Principal":"*"
+		}
+	]
+}`
 )
 
 var (
@@ -185,6 +207,60 @@ func TestDriverCreateBucket(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestDriverCreateBucketWithPolicyTemplate(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+
+	client := linodestub.New()
+	s3cli := s3stub.New()
+	epc := cache.New(discardLog, client, 0)
+	if err := epc.Refresh(ctx); err != nil {
+		t.Fatalf("failed to refresh cache: %v", err)
+	}
+
+	s3stub.SetBucketTracker(s3cli, client)
+
+	srv, err := provisioner.New(nil, client, epc, s3cli, true)
+	if err != nil {
+		t.Fatalf("failed to create provisioner server: %v", err)
+	}
+
+	req := &cosi.DriverCreateBucketRequest{
+		Name: testBucketName,
+		Parameters: map[string]string{
+			provisioner.ParamRegion: testRegion,
+			provisioner.ParamPolicy: testBucketPolicyTemplate,
+		},
+	}
+
+	expected := &cosi.DriverCreateBucketResponse{
+		BucketId:   testBucketID,
+		BucketInfo: defaultBucketInfo,
+	}
+
+	for callIndex := 0; callIndex < 2; callIndex++ {
+		actual, err := srv.DriverCreateBucket(ctx, req)
+		if err != nil {
+			t.Fatalf("call %d: expected no error, but got: %v", callIndex, err)
+		}
+
+		if !reflect.DeepEqual(expected, actual) {
+			t.Fatalf("call %d: expected response %#+v, got %#+v", callIndex, expected, actual)
+		}
+	}
+
+	actualPolicy, err := s3cli.GetBucketPolicy(ctx, testRegion, testBucketName)
+	if err != nil {
+		t.Fatalf("expected bucket policy to be set, got error: %v", err)
+	}
+
+	if actualPolicy != testBucketPolicy {
+		t.Fatalf("expected policy %q, got %q", testBucketPolicy, actualPolicy)
 	}
 }
 
