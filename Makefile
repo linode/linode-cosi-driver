@@ -1,5 +1,4 @@
 # Copyright 2023 Akamai Technologies, Inc.
-# (original header preserved for stealth)
 
 SHELL = /bin/bash
 .SHELLFLAGS = -ec
