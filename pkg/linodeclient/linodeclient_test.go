@@ -19,8 +19,6 @@ import (
 	"log/slog"
 	"testing"
 
-	"github.com/linode/linodego"
-
 	"github.com/linode/linode-cosi-driver/pkg/linodeclient"
 	"github.com/linode/linode-cosi-driver/pkg/linodeclient/stubclient"
 )
@@ -81,18 +79,14 @@ func TestNewLinodeClient(t *testing.T) {
 func TestNewEphemeralS3Credentials(t *testing.T) {
 	t.Parallel()
 
-	client := stubclient.New(
-		stubclient.WithEndpoint(linodego.ObjectStorageEndpoint{
-			Region:     "us-test",
-			S3Endpoint: ptr("us-test-1.linodeobjects.com"),
-		}),
-		stubclient.WithEndpoint(linodego.ObjectStorageEndpoint{
-			Region:     "eu-test",
-			S3Endpoint: ptr("eu-test-1.linodeobjects.com"),
-		}),
-	)
+	client := stubclient.New()
 
-	creds, cleanup, err := linodeclient.NewEphemeralS3Credentials(t.Context(), slog.New(slog.DiscardHandler), client)
+	creds, cleanup, err := linodeclient.NewEphemeralS3Credentials(
+		t.Context(),
+		slog.New(slog.DiscardHandler),
+		client,
+		"us-test",
+	)
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
@@ -110,8 +104,8 @@ func TestNewEphemeralS3Credentials(t *testing.T) {
 		regionIDs = append(regionIDs, region.ID)
 	}
 
-	if len(regionIDs) != 2 || !contains(regionIDs, "us-test") || !contains(regionIDs, "eu-test") {
-		t.Fatalf("expected credentials for both regions, got: %+v", regionIDs)
+	if len(regionIDs) != 1 || !contains(regionIDs, "us-test") {
+		t.Fatalf("expected credentials for only us-test, got: %+v", regionIDs)
 	}
 
 	if err := cleanup(t.Context()); err != nil {
@@ -121,10 +115,6 @@ func TestNewEphemeralS3Credentials(t *testing.T) {
 	if _, err := client.GetObjectStorageKey(t.Context(), creds.ID); err == nil {
 		t.Fatal("expected ephemeral credentials to be deleted after cleanup")
 	}
-}
-
-func ptr[T any](value T) *T {
-	return &value
 }
 
 func contains(items []string, want string) bool {

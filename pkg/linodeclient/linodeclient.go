@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"strings"
 
 	"github.com/google/uuid"
 	"github.com/linode/linodego"
@@ -59,26 +58,21 @@ func NewEphemeralS3Credentials(
 	ctx context.Context,
 	slog *slog.Logger,
 	client Client,
+	region string,
 ) (*linodego.ObjectStorageKey, func(context.Context) error, error) {
+	if region == "" {
+		return nil, nil, fmt.Errorf("region is required for ephemeral object storage credentials")
+	}
+
 	keyLabel := fmt.Sprintf("cosi-%s", uuid.New().String())
 	slog.Info(fmt.Sprintf("Generating new ephemeral key: %s", keyLabel))
 
-	clusters, err := client.ListObjectStorageEndpoints(ctx, &linodego.ListOptions{})
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to list ObjectStorage clusters: %w", err)
-	}
-
-	var regions = make([]string, 0, len(clusters))
-	for _, cluster := range clusters {
-		regions = append(regions, cluster.Region)
-	}
-
 	creds, err := client.CreateObjectStorageKey(ctx, linodego.ObjectStorageKeyCreateOptions{
 		Label:   keyLabel,
-		Regions: regions,
+		Regions: []string{region},
 	})
 	if err != nil {
-		return nil, nil, fmt.Errorf("unable to create object storage key: %w. requested regions were: %s", err, strings.Join(regions, ", "))
+		return nil, nil, fmt.Errorf("unable to create object storage key: %w. requested region was: %s", err, region)
 	}
 
 	cleanup := func(cctx context.Context) error {

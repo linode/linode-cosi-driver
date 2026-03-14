@@ -96,12 +96,12 @@ func (s *Server) s3ClientForBucket(ctx context.Context, region, label string) (s
 	return s3.New(s.cache, key.AccessKey, key.SecretKey, s.s3SSL), cleanup, nil
 }
 
-func (s *Server) s3ClientForPolicy(ctx context.Context) (s3.Client, func(context.Context) error, error) {
+func (s *Server) s3ClientForPolicy(ctx context.Context, region string) (s3.Client, func(context.Context) error, error) {
 	if s.s3cli != nil {
 		return s.s3cli, func(context.Context) error { return nil }, nil
 	}
 
-	key, cleanup, err := linodeclient.NewEphemeralS3Credentials(ctx, s.logAttr(), s.client)
+	key, cleanup, err := linodeclient.NewEphemeralS3Credentials(ctx, s.logAttr(), s.client, region)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create object storage key for policy updates: %w", err)
 	}
@@ -119,7 +119,7 @@ func (s *Server) logAttr(attr ...slog.Attr) *slog.Logger {
 	return slog.New(s.log.Handler().WithAttrs(attr))
 }
 
-const keyCleanupTimeout = 3 * time.Second
+const keyCleanupTimeout = 30 * time.Second
 
 func cleanupWithTimeout(ctx context.Context, log *slog.Logger, cleanup func(context.Context) error) {
 	cctx, cancel := context.WithTimeout(ctx, keyCleanupTimeout)
@@ -269,7 +269,7 @@ func (s *Server) ensureExistingBucket(
 }
 
 func (s *Server) applyBucketPolicy(ctx context.Context, log *slog.Logger, region, label, policy string) error {
-	s3cli, cleanup, err := s.s3ClientForPolicy(ctx)
+	s3cli, cleanup, err := s.s3ClientForPolicy(ctx, region)
 	if err != nil {
 		return err
 	}

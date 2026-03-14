@@ -74,6 +74,12 @@ func TestHappyPath(t *testing.T) {
 		return
 	}
 
+	region, err := resolveTestRegion(t.Context(), client, "")
+	if err != nil {
+		t.Errorf("failed to resolve test region: %v", err)
+		return
+	}
+
 	testCache := cache.New(slog.Default(), client, cache.DefaultTTL)
 	if err := testCache.Refresh(t.Context()); err != nil {
 		t.Errorf("failed to refresh cache: %v", err.Error())
@@ -86,8 +92,12 @@ func TestHappyPath(t *testing.T) {
 		return
 	}
 
+	suffix := time.Now().UnixNano()
 	suite := suite{
-		server: srv,
+		server:     srv,
+		region:     region,
+		bucketName: fmt.Sprintf("integration-%d", suffix),
+		accessName: fmt.Sprintf("integration-access-%d", suffix),
 	}
 
 	idempotentRun(t, iterations, "DriverCreateBucket", suite.DriverCreateBucket)
@@ -101,7 +111,7 @@ func TestBucketScopedKeyIsolation(t *testing.T) {
 
 	var (
 		linodeToken = envflag.String("LINODE_TOKEN", "")
-		region      = envflag.String("OBJ_TEST_REGION", "us-east")
+		region      = envflag.String("OBJ_TEST_REGION", "")
 	)
 
 	if linodeToken == "" {
@@ -112,6 +122,12 @@ func TestBucketScopedKeyIsolation(t *testing.T) {
 	client, err := linodeclient.NewLinodeClient(fmt.Sprintf("LinodeCOSI/%s+integration", version.Version))
 	if err != nil {
 		t.Errorf("failed to create client: %v", err.Error())
+		return
+	}
+
+	region, err = resolveTestRegion(t.Context(), client, region)
+	if err != nil {
+		t.Errorf("failed to resolve test region: %v", err)
 		return
 	}
 
@@ -230,14 +246,36 @@ func listObjectsErr(ctx context.Context, cli *minio.Client, bucket string) error
 	return nil
 }
 
+func resolveTestRegion(ctx context.Context, client linodeclient.Client, requested string) (string, error) {
+	if requested != "" {
+		return requested, nil
+	}
+
+	endpoints, err := client.ListObjectStorageEndpoints(ctx, nil)
+	if err != nil {
+		return "", fmt.Errorf("list object storage endpoints: %w", err)
+	}
+
+	for _, endpoint := range endpoints {
+		if endpoint.Region != "" && endpoint.S3Endpoint != nil && *endpoint.S3Endpoint != "" {
+			return endpoint.Region, nil
+		}
+	}
+
+	return "", fmt.Errorf("no object storage endpoint with region and S3 endpoint available")
+}
+
 type suite struct {
 	server *provisioner.Server
 
 	finishedCreateBucket      bool
 	finishedGrantBucketAccess bool
 
-	bucketID  string
-	accountID string
+	region     string
+	bucketName string
+	accessName string
+	bucketID   string
+	accountID  string
 }
 
 func (s *suite) DriverCreateBucket(t *testing.T) {
@@ -245,9 +283,9 @@ func (s *suite) DriverCreateBucket(t *testing.T) {
 	defer cancel()
 
 	req := &cosi.DriverCreateBucketRequest{
-		Name: "integration",
+		Name: s.bucketName,
 		Parameters: map[string]string{
-			provisioner.ParamRegion: "us-east",
+			provisioner.ParamRegion: s.region,
 			provisioner.ParamACL:    "private",
 			provisioner.ParamCORS:   string(provisioner.ParamCORSValueEnabled),
 			provisioner.ParamPolicy: integrationBucketPolicyTemplate,
@@ -293,7 +331,7 @@ func (s *suite) DriverGrantBucketAccess(t *testing.T) {
 
 	req := &cosi.DriverGrantBucketAccessRequest{
 		BucketId:           s.bucketID,
-		Name:               "integration",
+		Name:               s.accessName,
 		AuthenticationType: cosi.AuthenticationType_Key,
 		Parameters: map[string]string{
 			provisioner.ParamPermissions: string(provisioner.ParamPermissionsValueReadWrite),
