@@ -96,6 +96,19 @@ func (s *Server) s3ClientForBucket(ctx context.Context, region, label string) (s
 	return s3.New(s.cache, key.AccessKey, key.SecretKey, s.s3SSL), cleanup, nil
 }
 
+func (s *Server) s3ClientForPolicy(ctx context.Context) (s3.Client, func(context.Context) error, error) {
+	if s.s3cli != nil {
+		return s.s3cli, func(context.Context) error { return nil }, nil
+	}
+
+	key, cleanup, err := linodeclient.NewEphemeralS3Credentials(ctx, s.logAttr(), s.client)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to create object storage key for policy updates: %w", err)
+	}
+
+	return s3.New(s.cache, key.AccessKey, key.SecretKey, s.s3SSL), cleanup, nil
+}
+
 func (s *Server) logAttr(attr ...slog.Attr) *slog.Logger {
 	s.once.Do(func() {
 		if s.log == nil {
@@ -106,14 +119,14 @@ func (s *Server) logAttr(attr ...slog.Attr) *slog.Logger {
 	return slog.New(s.log.Handler().WithAttrs(attr))
 }
 
-const keyCleanupTimeout = 3 * time.Second
+const keyCleanupTimeout = 30 * time.Second
 
 func cleanupWithTimeout(ctx context.Context, log *slog.Logger, cleanup func(context.Context) error) {
 	cctx, cancel := context.WithTimeout(ctx, keyCleanupTimeout)
 	defer cancel()
 
 	if err := cleanup(cctx); err != nil {
-		log.ErrorContext(ctx, "Failed to cleanup bucket-scoped credentials", "error", err)
+		log.ErrorContext(ctx, "Failed to cleanup temporary S3 credentials", "error", err)
 	}
 }
 
@@ -167,7 +180,7 @@ func (s *Server) DriverCreateBucket(ctx context.Context, req *cosi.DriverCreateB
 }
 
 func (s *Server) buildBucketPolicy(policyTemplate, label string) (string, error) {
-	if policyTemplate != "" {
+	if policyTemplate == "" {
 		return "", nil
 	}
 	return s3.ApplyTemplate(policyTemplate, s3.PolicyTemplateParams{
@@ -239,10 +252,12 @@ func (s *Server) ensureExistingBucket(
 	}
 
 	// Comparing policies is expensive and hard. If every other parameter is equal,
-	// we assume that bucket is valid, and the policy will be applied.
-	if err := s.applyBucketPolicy(ctx, log, region, label, policy); err != nil {
-		log.ErrorContext(ctx, "Failed to set bucket policy", "error", err)
-		return nil, status.Error(codes.Internal, fmt.Sprintf("failed to set bucket policy: %v", err))
+	// we assume that bucket is valid, and apply policy only when one was provided.
+	if policy != "" {
+		if err := s.applyBucketPolicy(ctx, log, region, label, policy); err != nil {
+			log.ErrorContext(ctx, "Failed to set bucket policy", "error", err)
+			return nil, status.Error(codes.Internal, fmt.Sprintf("failed to set bucket policy: %v", err))
+		}
 	}
 
 	log.InfoContext(ctx, "Bucket exists")
@@ -254,7 +269,7 @@ func (s *Server) ensureExistingBucket(
 }
 
 func (s *Server) applyBucketPolicy(ctx context.Context, log *slog.Logger, region, label, policy string) error {
-	s3cli, cleanup, err := s.s3ClientForBucket(ctx, region, label)
+	s3cli, cleanup, err := s.s3ClientForPolicy(ctx)
 	if err != nil {
 		return err
 	}

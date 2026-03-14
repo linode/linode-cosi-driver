@@ -21,13 +21,31 @@ spec:
     - assert:
         file: ../../../examples/linode-objectstorage.BucketAccessClass.yaml
     - apply:
-        file: ../../../examples/example.BucketAccess.yaml
-    - assert:
-        file: ../../../examples/example.BucketAccess.yaml
-    - apply:
         file: ../../../examples/example.BucketClaim.yaml
+  - name: Check if BucketClaim is ready
+    timeouts:
+      assert: 600s
+    try:
     - assert:
         file: ./example.BucketClaim.yaml
+  - name: Create BucketAccess
+    try:
+    - apply:
+        file: ../../../examples/example.BucketAccess.yaml
+    - assert:
+        resource:
+          apiVersion: objectstorage.k8s.io/v1alpha1
+          kind: BucketAccess
+          metadata:
+            name: example
+          status:
+            accessGranted: true
+    - assert:
+        resource:
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: s3-credentials
   - name: Run bucket-test pod
     try:
     - create:
@@ -69,4 +87,3 @@ spec:
         check:
           ($error): ~
           (starts_with($stdout, '{"metadata"')): true
-

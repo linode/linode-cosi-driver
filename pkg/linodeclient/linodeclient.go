@@ -58,7 +58,7 @@ func NewLinodeClient(ua string) (*linodego.Client, error) {
 func NewEphemeralS3Credentials(
 	ctx context.Context,
 	slog *slog.Logger,
-	client *linodego.Client,
+	client Client,
 ) (*linodego.ObjectStorageKey, func(context.Context) error, error) {
 	keyLabel := fmt.Sprintf("cosi-%s", uuid.New().String())
 	slog.Info(fmt.Sprintf("Generating new ephemeral key: %s", keyLabel))
