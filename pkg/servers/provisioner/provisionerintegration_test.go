@@ -34,6 +34,21 @@ import (
 	"github.com/linode/linode-cosi-driver/pkg/version"
 )
 
+const integrationBucketPolicyTemplate = `{
+	"Version":"2012-10-17",
+	"Statement":[
+		{
+			"Effect":"Allow",
+			"Action":"*",
+			"Resource":[
+			"arn:aws:s3:::{{ .BucketName }}",
+			"arn:aws:s3:::{{ .BucketName }}/*"
+			],
+			"Principal":"*"
+		}
+	]
+}`
+
 func idempotentRun(t *testing.T, n int, name string, run func(t *testing.T)) {
 	for i := 0; i < n; i++ {
 		t.Run(fmt.Sprintf("%s_%d", name, i), run)
@@ -235,6 +250,7 @@ func (s *suite) DriverCreateBucket(t *testing.T) {
 			provisioner.ParamRegion: "us-east",
 			provisioner.ParamACL:    "private",
 			provisioner.ParamCORS:   string(provisioner.ParamCORSValueEnabled),
+			provisioner.ParamPolicy: integrationBucketPolicyTemplate,
 		},
 	}
 

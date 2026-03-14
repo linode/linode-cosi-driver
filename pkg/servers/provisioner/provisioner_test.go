@@ -46,8 +46,11 @@ const (
 	"Statement":[
 		{
 			"Effect":"Allow",
-			"Action":"s3:GetObject",
-			"Resource":"arn:aws:s3:::{{ .BucketName }}/*",
+			"Action":"*",
+			"Resource":[
+			"arn:aws:s3:::{{ .BucketName }}",
+			"arn:aws:s3:::{{ .BucketName }}/*"
+			],
 			"Principal":"*"
 		}
 	]
@@ -57,8 +60,11 @@ const (
 	"Statement":[
 		{
 			"Effect":"Allow",
-			"Action":"s3:GetObject",
-			"Resource":"arn:aws:s3:::test-bucket/*",
+			"Action":"*",
+			"Resource":[
+			"arn:aws:s3:::test-bucket",
+			"arn:aws:s3:::test-bucket/*"
+			],
 			"Principal":"*"
 		}
 	]
