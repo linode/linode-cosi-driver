@@ -5,3 +5,19 @@ metadata:
 spec:
   templating:
     enabled: true
+  error:
+    catch:
+      - script:
+          content: |
+            set +e
+            for target in \
+              "container-object-storage-system deployment/container-object-storage-controller" \
+              "local-path-storage deployment/local-path-provisioner" \
+              "linode-cosi-driver deployment/linode-cosi-driver"
+            do
+              ns="${target%% *}"
+              ref="${target#* }"
+              echo "=== ${ns}/${ref} ==="
+              kubectl -n "$ns" get "$ref" -o wide || true
+              kubectl -n "$ns" logs "$ref" --all-containers=true --tail=-1 || true
+            done

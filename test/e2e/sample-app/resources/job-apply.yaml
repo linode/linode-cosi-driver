@@ -12,10 +12,29 @@ spec:
         - /bin/sh
         - -c
         - |
-           set -ex
+           set -eu
            cat /root/.mc/config.json
-           date | mc pipe "cosi/$(cat /root/.mc//BUCKET_NAME)/test.txt"
-           mc rm "cosi/$(cat /root/.mc//BUCKET_NAME)/test.txt"
+           bucket="$(cat /root/.mc/BUCKET_NAME)"
+
+           for attempt in $(seq 1 24); do
+             if mc ls "cosi/${bucket}" >/dev/null 2>&1; then
+               break
+             fi
+             echo "waiting for bucket ${bucket} to be reachable over s3 (${attempt}/24)"
+             sleep 5
+           done
+
+           for attempt in $(seq 1 12); do
+             if date | mc pipe "cosi/${bucket}/test.txt"; then
+               mc rm "cosi/${bucket}/test.txt"
+               exit 0
+             fi
+             echo "upload failed for bucket ${bucket} (${attempt}/12), retrying"
+             sleep 5
+           done
+
+           echo "upload failed for bucket ${bucket} after retries" >&2
+           exit 1
         volumeMounts:
         - name: s3-credentials
           mountPath: /cosi

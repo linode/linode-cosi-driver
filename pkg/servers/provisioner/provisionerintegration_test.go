@@ -86,8 +86,11 @@ func TestHappyPath(t *testing.T) {
 		return
 	}
 
+	suffix := time.Now().UnixNano()
 	suite := suite{
-		server: srv,
+		server:     srv,
+		bucketName: fmt.Sprintf("integration-%d", suffix),
+		accessName: fmt.Sprintf("integration-access-%d", suffix),
 	}
 
 	idempotentRun(t, iterations, "DriverCreateBucket", suite.DriverCreateBucket)
@@ -236,8 +239,10 @@ type suite struct {
 	finishedCreateBucket      bool
 	finishedGrantBucketAccess bool
 
-	bucketID  string
-	accountID string
+	bucketName string
+	accessName string
+	bucketID   string
+	accountID  string
 }
 
 func (s *suite) DriverCreateBucket(t *testing.T) {
@@ -245,7 +250,7 @@ func (s *suite) DriverCreateBucket(t *testing.T) {
 	defer cancel()
 
 	req := &cosi.DriverCreateBucketRequest{
-		Name: "integration",
+		Name: s.bucketName,
 		Parameters: map[string]string{
 			provisioner.ParamRegion: "us-east",
 			provisioner.ParamACL:    "private",
@@ -293,7 +298,7 @@ func (s *suite) DriverGrantBucketAccess(t *testing.T) {
 
 	req := &cosi.DriverGrantBucketAccessRequest{
 		BucketId:           s.bucketID,
-		Name:               "integration",
+		Name:               s.accessName,
 		AuthenticationType: cosi.AuthenticationType_Key,
 		Parameters: map[string]string{
 			provisioner.ParamPermissions: string(provisioner.ParamPermissionsValueReadWrite),

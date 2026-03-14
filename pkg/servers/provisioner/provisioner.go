@@ -119,7 +119,7 @@ func (s *Server) logAttr(attr ...slog.Attr) *slog.Logger {
 	return slog.New(s.log.Handler().WithAttrs(attr))
 }
 
-const keyCleanupTimeout = 3 * time.Second
+const keyCleanupTimeout = 30 * time.Second
 
 func cleanupWithTimeout(ctx context.Context, log *slog.Logger, cleanup func(context.Context) error) {
 	cctx, cancel := context.WithTimeout(ctx, keyCleanupTimeout)
