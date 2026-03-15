@@ -19,20 +19,21 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"reflect"
 	"testing"
 
 	"github.com/linode/linodego"
+	"go.uber.org/mock/gomock"
 	grpccodes "google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	cosi "sigs.k8s.io/container-object-storage-interface-spec"
 
 	"github.com/linode/linode-cosi-driver/pkg/linodeclient"
 	"github.com/linode/linode-cosi-driver/pkg/linodeclient/cache"
-	linodestub "github.com/linode/linode-cosi-driver/pkg/linodeclient/stubclient"
 	"github.com/linode/linode-cosi-driver/pkg/s3"
-	s3stub "github.com/linode/linode-cosi-driver/pkg/s3/stubclient"
 	"github.com/linode/linode-cosi-driver/pkg/servers/provisioner"
+	"github.com/linode/linode-cosi-driver/testing/mock"
 )
 
 const (
@@ -69,6 +70,13 @@ const (
 		}
 	]
 }`
+	testRegion           = "test-region"
+	testBucketName       = "test-bucket"
+	testBucketID         = testRegion + "/" + testBucketName
+	testBucketAccessName = "test-bucket-access"
+	testBucketAccessID   = "0"
+	testAccessKey        = "TEST_ACCESS_KEY"
+	testSecretKey        = "TEST_SECRET_KEY"
 )
 
 var (
@@ -112,8 +120,8 @@ var (
 			Secrets: map[string]string{
 				provisioner.S3Region:                testRegion,
 				provisioner.S3Endpoint:              testEndpoint,
-				provisioner.S3SecretAccessKeyID:     linodestub.TestAccessKey,
-				provisioner.S3SecretAccessSecretKey: linodestub.TestSecretKey,
+				provisioner.S3SecretAccessKeyID:     testAccessKey,
+				provisioner.S3SecretAccessSecretKey: testSecretKey,
 			},
 		},
 	}
@@ -122,18 +130,40 @@ var (
 func TestDriverCreateBucket(t *testing.T) {
 	t.Parallel()
 
+	const testPolicyTemplate = `{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": "*",
+      "Action": "s3:GetObject",
+      "Resource": "arn:aws:s3:::{{ .BucketName }}/*"
+    }
+  ]
+}`
+
+	testPolicyRendered := `{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": "*",
+      "Action": "s3:GetObject",
+      "Resource": "arn:aws:s3:::test-bucket/*"
+    }
+  ]
+}`
+
 	for _, tc := range []struct {
 		testName         string
-		client           linodeclient.Client
-		s3cli            s3.Client
 		request          *cosi.DriverCreateBucketRequest
 		expectedResponse *cosi.DriverCreateBucketResponse
 		expectedError    error
+		setupMockS3      func(*testing.T) s3.Client
+		setupMockLinode  func(*testing.T) linodeclient.Client
 	}{
 		{
 			testName: "base",
-			client:   linodestub.New(),
-			s3cli:    s3stub.New(),
 			request: &cosi.DriverCreateBucketRequest{
 				Name:       testBucketName,
 				Parameters: defaultBucketParameters,
@@ -141,15 +171,48 @@ func TestDriverCreateBucket(t *testing.T) {
 			expectedResponse: &cosi.DriverCreateBucketResponse{
 				BucketId:   testBucketID,
 				BucketInfo: defaultBucketInfo,
+			},
+			setupMockS3: func(t *testing.T) s3.Client {
+				t.Helper()
+				ctrl := gomock.NewController(t)
+				mockS3 := mock.NewMockS3Client(ctrl)
+				// No S3 calls expected - no policy provided
+				return mockS3
+			},
+			setupMockLinode: func(t *testing.T) linodeclient.Client {
+				t.Helper()
+				ctrl := gomock.NewController(t)
+				mockLinode := mock.NewMockLinodeClient(ctrl)
+				// First call: GetObjectStorageBucket returns NotFound (bucket doesn't exist)
+				mockLinode.EXPECT().
+					GetObjectStorageBucket(gomock.Any(), gomock.Eq(testRegion), gomock.Eq(testBucketName)).
+					Return(nil, linodego.Error{Code: http.StatusNotFound}).
+					Times(1)
+				// Second call: CreateObjectStorageBucket creates the bucket
+				mockLinode.EXPECT().
+					CreateObjectStorageBucket(gomock.Any(), gomock.Any()).
+					Return(defaultLinodegoBucket, nil).
+					Times(1)
+				// Third call (idempotency): GetObjectStorageBucket returns the bucket
+				mockLinode.EXPECT().
+					GetObjectStorageBucket(gomock.Any(), gomock.Eq(testRegion), gomock.Eq(testBucketName)).
+					Return(defaultLinodegoBucket, nil).
+					Times(1)
+				// Fourth call (idempotency): GetObjectStorageBucketAccess validates parameters
+				mockLinode.EXPECT().
+					GetObjectStorageBucketAccess(gomock.Any(), gomock.Eq(testRegion), gomock.Eq(testBucketName)).
+					Return(defaultLinodegoBucketAccess, nil).
+					Times(1)
+				// ListObjectStorageEndpoints is called to populate cache
+				mockLinode.EXPECT().
+					ListObjectStorageEndpoints(gomock.Any(), gomock.Any()).
+					Return([]linodego.ObjectStorageEndpoint{defaultLinodegoEndpoint}, nil).
+					AnyTimes()
+				return mockLinode
 			},
 		},
 		{
 			testName: "bucket exists",
-			client: linodestub.New(
-				linodestub.WithBucket(defaultLinodegoBucket),
-				linodestub.WithBucketAccess(defaultLinodegoBucketAccess, defaultLinodegoBucket.Region, defaultLinodegoBucket.Label),
-			),
-			s3cli: s3stub.New(),
 			request: &cosi.DriverCreateBucketRequest{
 				Name:       testBucketName,
 				Parameters: defaultBucketParameters,
@@ -158,25 +221,243 @@ func TestDriverCreateBucket(t *testing.T) {
 				BucketId:   testBucketID,
 				BucketInfo: defaultBucketInfo,
 			},
+			setupMockS3: func(t *testing.T) s3.Client {
+				t.Helper()
+				ctrl := gomock.NewController(t)
+				mockS3 := mock.NewMockS3Client(ctrl)
+				// No S3 calls expected - no policy provided
+				return mockS3
+			},
+			setupMockLinode: func(t *testing.T) linodeclient.Client {
+				t.Helper()
+				ctrl := gomock.NewController(t)
+				mockLinode := mock.NewMockLinodeClient(ctrl)
+				// Both calls: GetObjectStorageBucket returns the existing bucket
+				mockLinode.EXPECT().
+					GetObjectStorageBucket(gomock.Any(), gomock.Eq(testRegion), gomock.Eq(testBucketName)).
+					Return(defaultLinodegoBucket, nil).
+					Times(2)
+				// Both calls: GetObjectStorageBucketAccess validates parameters
+				mockLinode.EXPECT().
+					GetObjectStorageBucketAccess(gomock.Any(), gomock.Eq(testRegion), gomock.Eq(testBucketName)).
+					Return(defaultLinodegoBucketAccess, nil).
+					Times(2)
+				// ListObjectStorageEndpoints is called to populate cache
+				mockLinode.EXPECT().
+					ListObjectStorageEndpoints(gomock.Any(), gomock.Any()).
+					Return([]linodego.ObjectStorageEndpoint{defaultLinodegoEndpoint}, nil).
+					AnyTimes()
+				return mockLinode
+			},
+		},
+		{
+			testName: "with policy template",
+			request: &cosi.DriverCreateBucketRequest{
+				Name: testBucketName,
+				Parameters: map[string]string{
+					provisioner.ParamRegion: testRegion,
+					provisioner.ParamPolicy: testPolicyTemplate,
+				},
+			},
+			expectedResponse: &cosi.DriverCreateBucketResponse{
+				BucketId:   testBucketID,
+				BucketInfo: defaultBucketInfo,
+			},
+			setupMockS3: func(t *testing.T) s3.Client {
+				t.Helper()
+				ctrl := gomock.NewController(t)
+				mockS3 := mock.NewMockS3Client(ctrl)
+				// Expect SetBucketPolicy to be called twice (idempotency test runs twice)
+				mockS3.EXPECT().
+					SetBucketPolicy(gomock.Any(), gomock.Eq(testRegion), gomock.Eq(testBucketName), gomock.Eq(testPolicyRendered)).
+					Return(nil).
+					Times(2)
+				return mockS3
+			},
+			setupMockLinode: func(t *testing.T) linodeclient.Client {
+				t.Helper()
+				ctrl := gomock.NewController(t)
+				mockLinode := mock.NewMockLinodeClient(ctrl)
+				// First call: GetObjectStorageBucket returns NotFound (bucket doesn't exist)
+				mockLinode.EXPECT().
+					GetObjectStorageBucket(gomock.Any(), gomock.Eq(testRegion), gomock.Eq(testBucketName)).
+					Return(nil, linodego.Error{Code: http.StatusNotFound}).
+					Times(1)
+				// Second call: CreateObjectStorageBucket creates the bucket
+				mockLinode.EXPECT().
+					CreateObjectStorageBucket(gomock.Any(), gomock.Any()).
+					Return(defaultLinodegoBucket, nil).
+					Times(1)
+				// Third call (idempotency): GetObjectStorageBucket returns the bucket
+				mockLinode.EXPECT().
+					GetObjectStorageBucket(gomock.Any(), gomock.Eq(testRegion), gomock.Eq(testBucketName)).
+					Return(defaultLinodegoBucket, nil).
+					Times(1)
+				// Fourth call (idempotency): GetObjectStorageBucketAccess validates parameters
+				mockLinode.EXPECT().
+					GetObjectStorageBucketAccess(gomock.Any(), gomock.Eq(testRegion), gomock.Eq(testBucketName)).
+					Return(defaultLinodegoBucketAccess, nil).
+					Times(1)
+				// ListObjectStorageEndpoints is called to populate cache
+				mockLinode.EXPECT().
+					ListObjectStorageEndpoints(gomock.Any(), gomock.Any()).
+					Return([]linodego.ObjectStorageEndpoint{defaultLinodegoEndpoint}, nil).
+					AnyTimes()
+				return mockLinode
+			},
+		},
+		{
+			testName: "with policy template, bucket exists",
+			request: &cosi.DriverCreateBucketRequest{
+				Name: testBucketName,
+				Parameters: map[string]string{
+					provisioner.ParamRegion: testRegion,
+					provisioner.ParamPolicy: testPolicyTemplate,
+				},
+			},
+			expectedResponse: &cosi.DriverCreateBucketResponse{
+				BucketId:   testBucketID,
+				BucketInfo: defaultBucketInfo,
+			},
+			setupMockS3: func(t *testing.T) s3.Client {
+				t.Helper()
+				ctrl := gomock.NewController(t)
+				mockS3 := mock.NewMockS3Client(ctrl)
+				// Expect SetBucketPolicy to be called twice (for existing buckets, policy is always applied)
+				mockS3.EXPECT().
+					SetBucketPolicy(gomock.Any(), gomock.Eq(testRegion), gomock.Eq(testBucketName), gomock.Eq(testPolicyRendered)).
+					Return(nil).
+					Times(2)
+				return mockS3
+			},
+			setupMockLinode: func(t *testing.T) linodeclient.Client {
+				t.Helper()
+				ctrl := gomock.NewController(t)
+				mockLinode := mock.NewMockLinodeClient(ctrl)
+				// Both calls: GetObjectStorageBucket returns the existing bucket
+				mockLinode.EXPECT().
+					GetObjectStorageBucket(gomock.Any(), gomock.Eq(testRegion), gomock.Eq(testBucketName)).
+					Return(defaultLinodegoBucket, nil).
+					Times(2)
+				// Both calls: GetObjectStorageBucketAccess validates parameters
+				mockLinode.EXPECT().
+					GetObjectStorageBucketAccess(gomock.Any(), gomock.Eq(testRegion), gomock.Eq(testBucketName)).
+					Return(defaultLinodegoBucketAccess, nil).
+					Times(2)
+				// ListObjectStorageEndpoints is called to populate cache
+				mockLinode.EXPECT().
+					ListObjectStorageEndpoints(gomock.Any(), gomock.Any()).
+					Return([]linodego.ObjectStorageEndpoint{defaultLinodegoEndpoint}, nil).
+					AnyTimes()
+				return mockLinode
+			},
+		},
+		{
+			testName: "SetBucketPolicy fails",
+			request: &cosi.DriverCreateBucketRequest{
+				Name: testBucketName,
+				Parameters: map[string]string{
+					provisioner.ParamRegion: testRegion,
+					provisioner.ParamPolicy: testPolicyTemplate,
+				},
+			},
+			expectedError: status.Error(grpccodes.Internal, "failed to set bucket policy: S3 connection failed"),
+			setupMockS3: func(t *testing.T) s3.Client {
+				t.Helper()
+				ctrl := gomock.NewController(t)
+				mockS3 := mock.NewMockS3Client(ctrl)
+				// Expect SetBucketPolicy to fail on both calls (idempotency test runs twice)
+				// First call creates bucket, second call sees existing bucket - both try to apply policy
+				mockS3.EXPECT().
+					SetBucketPolicy(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(errors.New("S3 connection failed")).
+					Times(2)
+				return mockS3
+			},
+			setupMockLinode: func(t *testing.T) linodeclient.Client {
+				t.Helper()
+				ctrl := gomock.NewController(t)
+				mockLinode := mock.NewMockLinodeClient(ctrl)
+				// First call: GetObjectStorageBucket returns NotFound (bucket doesn't exist)
+				mockLinode.EXPECT().
+					GetObjectStorageBucket(gomock.Any(), gomock.Eq(testRegion), gomock.Eq(testBucketName)).
+					Return(nil, linodego.Error{Code: http.StatusNotFound}).
+					Times(1)
+				// Second call: CreateObjectStorageBucket creates the bucket
+				mockLinode.EXPECT().
+					CreateObjectStorageBucket(gomock.Any(), gomock.Any()).
+					Return(defaultLinodegoBucket, nil).
+					Times(1)
+				// Third call (idempotency): GetObjectStorageBucket returns the bucket
+				mockLinode.EXPECT().
+					GetObjectStorageBucket(gomock.Any(), gomock.Eq(testRegion), gomock.Eq(testBucketName)).
+					Return(defaultLinodegoBucket, nil).
+					Times(1)
+				// Fourth call (idempotency): GetObjectStorageBucketAccess validates parameters
+				mockLinode.EXPECT().
+					GetObjectStorageBucketAccess(gomock.Any(), gomock.Eq(testRegion), gomock.Eq(testBucketName)).
+					Return(defaultLinodegoBucketAccess, nil).
+					Times(1)
+				// ListObjectStorageEndpoints is called to populate cache
+				mockLinode.EXPECT().
+					ListObjectStorageEndpoints(gomock.Any(), gomock.Any()).
+					Return([]linodego.ObjectStorageEndpoint{defaultLinodegoEndpoint}, nil).
+					AnyTimes()
+				return mockLinode
+			},
 		},
 		{
 			testName: "empty map",
-			client:   linodestub.New(),
-			s3cli:    s3stub.New(),
 			request: &cosi.DriverCreateBucketRequest{
 				Name:       testBucketName,
 				Parameters: map[string]string{},
 			},
 			expectedError: status.Error(grpccodes.InvalidArgument, provisioner.ErrMissingRegion.Error()),
+			setupMockS3: func(t *testing.T) s3.Client {
+				t.Helper()
+				ctrl := gomock.NewController(t)
+				mockS3 := mock.NewMockS3Client(ctrl)
+				// No S3 calls expected - validation fails before S3 operations
+				return mockS3
+			},
+			setupMockLinode: func(t *testing.T) linodeclient.Client {
+				t.Helper()
+				ctrl := gomock.NewController(t)
+				mockLinode := mock.NewMockLinodeClient(ctrl)
+				// No Linode calls expected - validation fails before any API operations
+				// ListObjectStorageEndpoints is called to populate cache
+				mockLinode.EXPECT().
+					ListObjectStorageEndpoints(gomock.Any(), gomock.Any()).
+					Return([]linodego.ObjectStorageEndpoint{defaultLinodegoEndpoint}, nil).
+					AnyTimes()
+				return mockLinode
+			},
 		},
 		{
 			testName: "nil map",
-			client:   linodestub.New(),
-			s3cli:    s3stub.New(),
 			request: &cosi.DriverCreateBucketRequest{
 				Name: testBucketName,
 			},
 			expectedError: status.Error(grpccodes.InvalidArgument, provisioner.ErrMissingRegion.Error()),
+			setupMockS3: func(t *testing.T) s3.Client {
+				t.Helper()
+				ctrl := gomock.NewController(t)
+				mockS3 := mock.NewMockS3Client(ctrl)
+				// No S3 calls expected - validation fails before S3 operations
+				return mockS3
+			},
+			setupMockLinode: func(t *testing.T) linodeclient.Client {
+				t.Helper()
+				ctrl := gomock.NewController(t)
+				mockLinode := mock.NewMockLinodeClient(ctrl)
+				// No Linode calls expected - validation fails before any API operations
+				// ListObjectStorageEndpoints is called to populate cache
+				mockLinode.EXPECT().
+					ListObjectStorageEndpoints(gomock.Any(), gomock.Any()).
+					Return([]linodego.ObjectStorageEndpoint{defaultLinodegoEndpoint}, nil).
+					AnyTimes()
+				return mockLinode
+			},
 		},
 	} {
 		tc := tc
@@ -187,14 +468,15 @@ func TestDriverCreateBucket(t *testing.T) {
 			ctx, cancel := context.WithCancel(t.Context())
 			defer cancel()
 
-			epc := cache.New(discardLog, tc.client, 0)
+			linodeCli := tc.setupMockLinode(t)
+			epc := cache.New(discardLog, linodeCli, 0)
 			if err := epc.Refresh(ctx); err != nil {
 				t.Fatalf("failed to refresh cache: %v", err)
 			}
 
-			s3stub.SetBucketTracker(tc.s3cli, tc.client)
+			s3cli := tc.setupMockS3(t)
 
-			srv, err := provisioner.New(nil, tc.client, epc, tc.s3cli, true)
+			srv, err := provisioner.New(nil, linodeCli, epc, s3cli, true)
 			if err != nil {
 				t.Fatalf("failed to create provisioner server: %v", err)
 			}
@@ -274,18 +556,39 @@ func TestDriverDeleteBucket(t *testing.T) {
 	t.Parallel()
 
 	for _, tc := range []struct {
-		testName      string
-		client        linodeclient.Client
-		s3cli         s3.Client
-		request       *cosi.DriverDeleteBucketRequest
-		expectedError error
+		testName        string
+		request         *cosi.DriverDeleteBucketRequest
+		expectedError   error
+		setupMockS3     func(*testing.T) s3.Client
+		setupMockLinode func(*testing.T) linodeclient.Client
 	}{
 		{
 			testName: "base",
-			client:   linodestub.New(linodestub.WithBucket(defaultLinodegoBucket)),
-			s3cli:    s3stub.New(),
 			request: &cosi.DriverDeleteBucketRequest{
 				BucketId: testBucketID,
+			},
+			setupMockS3: func(t *testing.T) s3.Client {
+				t.Helper()
+				ctrl := gomock.NewController(t)
+				mockS3 := mock.NewMockS3Client(ctrl)
+				// No S3 calls expected - cleanup is disabled (hardcoded to false in provisioner.go:278)
+				return mockS3
+			},
+			setupMockLinode: func(t *testing.T) linodeclient.Client {
+				t.Helper()
+				ctrl := gomock.NewController(t)
+				mockLinode := mock.NewMockLinodeClient(ctrl)
+				// Both calls: DeleteObjectStorageBucket deletes the bucket
+				mockLinode.EXPECT().
+					DeleteObjectStorageBucket(gomock.Any(), gomock.Eq(testRegion), gomock.Eq(testBucketName)).
+					Return(nil).
+					Times(2)
+				// ListObjectStorageEndpoints is called to populate cache
+				mockLinode.EXPECT().
+					ListObjectStorageEndpoints(gomock.Any(), gomock.Any()).
+					Return([]linodego.ObjectStorageEndpoint{defaultLinodegoEndpoint}, nil).
+					AnyTimes()
+				return mockLinode
 			},
 		},
 	} {
@@ -297,12 +600,15 @@ func TestDriverDeleteBucket(t *testing.T) {
 			ctx, cancel := context.WithCancel(t.Context())
 			defer cancel()
 
-			epc := cache.New(discardLog, tc.client, 0)
+			linodeCli := tc.setupMockLinode(t)
+			epc := cache.New(discardLog, linodeCli, 0)
 			if err := epc.Refresh(ctx); err != nil {
 				t.Fatalf("failed to refresh cache: %v", err)
 			}
 
-			srv, err := provisioner.New(nil, tc.client, epc, tc.s3cli, true)
+			s3cli := tc.setupMockS3(t)
+
+			srv, err := provisioner.New(nil, linodeCli, epc, s3cli, true)
 			if err != nil {
 				t.Fatalf("failed to create provisioner server: %v", err)
 			}
@@ -322,19 +628,14 @@ func TestDriverGrantBucketAccess(t *testing.T) {
 
 	for _, tc := range []struct {
 		testName         string
-		client           linodeclient.Client
-		s3cli            s3.Client
 		request          *cosi.DriverGrantBucketAccessRequest
 		expectedResponse *cosi.DriverGrantBucketAccessResponse
 		expectedError    error
+		setupMockS3      func(*testing.T) s3.Client
+		setupMockLinode  func(*testing.T) linodeclient.Client
 	}{
 		{
 			testName: "base",
-			client: linodestub.New(
-				linodestub.WithBucket(defaultLinodegoBucket),
-				linodestub.WithEndpoint(defaultLinodegoEndpoint),
-			),
-			s3cli: s3stub.New(),
 			request: &cosi.DriverGrantBucketAccessRequest{
 				BucketId:           testBucketID,
 				Name:               testBucketAccessName,
@@ -345,14 +646,36 @@ func TestDriverGrantBucketAccess(t *testing.T) {
 				AccountId:   testBucketAccessID,
 				Credentials: defaultCredentials,
 			},
+			setupMockS3: func(t *testing.T) s3.Client {
+				t.Helper()
+				ctrl := gomock.NewController(t)
+				mockS3 := mock.NewMockS3Client(ctrl)
+				// No S3 calls expected - GrantBucketAccess only uses Linode API
+				return mockS3
+			},
+			setupMockLinode: func(t *testing.T) linodeclient.Client {
+				t.Helper()
+				ctrl := gomock.NewController(t)
+				mockLinode := mock.NewMockLinodeClient(ctrl)
+				// Both calls: CreateObjectStorageKey creates the key
+				mockLinode.EXPECT().
+					CreateObjectStorageKey(gomock.Any(), gomock.Any()).
+					Return(&linodego.ObjectStorageKey{
+						ID:        0,
+						AccessKey: testAccessKey,
+						SecretKey: testSecretKey,
+					}, nil).
+					Times(2)
+				// ListObjectStorageEndpoints is called to populate cache
+				mockLinode.EXPECT().
+					ListObjectStorageEndpoints(gomock.Any(), gomock.Any()).
+					Return([]linodego.ObjectStorageEndpoint{defaultLinodegoEndpoint}, nil).
+					AnyTimes()
+				return mockLinode
+			},
 		},
 		{
 			testName: "IAM Auth",
-			client: linodestub.New(
-				linodestub.WithBucket(defaultLinodegoBucket),
-				linodestub.WithEndpoint(defaultLinodegoEndpoint),
-			),
-			s3cli: s3stub.New(),
 			request: &cosi.DriverGrantBucketAccessRequest{
 				BucketId:           testBucketID,
 				Name:               testBucketAccessName,
@@ -363,14 +686,28 @@ func TestDriverGrantBucketAccess(t *testing.T) {
 				grpccodes.InvalidArgument,
 				fmt.Errorf("%w: %s", provisioner.ErrUnsuportedAuth, cosi.AuthenticationType_IAM).Error(),
 			),
+			setupMockS3: func(t *testing.T) s3.Client {
+				t.Helper()
+				ctrl := gomock.NewController(t)
+				mockS3 := mock.NewMockS3Client(ctrl)
+				// No S3 calls expected - validation fails before any operations
+				return mockS3
+			},
+			setupMockLinode: func(t *testing.T) linodeclient.Client {
+				t.Helper()
+				ctrl := gomock.NewController(t)
+				mockLinode := mock.NewMockLinodeClient(ctrl)
+				// No Linode calls expected - validation fails before any API operations
+				// ListObjectStorageEndpoints is called to populate cache
+				mockLinode.EXPECT().
+					ListObjectStorageEndpoints(gomock.Any(), gomock.Any()).
+					Return([]linodego.ObjectStorageEndpoint{defaultLinodegoEndpoint}, nil).
+					AnyTimes()
+				return mockLinode
+			},
 		},
 		{
 			testName: "invalid permissions",
-			client: linodestub.New(
-				linodestub.WithBucket(defaultLinodegoBucket),
-				linodestub.WithEndpoint(defaultLinodegoEndpoint),
-			),
-			s3cli: s3stub.New(),
 			request: &cosi.DriverGrantBucketAccessRequest{
 				BucketId:           testBucketID,
 				Name:               testBucketAccessName,
@@ -383,6 +720,25 @@ func TestDriverGrantBucketAccess(t *testing.T) {
 				grpccodes.InvalidArgument,
 				fmt.Errorf("%w: %s", provisioner.ErrUnknownPermsissions, "invalid").Error(),
 			),
+			setupMockS3: func(t *testing.T) s3.Client {
+				t.Helper()
+				ctrl := gomock.NewController(t)
+				mockS3 := mock.NewMockS3Client(ctrl)
+				// No S3 calls expected - validation fails before any operations
+				return mockS3
+			},
+			setupMockLinode: func(t *testing.T) linodeclient.Client {
+				t.Helper()
+				ctrl := gomock.NewController(t)
+				mockLinode := mock.NewMockLinodeClient(ctrl)
+				// No Linode calls expected - validation fails before any API operations
+				// ListObjectStorageEndpoints is called to populate cache
+				mockLinode.EXPECT().
+					ListObjectStorageEndpoints(gomock.Any(), gomock.Any()).
+					Return([]linodego.ObjectStorageEndpoint{defaultLinodegoEndpoint}, nil).
+					AnyTimes()
+				return mockLinode
+			},
 		},
 	} {
 		tc := tc
@@ -393,12 +749,15 @@ func TestDriverGrantBucketAccess(t *testing.T) {
 			ctx, cancel := context.WithCancel(t.Context())
 			defer cancel()
 
-			epc := cache.New(discardLog, tc.client, 0)
+			linodeCli := tc.setupMockLinode(t)
+			epc := cache.New(discardLog, linodeCli, 0)
 			if err := epc.Refresh(ctx); err != nil {
 				t.Fatalf("failed to refresh cache: %v", err)
 			}
 
-			srv, err := provisioner.New(nil, tc.client, epc, tc.s3cli, true)
+			s3cli := tc.setupMockS3(t)
+
+			srv, err := provisioner.New(nil, linodeCli, epc, s3cli, true)
 			if err != nil {
 				t.Fatalf("failed to create provisioner server: %v", err)
 			}
@@ -424,22 +783,40 @@ func TestDriverRevokeBucketAccess(t *testing.T) {
 	t.Parallel()
 
 	for _, tc := range []struct {
-		testName      string
-		client        linodeclient.Client
-		s3cli         s3.Client
-		request       *cosi.DriverRevokeBucketAccessRequest
-		expectedError error
+		testName        string
+		request         *cosi.DriverRevokeBucketAccessRequest
+		expectedError   error
+		setupMockS3     func(*testing.T) s3.Client
+		setupMockLinode func(*testing.T) linodeclient.Client
 	}{
 		{
 			testName: "base",
-			client: linodestub.New(
-				linodestub.WithBucket(defaultLinodegoBucket),
-				linodestub.WithBucketAccess(defaultLinodegoBucketAccess, defaultLinodegoBucket.Region, defaultLinodegoBucket.Label),
-			),
-			s3cli: s3stub.New(),
 			request: &cosi.DriverRevokeBucketAccessRequest{
 				BucketId:  testBucketID,
 				AccountId: testBucketAccessID,
+			},
+			setupMockS3: func(t *testing.T) s3.Client {
+				t.Helper()
+				ctrl := gomock.NewController(t)
+				mockS3 := mock.NewMockS3Client(ctrl)
+				// No S3 calls expected - RevokeBucketAccess only uses Linode API
+				return mockS3
+			},
+			setupMockLinode: func(t *testing.T) linodeclient.Client {
+				t.Helper()
+				ctrl := gomock.NewController(t)
+				mockLinode := mock.NewMockLinodeClient(ctrl)
+				// Both calls: DeleteObjectStorageKey deletes the key
+				mockLinode.EXPECT().
+					DeleteObjectStorageKey(gomock.Any(), gomock.Eq(0)).
+					Return(nil).
+					Times(2)
+				// ListObjectStorageEndpoints is called to populate cache
+				mockLinode.EXPECT().
+					ListObjectStorageEndpoints(gomock.Any(), gomock.Any()).
+					Return([]linodego.ObjectStorageEndpoint{defaultLinodegoEndpoint}, nil).
+					AnyTimes()
+				return mockLinode
 			},
 		},
 	} {
@@ -451,12 +828,15 @@ func TestDriverRevokeBucketAccess(t *testing.T) {
 			ctx, cancel := context.WithCancel(t.Context())
 			defer cancel()
 
-			epc := cache.New(discardLog, tc.client, 0)
+			linodeCli := tc.setupMockLinode(t)
+			epc := cache.New(discardLog, linodeCli, 0)
 			if err := epc.Refresh(ctx); err != nil {
 				t.Fatalf("failed to refresh cache: %v", err)
 			}
 
-			srv, err := provisioner.New(nil, tc.client, epc, tc.s3cli, true)
+			s3cli := tc.setupMockS3(t)
+
+			srv, err := provisioner.New(nil, linodeCli, epc, s3cli, true)
 			if err != nil {
 				t.Fatalf("failed to create provisioner server: %v", err)
 			}

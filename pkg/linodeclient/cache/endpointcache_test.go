@@ -22,8 +22,9 @@ import (
 	"time"
 
 	"github.com/linode/linodego"
+	"go.uber.org/mock/gomock"
 
-	"github.com/linode/linode-cosi-driver/pkg/linodeclient/stubclient"
+	"github.com/linode/linode-cosi-driver/testing/mock"
 )
 
 var discardLog = slog.New(slog.DiscardHandler)
@@ -48,13 +49,15 @@ func TestCache(t *testing.T) {
 		S3Endpoint: ptr("pl-test-1.linodeobjects.com"),
 	}
 
+	ctrl := gomock.NewController(t)
+	mockClient := mock.NewMockLinodeClient(ctrl)
+	mockClient.EXPECT().
+		ListObjectStorageEndpoints(gomock.Any(), gomock.Any()).
+		Return([]linodego.ObjectStorageEndpoint{testRegion1, testRegion2, testRegion3}, nil)
+
 	cache := New(
 		discardLog,
-		stubclient.New(
-			stubclient.WithEndpoint(testRegion1),
-			stubclient.WithEndpoint(testRegion2),
-			stubclient.WithEndpoint(testRegion3),
-		),
+		mockClient,
 		DefaultTTL,
 	)
 
@@ -93,9 +96,16 @@ func TestCacheStart(t *testing.T) {
 	}
 	testTTL := time.Second
 
+	ctrl := gomock.NewController(t)
+	mockClient := mock.NewMockLinodeClient(ctrl)
+	mockClient.EXPECT().
+		ListObjectStorageEndpoints(gomock.Any(), gomock.Any()).
+		Return([]linodego.ObjectStorageEndpoint{testRegion}, nil).
+		AnyTimes()
+
 	cache := New(
 		discardLog,
-		stubclient.New(stubclient.WithEndpoint(testRegion)),
+		mockClient,
 		testTTL,
 	)
 

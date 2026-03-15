@@ -110,7 +110,7 @@ generate-schemas: helm-values-schema-json ## Run generate schema for Helm Chart 
 		-output=helm/linode-cosi-driver/values.schema.json \
 
 .PHONY: test
-test: ## Run tests.
+test: generate-mocks
 	go test \
 		-race \
 		-cover -coverprofile=coverage.out \
@@ -143,6 +143,11 @@ lint-manifests: kube-linter ## Run kube-linter on Kubernetes manifests.
 .PHONY: hadolint
 hadolint: ## Run hadolint on Dockerfile
 	$(CONTAINER_TOOL) run --rm -i hadolint/hadolint < Dockerfile
+
+.PHONY: generate-mocks
+generate-mocks:
+	go run go.uber.org/mock/mockgen@$(GOMOCK_VERSION) -source=./pkg/s3/s3.go -destination=./testing/mock/s3.gen.go -package=mock -typed -mock_names=Client=MockS3Client
+	go run go.uber.org/mock/mockgen@$(GOMOCK_VERSION) -source=./pkg/linodeclient/linodeclient.go -destination=./testing/mock/linodeclient.gen.go -package=mock -typed -mock_names=Client=MockLinodeClient
 
 ##@ CI
 
@@ -236,6 +241,8 @@ KIND_VERSION                    ?= v0.29.0
 KUBE_LINTER_VERSION             ?= v0.7.1
 # renovate: datasource=github-tags depName=tilt-dev/tilt
 TILT_VERSION                    ?= 0.36.0
+# renovate: datasource=github-tags depName=uber-go/mock
+GOMOCK_VERSION                  ?= v0.6.0
 
 .PHONY: chainsaw
 chainsaw: $(CHAINSAW)-$(CHAINSAW_VERSION) ## Download chainsaw locally if necessary.

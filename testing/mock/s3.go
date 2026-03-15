@@ -12,19 +12,5 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package stubclient
-
-import (
-	"fmt"
-)
-
-// Option represents a function that configures a Client.
-type Option func(c *Client)
-
-// WithPolicy is an option to configure the stub client with a policy for bucket.
-func WithPolicy(region, bucket, policy string) Option {
-	return func(c *Client) {
-		id := fmt.Sprintf("%s/%s", region, bucket)
-		c.policies[id] = policy
-	}
-}
+// Package mock provides mock implementations for testing.
+package mock
