@@ -269,6 +269,10 @@ func (s *Server) ensureExistingBucket(
 }
 
 func (s *Server) applyBucketPolicy(ctx context.Context, log *slog.Logger, region, label, policy string) error {
+	if policy == "" {
+		return nil
+	}
+
 	s3cli, cleanup, err := s.s3ClientForPolicy(ctx, region)
 	if err != nil {
 		return err
