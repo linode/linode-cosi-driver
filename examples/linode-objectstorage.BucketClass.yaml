@@ -16,7 +16,10 @@ parameters:
           "Effect": "Allow",
           "Principal": "*",
           "Action": "*",
-          "Resource": "arn:aws:s3:::{{ .BucketName }}/*"
+          "Resource": [
+            "arn:aws:s3:::{{ .BucketName }}",
+            "arn:aws:s3:::{{ .BucketName }}/*"
+          ]
         }
       ]
     }

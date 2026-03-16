@@ -12,11 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package linodeclient
+package linodeclient_test
 
 import (
 	"errors"
+	"log/slog"
 	"testing"
+
+	"github.com/linode/linode-cosi-driver/pkg/linodeclient"
+	"github.com/linode/linode-cosi-driver/pkg/linodeclient/stubclient"
 )
 
 //nolint:paralleltest // modifies environment variables
@@ -64,10 +68,61 @@ func TestNewLinodeClient(t *testing.T) {
 		t.Setenv("LINODE_URL", tc.url)
 		t.Setenv("LINODE_API_VERSION", tc.version)
 		t.Run(tc.testName, func(t *testing.T) {
-			_, err := NewLinodeClient(tc.userAgent)
+			_, err := linodeclient.NewLinodeClient(tc.userAgent)
 			if !errors.Is(err, tc.expectedError) {
 				t.Errorf("expected error: %v, but got: %v", tc.expectedError, err)
 			}
 		})
 	}
+}
+
+func TestNewEphemeralS3Credentials(t *testing.T) {
+	t.Parallel()
+
+	client := stubclient.New()
+
+	creds, cleanup, err := linodeclient.NewEphemeralS3Credentials(
+		t.Context(),
+		slog.New(slog.DiscardHandler),
+		client,
+		"us-test",
+	)
+	if err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+
+	if creds.Limited {
+		t.Fatal("expected ephemeral policy credentials to be region-scoped, got bucket-scoped key")
+	}
+
+	if creds.BucketAccess != nil {
+		t.Fatalf("expected no bucket access restrictions, got: %+v", *creds.BucketAccess)
+	}
+
+	regionIDs := make([]string, 0, len(creds.Regions))
+	for _, region := range creds.Regions {
+		regionIDs = append(regionIDs, region.ID)
+	}
+
+	if len(regionIDs) != 1 || !contains(regionIDs, "us-test") {
+		t.Fatalf("expected credentials for only us-test, got: %+v", regionIDs)
+	}
+
+	if err := cleanup(t.Context()); err != nil {
+		t.Fatalf("expected cleanup to succeed, got: %v", err)
+	}
+
+	if _, err := client.GetObjectStorageKey(t.Context(), creds.ID); err == nil {
+		t.Fatal("expected ephemeral credentials to be deleted after cleanup")
+	}
+}
+
+func contains(items []string, want string) bool {
+	for _, item := range items {
+		if item == want {
+			return true
+		}
+	}
+
+	return false
 }

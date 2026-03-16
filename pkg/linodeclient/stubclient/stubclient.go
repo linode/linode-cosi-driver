@@ -235,10 +235,19 @@ func (c *Client) CreateObjectStorageKey(ctx context.Context, opt linodego.Object
 
 	limited := opt.BucketAccess != nil && len(*opt.BucketAccess) != 0
 
+	var regions []linodego.ObjectStorageKeyRegion
+	if len(opt.Regions) != 0 {
+		regions = make([]linodego.ObjectStorageKeyRegion, 0, len(opt.Regions))
+		for _, region := range opt.Regions {
+			regions = append(regions, linodego.ObjectStorageKeyRegion{ID: region})
+		}
+	}
+
 	obj := &linodego.ObjectStorageKey{
 		Label:        opt.Label,
 		AccessKey:    TestAccessKey,
 		SecretKey:    TestSecretKey,
+		Regions:      regions,
 		BucketAccess: opt.BucketAccess,
 		Limited:      limited,
 	}

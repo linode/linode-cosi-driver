@@ -15,6 +15,7 @@
 package s3
 
 import (
+	"encoding/json"
 	"errors"
 	"testing"
 )
@@ -29,8 +30,11 @@ func TestApplyTemplate(t *testing.T) {
     {
       "Effect": "Allow",
       "Principal": "*",
-      "Action": "s3:GetObject",
-      "Resource": "arn:aws:s3:::{{ .BucketName }}/*"
+      "Action": "*",
+      "Resource": [
+        "arn:aws:s3:::{{ .BucketName }}",
+        "arn:aws:s3:::{{ .BucketName }}/*"
+      ]
     }
   ]
 }`
@@ -41,8 +45,11 @@ func TestApplyTemplate(t *testing.T) {
     {
       "Effect": "Allow",
       "Principal": "*",
-      "Action": "s3:GetObject",
-      "Resource": "arn:aws:s3:::test-bucket/*"
+      "Action": "*",
+      "Resource": [
+        "arn:aws:s3:::test-bucket",
+        "arn:aws:s3:::test-bucket/*"
+      ]
     }
   ]
 }`
@@ -68,9 +75,25 @@ func TestApplyTemplate(t *testing.T) {
 				t.Errorf("expected error: %v, but got: %v", tc.expectedError, err)
 			}
 
-			if actual != tc.expected {
+			if normalizeJSON(t, actual) != normalizeJSON(t, tc.expected) {
 				t.Errorf("expected policy: %v, but got: %v", tc.expected, actual)
 			}
 		})
 	}
+}
+
+func normalizeJSON(t *testing.T, input string) string {
+	t.Helper()
+
+	var decoded any
+	if err := json.Unmarshal([]byte(input), &decoded); err != nil {
+		t.Fatalf("failed to unmarshal JSON %q: %v", input, err)
+	}
+
+	normalized, err := json.Marshal(decoded)
+	if err != nil {
+		t.Fatalf("failed to marshal JSON %q: %v", input, err)
+	}
+
+	return string(normalized)
 }
