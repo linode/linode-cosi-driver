@@ -37,11 +37,6 @@ import (
 )
 
 const (
-	testRegion               = "test-region"
-	testBucketName           = "test-bucket"
-	testBucketID             = testRegion + "/" + testBucketName
-	testBucketAccessName     = "test-bucket-access"
-	testBucketAccessID       = "0"
 	testBucketPolicyTemplate = `{
 	"Version":"2012-10-17",
 	"Statement":[
@@ -504,16 +499,70 @@ func TestDriverCreateBucketWithPolicyTemplate(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
-	client := linodestub.New()
-	s3cli := s3stub.New()
-	epc := cache.New(discardLog, client, 0)
+	// Setup mock S3 client with stateful behavior
+	ctrl := gomock.NewController(t)
+	mockS3 := mock.NewMockS3Client(ctrl)
+
+	// Variable to store the policy (simulates S3 storage)
+	var storedPolicy string
+
+	// SetBucketPolicy stores the policy
+	mockS3.EXPECT().
+		SetBucketPolicy(gomock.Any(), gomock.Eq(testRegion), gomock.Eq(testBucketName), gomock.Any()).
+		DoAndReturn(func(ctx context.Context, region, bucketName, policy string) error {
+			storedPolicy = policy
+			return nil
+		}).
+		Times(2) // Called twice due to idempotency test
+
+	// GetBucketPolicy retrieves the stored policy
+	mockS3.EXPECT().
+		GetBucketPolicy(gomock.Any(), gomock.Eq(testRegion), gomock.Eq(testBucketName)).
+		DoAndReturn(func(ctx context.Context, region, bucketName string) (string, error) {
+			return storedPolicy, nil
+		}).
+		Times(1) // Called once at the end
+
+	// Setup mock Linode client
+	mockLinode := mock.NewMockLinodeClient(ctrl)
+
+	// First call: GetObjectStorageBucket returns NotFound (bucket doesn't exist)
+	mockLinode.EXPECT().
+		GetObjectStorageBucket(gomock.Any(), gomock.Eq(testRegion), gomock.Eq(testBucketName)).
+		Return(nil, linodego.Error{Code: http.StatusNotFound}).
+		Times(1)
+
+	// Second call: CreateObjectStorageBucket creates the bucket
+	mockLinode.EXPECT().
+		CreateObjectStorageBucket(gomock.Any(), gomock.Any()).
+		Return(defaultLinodegoBucket, nil).
+		Times(1)
+
+	// Third call (idempotency): GetObjectStorageBucket returns the bucket
+	mockLinode.EXPECT().
+		GetObjectStorageBucket(gomock.Any(), gomock.Eq(testRegion), gomock.Eq(testBucketName)).
+		Return(defaultLinodegoBucket, nil).
+		Times(1)
+
+	// Fourth call (idempotency): GetObjectStorageBucketAccess validates parameters
+	mockLinode.EXPECT().
+		GetObjectStorageBucketAccess(gomock.Any(), gomock.Eq(testRegion), gomock.Eq(testBucketName)).
+		Return(defaultLinodegoBucketAccess, nil).
+		Times(1)
+
+	// ListObjectStorageEndpoints is called to populate cache
+	mockLinode.EXPECT().
+		ListObjectStorageEndpoints(gomock.Any(), gomock.Any()).
+		Return([]linodego.ObjectStorageEndpoint{defaultLinodegoEndpoint}, nil).
+		AnyTimes()
+
+	// Create cache and provisioner
+	epc := cache.New(discardLog, mockLinode, 0)
 	if err := epc.Refresh(ctx); err != nil {
 		t.Fatalf("failed to refresh cache: %v", err)
 	}
 
-	s3stub.SetBucketTracker(s3cli, client)
-
-	srv, err := provisioner.New(nil, client, epc, s3cli, true)
+	srv, err := provisioner.New(nil, mockLinode, epc, mockS3, true)
 	if err != nil {
 		t.Fatalf("failed to create provisioner server: %v", err)
 	}
@@ -531,6 +580,7 @@ func TestDriverCreateBucketWithPolicyTemplate(t *testing.T) {
 		BucketInfo: defaultBucketInfo,
 	}
 
+	// Run twice to test idempotency
 	for callIndex := 0; callIndex < 2; callIndex++ {
 		actual, err := srv.DriverCreateBucket(ctx, req)
 		if err != nil {
@@ -542,7 +592,8 @@ func TestDriverCreateBucketWithPolicyTemplate(t *testing.T) {
 		}
 	}
 
-	actualPolicy, err := s3cli.GetBucketPolicy(ctx, testRegion, testBucketName)
+	// Verify the policy was set correctly by retrieving it
+	actualPolicy, err := mockS3.GetBucketPolicy(ctx, testRegion, testBucketName)
 	if err != nil {
 		t.Fatalf("expected bucket policy to be set, got error: %v", err)
 	}

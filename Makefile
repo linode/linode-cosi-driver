@@ -115,6 +115,9 @@ test: generate-mocks
 		-race \
 		-cover -coverprofile=coverage.out \
 		./...
+	@if [ -f coverage.out ]; then \
+		grep -v ".gen.go" coverage.out > coverage.filtered.out && mv coverage.filtered.out coverage.out; \
+	fi
 
 .PHONY: test-integration
 test-integration: ## Run integration tests.
@@ -123,6 +126,9 @@ test-integration: ## Run integration tests.
 		-race \
 		-cover -coverprofile=integration-coverage.out \
 		./...
+	@if [ -f integration-coverage.out ]; then \
+		grep -v ".gen.go" integration-coverage.out > integration-coverage.filtered.out && mv integration-coverage.filtered.out integration-coverage.out; \
+	fi
 
 .PHONY: test-e2e
 test-e2e: local-deploy chainsaw ## Run the e2e tests against a k8s instance using Kyverno Chainsaw.
