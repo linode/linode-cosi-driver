@@ -19,8 +19,11 @@ import (
 	"log/slog"
 	"testing"
 
+	"github.com/linode/linodego"
+	"go.uber.org/mock/gomock"
+
 	"github.com/linode/linode-cosi-driver/pkg/linodeclient"
-	"github.com/linode/linode-cosi-driver/pkg/linodeclient/stubclient"
+	"github.com/linode/linode-cosi-driver/testing/mock"
 )
 
 //nolint:paralleltest // modifies environment variables
@@ -79,8 +82,23 @@ func TestNewLinodeClient(t *testing.T) {
 func TestNewEphemeralS3Credentials(t *testing.T) {
 	t.Parallel()
 
-	client := stubclient.New()
+	ctrl := gomock.NewController(t)
+	client := mock.NewMockLinodeClient(ctrl)
 
+	client.EXPECT().
+		CreateObjectStorageKey(gomock.Any(), gomock.Any()).
+		Return(&linodego.ObjectStorageKey{
+			ID:    10,
+			Label: "test-key",
+			Regions: []linodego.ObjectStorageKeyRegion{{
+				ID: "us-test",
+			}}}, nil).
+		Times(1)
+
+	client.EXPECT().
+		DeleteObjectStorageKey(gomock.Any(), 10).
+		Return(nil).
+		Times(1)
 	creds, cleanup, err := linodeclient.NewEphemeralS3Credentials(
 		t.Context(),
 		slog.New(slog.DiscardHandler),
@@ -110,10 +128,6 @@ func TestNewEphemeralS3Credentials(t *testing.T) {
 
 	if err := cleanup(t.Context()); err != nil {
 		t.Fatalf("expected cleanup to succeed, got: %v", err)
-	}
-
-	if _, err := client.GetObjectStorageKey(t.Context(), creds.ID); err == nil {
-		t.Fatal("expected ephemeral credentials to be deleted after cleanup")
 	}
 }
 
