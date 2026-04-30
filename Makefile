@@ -240,7 +240,7 @@ HELM_VERSION                    ?= v4.2.3
 # renovate: datasource=go depName=github.com/norwoodj/helm-docs/cmd/helm-docs
 HELM_DOCS_VERSION               ?= v1.14.2
 # renovate: datasource=go depName=github.com/losisin/helm-values-schema-json
-HELM_VALUES_SCHEMA_JSON_VERSION ?= v1.9.2
+HELM_VALUES_SCHEMA_JSON_VERSION ?= v2.4.0
 # renovate: datasource=go depName=sigs.k8s.io/kind
 KIND_VERSION                    ?= v0.29.0
 # renovate: datasource=go depName=golang.stackrox.io/kube-linter/cmd/kube-linter
