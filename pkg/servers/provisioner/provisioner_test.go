@@ -75,12 +75,15 @@ const (
 )
 
 var (
-	discardLog   = slog.New(slog.DiscardHandler)
-	testEndpoint = "test-region-1.linodeobjects.com"
+	discardLog     = slog.New(slog.DiscardHandler)
+	testEndpoint   = "test-region-1.linodeobjects.com"
+	testEndpointE1 = "test-region-2.linodeobjects.com"
+	testEndpointE3 = "test-region-3.linodeobjects.com"
 
 	defaultLinodegoBucket = &linodego.ObjectStorageBucket{
-		Label:  testBucketName,
-		Region: testRegion,
+		Label:        testBucketName,
+		Region:       testRegion,
+		EndpointType: linodego.ObjectStorageEndpointE0,
 	}
 	defaultLinodegoBucketAccess = &linodego.ObjectStorageBucketAccess{
 		ACL:         linodego.ACLPrivate,
@@ -100,6 +103,16 @@ var (
 		Region:       testRegion,
 		S3Endpoint:   &testEndpoint,
 		EndpointType: linodego.ObjectStorageEndpointE0,
+	}
+	defaultLinodegoEndpointE1 = linodego.ObjectStorageEndpoint{
+		Region:       testRegion,
+		S3Endpoint:   &testEndpointE1,
+		EndpointType: linodego.ObjectStorageEndpointE1,
+	}
+	defaultLinodegoEndpointE3 = linodego.ObjectStorageEndpoint{
+		Region:       testRegion,
+		S3Endpoint:   &testEndpointE3,
+		EndpointType: linodego.ObjectStorageEndpointE3,
 	}
 
 	defaultBucketInfo = &cosi.Protocol{
@@ -121,6 +134,32 @@ var (
 		},
 	}
 )
+
+func credentialsWithEndpoint(endpoint string) map[string]*cosi.CredentialDetails {
+	return map[string]*cosi.CredentialDetails{
+		provisioner.S3: {
+			Secrets: map[string]string{
+				provisioner.S3Region:                testRegion,
+				provisioner.S3Endpoint:              endpoint,
+				provisioner.S3SecretAccessKeyID:     testAccessKey,
+				provisioner.S3SecretAccessSecretKey: testSecretKey,
+			},
+		},
+	}
+}
+
+func expectGetBucket(t *testing.T, mockLinode *mock.MockLinodeClient, endpointType linodego.ObjectStorageEndpointType) {
+	t.Helper()
+
+	mockLinode.EXPECT().
+		GetObjectStorageBucket(gomock.Any(), gomock.Eq(testRegion), gomock.Eq(testBucketName)).
+		Return(&linodego.ObjectStorageBucket{
+			Label:        testBucketName,
+			Region:       testRegion,
+			EndpointType: endpointType,
+		}, nil).
+		Times(2)
+}
 
 func TestDriverCreateBucket(t *testing.T) {
 	t.Parallel()
@@ -186,7 +225,12 @@ func TestDriverCreateBucket(t *testing.T) {
 				// Second call: CreateObjectStorageBucket creates the bucket
 				mockLinode.EXPECT().
 					CreateObjectStorageBucket(gomock.Any(), gomock.Any()).
-					Return(defaultLinodegoBucket, nil).
+					DoAndReturn(func(_ context.Context, opts linodego.ObjectStorageBucketCreateOptions) (*linodego.ObjectStorageBucket, error) {
+						if opts.EndpointType != linodego.ObjectStorageEndpointE0 {
+							t.Errorf("expected endpoint type %s, got %s", linodego.ObjectStorageEndpointE0, opts.EndpointType)
+						}
+						return defaultLinodegoBucket, nil
+					}).
 					Times(1)
 				// Third call (idempotency): GetObjectStorageBucket returns the bucket
 				mockLinode.EXPECT().
@@ -202,6 +246,163 @@ func TestDriverCreateBucket(t *testing.T) {
 				mockLinode.EXPECT().
 					ListObjectStorageEndpoints(gomock.Any(), gomock.Any()).
 					Return([]linodego.ObjectStorageEndpoint{defaultLinodegoEndpoint}, nil).
+					AnyTimes()
+				return mockLinode
+			},
+		},
+		{
+			testName: "with endpoint type",
+			request: &cosi.DriverCreateBucketRequest{
+				Name: testBucketName,
+				Parameters: map[string]string{
+					provisioner.ParamRegion:       testRegion,
+					provisioner.ParamEndpointType: string(linodego.ObjectStorageEndpointE1),
+				},
+			},
+			expectedResponse: &cosi.DriverCreateBucketResponse{
+				BucketId:   testBucketID,
+				BucketInfo: defaultBucketInfo,
+			},
+			setupMockS3: func(t *testing.T) s3.Client {
+				t.Helper()
+				ctrl := gomock.NewController(t)
+				mockS3 := mock.NewMockS3Client(ctrl)
+				// No S3 calls expected - no policy provided
+				return mockS3
+			},
+			setupMockLinode: func(t *testing.T) linodeclient.Client {
+				t.Helper()
+				ctrl := gomock.NewController(t)
+				mockLinode := mock.NewMockLinodeClient(ctrl)
+				e1Bucket := &linodego.ObjectStorageBucket{
+					Label:        testBucketName,
+					Region:       testRegion,
+					EndpointType: linodego.ObjectStorageEndpointE1,
+				}
+				mockLinode.EXPECT().
+					GetObjectStorageBucket(gomock.Any(), gomock.Eq(testRegion), gomock.Eq(testBucketName)).
+					Return(nil, linodego.Error{Code: http.StatusNotFound}).
+					Times(1)
+				mockLinode.EXPECT().
+					CreateObjectStorageBucket(gomock.Any(), gomock.Any()).
+					DoAndReturn(func(_ context.Context, opts linodego.ObjectStorageBucketCreateOptions) (*linodego.ObjectStorageBucket, error) {
+						if opts.EndpointType != linodego.ObjectStorageEndpointE1 {
+							t.Errorf("expected endpoint type %s, got %s", linodego.ObjectStorageEndpointE1, opts.EndpointType)
+						}
+						return e1Bucket, nil
+					}).
+					Times(1)
+				mockLinode.EXPECT().
+					GetObjectStorageBucket(gomock.Any(), gomock.Eq(testRegion), gomock.Eq(testBucketName)).
+					Return(e1Bucket, nil).
+					Times(1)
+				mockLinode.EXPECT().
+					GetObjectStorageBucketAccess(gomock.Any(), gomock.Eq(testRegion), gomock.Eq(testBucketName)).
+					Return(defaultLinodegoBucketAccess, nil).
+					Times(1)
+				mockLinode.EXPECT().
+					ListObjectStorageEndpoints(gomock.Any(), gomock.Any()).
+					Return([]linodego.ObjectStorageEndpoint{defaultLinodegoEndpoint, defaultLinodegoEndpointE1}, nil).
+					AnyTimes()
+				return mockLinode
+			},
+		},
+		{
+			testName: "with endpoint type preference and CORS skips unsupported endpoint",
+			request: &cosi.DriverCreateBucketRequest{
+				Name: testBucketName,
+				Parameters: map[string]string{
+					provisioner.ParamRegion:                 testRegion,
+					provisioner.ParamCORS:                   string(provisioner.ParamCORSValueEnabled),
+					provisioner.ParamEndpointTypePreference: string(linodego.ObjectStorageEndpointE3) + "," + string(linodego.ObjectStorageEndpointE1),
+				},
+			},
+			expectedResponse: &cosi.DriverCreateBucketResponse{
+				BucketId:   testBucketID,
+				BucketInfo: defaultBucketInfo,
+			},
+			setupMockS3: func(t *testing.T) s3.Client {
+				t.Helper()
+				ctrl := gomock.NewController(t)
+				mockS3 := mock.NewMockS3Client(ctrl)
+				// No S3 calls expected - no policy provided
+				return mockS3
+			},
+			setupMockLinode: func(t *testing.T) linodeclient.Client {
+				t.Helper()
+				ctrl := gomock.NewController(t)
+				mockLinode := mock.NewMockLinodeClient(ctrl)
+				e1Bucket := &linodego.ObjectStorageBucket{
+					Label:        testBucketName,
+					Region:       testRegion,
+					EndpointType: linodego.ObjectStorageEndpointE1,
+				}
+				corsEnabledAccess := &linodego.ObjectStorageBucketAccess{
+					ACL:         linodego.ACLPrivate,
+					CorsEnabled: true,
+				}
+				mockLinode.EXPECT().
+					GetObjectStorageBucket(gomock.Any(), gomock.Eq(testRegion), gomock.Eq(testBucketName)).
+					Return(nil, linodego.Error{Code: http.StatusNotFound}).
+					Times(1)
+				mockLinode.EXPECT().
+					CreateObjectStorageBucket(gomock.Any(), gomock.Any()).
+					DoAndReturn(func(_ context.Context, opts linodego.ObjectStorageBucketCreateOptions) (*linodego.ObjectStorageBucket, error) {
+						if opts.EndpointType != linodego.ObjectStorageEndpointE1 {
+							t.Errorf("expected endpoint type %s, got %s", linodego.ObjectStorageEndpointE1, opts.EndpointType)
+						}
+						if opts.CorsEnabled == nil || !*opts.CorsEnabled {
+							t.Errorf("expected cors_enabled to be true")
+						}
+						return e1Bucket, nil
+					}).
+					Times(1)
+				mockLinode.EXPECT().
+					GetObjectStorageBucket(gomock.Any(), gomock.Eq(testRegion), gomock.Eq(testBucketName)).
+					Return(e1Bucket, nil).
+					Times(1)
+				mockLinode.EXPECT().
+					GetObjectStorageBucketAccess(gomock.Any(), gomock.Eq(testRegion), gomock.Eq(testBucketName)).
+					Return(corsEnabledAccess, nil).
+					Times(1)
+				mockLinode.EXPECT().
+					ListObjectStorageEndpoints(gomock.Any(), gomock.Any()).
+					Return([]linodego.ObjectStorageEndpoint{
+						defaultLinodegoEndpointE3,
+						defaultLinodegoEndpointE1,
+					}, nil).
+					AnyTimes()
+				return mockLinode
+			},
+		},
+		{
+			testName: "with explicit CORS unsupported endpoint type",
+			request: &cosi.DriverCreateBucketRequest{
+				Name: testBucketName,
+				Parameters: map[string]string{
+					provisioner.ParamRegion:       testRegion,
+					provisioner.ParamCORS:         string(provisioner.ParamCORSValueEnabled),
+					provisioner.ParamEndpointType: string(linodego.ObjectStorageEndpointE3),
+				},
+			},
+			expectedError: status.Error(grpccodes.InvalidArgument, "endpoint type E3 does not support CORS"),
+			setupMockS3: func(t *testing.T) s3.Client {
+				t.Helper()
+				ctrl := gomock.NewController(t)
+				mockS3 := mock.NewMockS3Client(ctrl)
+				// No S3 calls expected - endpoint selection fails first
+				return mockS3
+			},
+			setupMockLinode: func(t *testing.T) linodeclient.Client {
+				t.Helper()
+				ctrl := gomock.NewController(t)
+				mockLinode := mock.NewMockLinodeClient(ctrl)
+				mockLinode.EXPECT().
+					ListObjectStorageEndpoints(gomock.Any(), gomock.Any()).
+					Return([]linodego.ObjectStorageEndpoint{
+						defaultLinodegoEndpointE3,
+						defaultLinodegoEndpointE1,
+					}, nil).
 					AnyTimes()
 				return mockLinode
 			},
@@ -708,6 +909,7 @@ func TestDriverGrantBucketAccess(t *testing.T) {
 				t.Helper()
 				ctrl := gomock.NewController(t)
 				mockLinode := mock.NewMockLinodeClient(ctrl)
+				expectGetBucket(t, mockLinode, linodego.ObjectStorageEndpointE0)
 				// Both calls: CreateObjectStorageKey creates the key
 				mockLinode.EXPECT().
 					CreateObjectStorageKey(gomock.Any(), gomock.Any()).
@@ -721,6 +923,171 @@ func TestDriverGrantBucketAccess(t *testing.T) {
 				mockLinode.EXPECT().
 					ListObjectStorageEndpoints(gomock.Any(), gomock.Any()).
 					Return([]linodego.ObjectStorageEndpoint{defaultLinodegoEndpoint}, nil).
+					AnyTimes()
+				return mockLinode
+			},
+		},
+		{
+			testName: "uses bucket endpoint type despite access endpoint type parameter",
+			request: &cosi.DriverGrantBucketAccessRequest{
+				BucketId:           testBucketID,
+				Name:               testBucketAccessName,
+				AuthenticationType: cosi.AuthenticationType_Key,
+				Parameters: map[string]string{
+					provisioner.ParamPermissions:  string(provisioner.ParamPermissionsValueReadOnly),
+					provisioner.ParamEndpointType: string(linodego.ObjectStorageEndpointE1),
+				},
+			},
+			expectedResponse: &cosi.DriverGrantBucketAccessResponse{
+				AccountId:   testBucketAccessID,
+				Credentials: defaultCredentials,
+			},
+			setupMockS3: func(t *testing.T) s3.Client {
+				t.Helper()
+				ctrl := gomock.NewController(t)
+				mockS3 := mock.NewMockS3Client(ctrl)
+				// No S3 calls expected - GrantBucketAccess only uses Linode API
+				return mockS3
+			},
+			setupMockLinode: func(t *testing.T) linodeclient.Client {
+				t.Helper()
+				ctrl := gomock.NewController(t)
+				mockLinode := mock.NewMockLinodeClient(ctrl)
+				expectGetBucket(t, mockLinode, linodego.ObjectStorageEndpointE0)
+				mockLinode.EXPECT().
+					CreateObjectStorageKey(gomock.Any(), gomock.Any()).
+					Return(&linodego.ObjectStorageKey{
+						ID:        0,
+						AccessKey: testAccessKey,
+						SecretKey: testSecretKey,
+					}, nil).
+					Times(2)
+				mockLinode.EXPECT().
+					ListObjectStorageEndpoints(gomock.Any(), gomock.Any()).
+					Return([]linodego.ObjectStorageEndpoint{defaultLinodegoEndpoint, defaultLinodegoEndpointE1}, nil).
+					AnyTimes()
+				return mockLinode
+			},
+		},
+		{
+			testName: "with endpoint type preference fallback",
+			request: &cosi.DriverGrantBucketAccessRequest{
+				BucketId:           testBucketID,
+				Name:               testBucketAccessName,
+				AuthenticationType: cosi.AuthenticationType_Key,
+				Parameters: map[string]string{
+					provisioner.ParamPermissions:            string(provisioner.ParamPermissionsValueReadOnly),
+					provisioner.ParamEndpointTypePreference: string(linodego.ObjectStorageEndpointE3) + "," + string(linodego.ObjectStorageEndpointE1),
+				},
+			},
+			expectedResponse: &cosi.DriverGrantBucketAccessResponse{
+				AccountId:   testBucketAccessID,
+				Credentials: credentialsWithEndpoint(testEndpointE1),
+			},
+			setupMockS3: func(t *testing.T) s3.Client {
+				t.Helper()
+				ctrl := gomock.NewController(t)
+				mockS3 := mock.NewMockS3Client(ctrl)
+				// No S3 calls expected - GrantBucketAccess only uses Linode API
+				return mockS3
+			},
+			setupMockLinode: func(t *testing.T) linodeclient.Client {
+				t.Helper()
+				ctrl := gomock.NewController(t)
+				mockLinode := mock.NewMockLinodeClient(ctrl)
+				expectGetBucket(t, mockLinode, linodego.ObjectStorageEndpointE1)
+				mockLinode.EXPECT().
+					CreateObjectStorageKey(gomock.Any(), gomock.Any()).
+					Return(&linodego.ObjectStorageKey{
+						ID:        0,
+						AccessKey: testAccessKey,
+						SecretKey: testSecretKey,
+					}, nil).
+					Times(2)
+				mockLinode.EXPECT().
+					ListObjectStorageEndpoints(gomock.Any(), gomock.Any()).
+					Return([]linodego.ObjectStorageEndpoint{defaultLinodegoEndpoint, defaultLinodegoEndpointE1}, nil).
+					AnyTimes()
+				return mockLinode
+			},
+		},
+		{
+			testName: "uses bucket endpoint type despite unavailable access preference",
+			request: &cosi.DriverGrantBucketAccessRequest{
+				BucketId:           testBucketID,
+				Name:               testBucketAccessName,
+				AuthenticationType: cosi.AuthenticationType_Key,
+				Parameters: map[string]string{
+					provisioner.ParamPermissions:            string(provisioner.ParamPermissionsValueReadOnly),
+					provisioner.ParamEndpointTypePreference: string(linodego.ObjectStorageEndpointE3),
+				},
+			},
+			expectedResponse: &cosi.DriverGrantBucketAccessResponse{
+				AccountId:   testBucketAccessID,
+				Credentials: defaultCredentials,
+			},
+			setupMockS3: func(t *testing.T) s3.Client {
+				t.Helper()
+				ctrl := gomock.NewController(t)
+				mockS3 := mock.NewMockS3Client(ctrl)
+				// No S3 calls expected - endpoint selection fails first
+				return mockS3
+			},
+			setupMockLinode: func(t *testing.T) linodeclient.Client {
+				t.Helper()
+				ctrl := gomock.NewController(t)
+				mockLinode := mock.NewMockLinodeClient(ctrl)
+				expectGetBucket(t, mockLinode, linodego.ObjectStorageEndpointE0)
+				mockLinode.EXPECT().
+					CreateObjectStorageKey(gomock.Any(), gomock.Any()).
+					Return(&linodego.ObjectStorageKey{
+						ID:        0,
+						AccessKey: testAccessKey,
+						SecretKey: testSecretKey,
+					}, nil).
+					Times(2)
+				mockLinode.EXPECT().
+					ListObjectStorageEndpoints(gomock.Any(), gomock.Any()).
+					Return([]linodego.ObjectStorageEndpoint{defaultLinodegoEndpoint, defaultLinodegoEndpointE3}, nil).
+					AnyTimes()
+				return mockLinode
+			},
+		},
+		{
+			testName: "default endpoint type from endpoints list",
+			request: &cosi.DriverGrantBucketAccessRequest{
+				BucketId:           testBucketID,
+				Name:               testBucketAccessName,
+				AuthenticationType: cosi.AuthenticationType_Key,
+				Parameters:         defaultBucketAccessParameters,
+			},
+			expectedResponse: &cosi.DriverGrantBucketAccessResponse{
+				AccountId:   testBucketAccessID,
+				Credentials: credentialsWithEndpoint(testEndpointE1),
+			},
+			setupMockS3: func(t *testing.T) s3.Client {
+				t.Helper()
+				ctrl := gomock.NewController(t)
+				mockS3 := mock.NewMockS3Client(ctrl)
+				// No S3 calls expected - GrantBucketAccess only uses Linode API
+				return mockS3
+			},
+			setupMockLinode: func(t *testing.T) linodeclient.Client {
+				t.Helper()
+				ctrl := gomock.NewController(t)
+				mockLinode := mock.NewMockLinodeClient(ctrl)
+				expectGetBucket(t, mockLinode, linodego.ObjectStorageEndpointE1)
+				mockLinode.EXPECT().
+					CreateObjectStorageKey(gomock.Any(), gomock.Any()).
+					Return(&linodego.ObjectStorageKey{
+						ID:        0,
+						AccessKey: testAccessKey,
+						SecretKey: testSecretKey,
+					}, nil).
+					Times(2)
+				mockLinode.EXPECT().
+					ListObjectStorageEndpoints(gomock.Any(), gomock.Any()).
+					Return([]linodego.ObjectStorageEndpoint{defaultLinodegoEndpointE1}, nil).
 					AnyTimes()
 				return mockLinode
 			},
