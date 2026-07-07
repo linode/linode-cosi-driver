@@ -161,6 +161,9 @@ func (s *Server) DriverCreateBucket(ctx context.Context, req *cosi.DriverCreateB
 	endpointType, err := s.selectEndpointType(ctx, region, req.GetParameters())
 	if err != nil {
 		log.ErrorContext(ctx, "Failed to select endpoint", "error", err)
+		if _, ok := status.FromError(err); ok {
+			return nil, err
+		}
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 	if endpointType != "" {
