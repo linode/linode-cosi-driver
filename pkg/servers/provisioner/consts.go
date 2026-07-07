@@ -16,9 +16,7 @@ package provisioner
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
-	"strings"
 
 	"github.com/linode/linodego"
 )
@@ -70,59 +68,6 @@ const (
 	ParamPermissionsValueReadOnly  ParamPermissionsValue = "read_only"
 	ParamPermissionsValueReadWrite ParamPermissionsValue = "read_write"
 )
-
-func parseEndpointType(params map[string]string) (linodego.ObjectStorageEndpointType, error) {
-	endpointType := linodego.ObjectStorageEndpointType(params[ParamEndpointType])
-	if endpointType == "" {
-		return "", nil
-	}
-
-	switch endpointType {
-	case linodego.ObjectStorageEndpointE0,
-		linodego.ObjectStorageEndpointE1,
-		linodego.ObjectStorageEndpointE2,
-		linodego.ObjectStorageEndpointE3:
-		return endpointType, nil
-	default:
-		return "", fmt.Errorf("%w: %s", ErrUnknownEndpointType, endpointType)
-	}
-}
-
-func parseEndpointTypePreference(params map[string]string) ([]linodego.ObjectStorageEndpointType, error) {
-	if endpointType, err := parseEndpointType(params); err != nil || endpointType != "" {
-		return []linodego.ObjectStorageEndpointType{endpointType}, err
-	}
-
-	value := strings.TrimSpace(params[ParamEndpointTypePreference])
-	if value == "" {
-		return nil, nil
-	}
-
-	parts := strings.Split(value, ",")
-	preferences := make([]linodego.ObjectStorageEndpointType, 0, len(parts))
-	for _, part := range parts {
-		endpointType := linodego.ObjectStorageEndpointType(strings.TrimSpace(part))
-		if endpointType == "" {
-			continue
-		}
-
-		switch endpointType {
-		case linodego.ObjectStorageEndpointE0,
-			linodego.ObjectStorageEndpointE1,
-			linodego.ObjectStorageEndpointE2,
-			linodego.ObjectStorageEndpointE3:
-			preferences = append(preferences, endpointType)
-		default:
-			return nil, fmt.Errorf("%w: %s", ErrUnknownEndpointType, endpointType)
-		}
-	}
-
-	if len(preferences) == 0 {
-		return nil, nil
-	}
-
-	return preferences, nil
-}
 
 const (
 	S3                      = "s3"
