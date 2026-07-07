@@ -21,7 +21,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/linode/linodego"
+	"github.com/linode/linodego/v2"
 	"go.uber.org/mock/gomock"
 
 	"github.com/linode/linode-cosi-driver/testing/mock"

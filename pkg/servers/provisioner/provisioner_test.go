@@ -23,7 +23,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/linode/linodego"
+	"github.com/linode/linodego/v2"
 	"go.uber.org/mock/gomock"
 	grpccodes "google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -87,7 +87,7 @@ var (
 	}
 	defaultLinodegoBucketAccess = &linodego.ObjectStorageBucketAccess{
 		ACL:         linodego.ACLPrivate,
-		CorsEnabled: provisioner.ParamCORSValueDisabled.Bool(),
+		CorsEnabled: provisioner.ParamCORSValueDisabled.BoolP(),
 	}
 
 	defaultBucketParameters = map[string]string{
@@ -363,7 +363,7 @@ func TestDriverCreateBucket(t *testing.T) {
 				}
 				corsEnabledAccess := &linodego.ObjectStorageBucketAccess{
 					ACL:         linodego.ACLPrivate,
-					CorsEnabled: true,
+					CorsEnabled: provisioner.ParamCORSValueEnabled.BoolP(),
 				}
 				corsEnabled := true
 				mockLinode.EXPECT().

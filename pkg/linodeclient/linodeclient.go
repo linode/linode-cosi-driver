@@ -20,7 +20,7 @@ import (
 	"log/slog"
 
 	"github.com/google/uuid"
-	"github.com/linode/linodego"
+	"github.com/linode/linodego/v2"
 )
 
 // Client defines a subset of all Linode Client methods required by COSI.

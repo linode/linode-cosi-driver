@@ -13,7 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
-	linodego "github.com/linode/linodego"
+	linodego "github.com/linode/linodego/v2"
 	gomock "go.uber.org/mock/gomock"
 )
 
