@@ -311,7 +311,7 @@ func (s *Server) selectEndpointType(
 
 	endpoints, err := s.client.ListObjectStorageEndpoints(ctx, nil)
 	if err != nil {
-		return "", fmt.Errorf("list object storage endpoints: %w", err)
+		return "", status.Error(codes.Internal, fmt.Sprintf("failed to list object storage endpoints: %v", err))
 	}
 
 	endpoint, ok := selectEndpoint(endpoints, region, endpointTypes, params)
