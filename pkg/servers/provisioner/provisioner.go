@@ -72,6 +72,16 @@ func (s *Server) s3ClientForBucket(ctx context.Context, region, label string) (s
 		return s.s3cli, func(context.Context) error { return nil }, nil
 	}
 
+	bucket, err := s.client.GetObjectStorageBucket(ctx, region, label)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get bucket for S3 client: %w", err)
+	}
+
+	endpoint, err := s.endpointForBucket(ctx, region, bucket)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to resolve bucket endpoint for S3 client: %w", err)
+	}
+
 	keyLabel := fmt.Sprintf("cosi-bucket-%s", uuid.NewString())
 	opts := linodego.ObjectStorageKeyCreateOptions{
 		Label: keyLabel,
@@ -93,20 +103,28 @@ func (s *Server) s3ClientForBucket(ctx context.Context, region, label string) (s
 		return s.client.DeleteObjectStorageKey(cctx, key.ID)
 	}
 
-	return s3.New(s.cache, key.AccessKey, key.SecretKey, s.s3SSL), cleanup, nil
+	return s3.NewWithEndpoint(endpoint, key.AccessKey, key.SecretKey, s.s3SSL), cleanup, nil
 }
 
-func (s *Server) s3ClientForPolicy(ctx context.Context, region string) (s3.Client, func(context.Context) error, error) {
+func (s *Server) s3ClientForPolicy(
+	ctx context.Context,
+	bucket *linodego.ObjectStorageBucket,
+) (s3.Client, func(context.Context) error, error) {
 	if s.s3cli != nil {
 		return s.s3cli, func(context.Context) error { return nil }, nil
 	}
 
-	key, cleanup, err := linodeclient.NewEphemeralS3Credentials(ctx, s.logAttr(), s.client, region)
+	endpoint, err := s.endpointForBucket(ctx, bucket.Region, bucket)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to resolve bucket endpoint for policy updates: %w", err)
+	}
+
+	key, cleanup, err := linodeclient.NewEphemeralS3Credentials(ctx, s.logAttr(), s.client, bucket.Region)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create object storage key for policy updates: %w", err)
 	}
 
-	return s3.New(s.cache, key.AccessKey, key.SecretKey, s.s3SSL), cleanup, nil
+	return s3.NewWithEndpoint(endpoint, key.AccessKey, key.SecretKey, s.s3SSL), cleanup, nil
 }
 
 func (s *Server) logAttr(attr ...slog.Attr) *slog.Logger {
@@ -230,11 +248,14 @@ func (s *Server) createBucketAndApplyPolicy(
 	}
 
 	log.InfoContext(ctx, "Bucket created")
+	if endpointType != "" && bucket.EndpointType == "" {
+		bucket.EndpointType = endpointType
+	}
 
 	if policy != "" {
 		log.InfoContext(ctx, "Updating policy")
 
-		if err := s.applyBucketPolicy(ctx, log, region, bucket.Label, policy); err != nil {
+		if err := s.applyBucketPolicy(ctx, log, bucket, policy); err != nil {
 			log.ErrorContext(ctx, "Failed to set bucket policy", "error", err)
 			return nil, status.Error(codes.Internal, fmt.Sprintf("failed to set bucket policy: %v", err))
 		}
@@ -277,7 +298,7 @@ func (s *Server) ensureExistingBucket(
 	// Comparing policies is expensive and hard. If every other parameter is equal,
 	// we assume that bucket is valid, and apply policy only when one was provided.
 	if policy != "" {
-		if err := s.applyBucketPolicy(ctx, log, region, label, policy); err != nil {
+		if err := s.applyBucketPolicy(ctx, log, bucket, policy); err != nil {
 			log.ErrorContext(ctx, "Failed to set bucket policy", "error", err)
 			return nil, status.Error(codes.Internal, fmt.Sprintf("failed to set bucket policy: %v", err))
 		}
@@ -465,18 +486,23 @@ func endpointTypeSupportsCORS(endpointType linodego.ObjectStorageEndpointType) b
 		endpointType != linodego.ObjectStorageEndpointE3
 }
 
-func (s *Server) applyBucketPolicy(ctx context.Context, log *slog.Logger, region, label, policy string) error {
+func (s *Server) applyBucketPolicy(
+	ctx context.Context,
+	log *slog.Logger,
+	bucket *linodego.ObjectStorageBucket,
+	policy string,
+) error {
 	if policy == "" {
 		return nil
 	}
 
-	s3cli, cleanup, err := s.s3ClientForPolicy(ctx, region)
+	s3cli, cleanup, err := s.s3ClientForPolicy(ctx, bucket)
 	if err != nil {
 		return err
 	}
 	defer cleanupWithTimeout(ctx, log, cleanup)
 
-	return s3cli.SetBucketPolicy(ctx, region, label, policy)
+	return s3cli.SetBucketPolicy(ctx, bucket.Region, bucket.Label, policy)
 }
 
 // DriverDeleteBucket call is made to delete the bucket in the backend.

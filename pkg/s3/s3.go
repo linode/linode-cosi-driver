@@ -34,6 +34,7 @@ type Client interface {
 
 type ClientS3 struct {
 	cache       cache.Cache
+	endpoint    string
 	s3AccessKey string
 	s3SecretKey string
 	s3SSL       bool
@@ -54,10 +55,29 @@ func New(
 	}
 }
 
+func NewWithEndpoint(
+	endpoint string,
+	s3AccessKey, s3SecretKey string,
+	s3SSL bool,
+) *ClientS3 {
+	return &ClientS3{
+		endpoint:    endpoint,
+		s3AccessKey: s3AccessKey,
+		s3SecretKey: s3SecretKey,
+		s3SSL:       s3SSL,
+	}
+}
+
 func (c *ClientS3) new(region string) (*minio.Client, error) {
-	endpoint, ok := c.cache.Get(region)
-	if !ok || endpoint == "" {
-		return nil, fmt.Errorf("failed to get endpoint for region: %s", region)
+	endpoint := c.endpoint
+	if endpoint == "" {
+		var ok bool
+		if c.cache != nil {
+			endpoint, ok = c.cache.Get(region)
+		}
+		if !ok || endpoint == "" {
+			return nil, fmt.Errorf("failed to get endpoint for region: %s", region)
+		}
 	}
 
 	cli, err := minio.New(endpoint, &minio.Options{
