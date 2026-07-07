@@ -421,6 +421,10 @@ func (s *Server) endpointForBucket(ctx context.Context, region string, bucket *l
 		return bucket.S3Endpoint, nil
 	}
 
+	if endpoint, ok := s.cache.Get(cache.Key(region, bucket.EndpointType)); ok && endpoint != "" {
+		return endpoint, nil
+	}
+
 	endpoint, err := s.endpointForType(ctx, region, bucket.EndpointType)
 	if err != nil {
 		return "", err
