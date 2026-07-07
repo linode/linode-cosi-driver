@@ -562,7 +562,7 @@ func (s *Server) DriverGrantBucketAccess(ctx context.Context, req *cosi.DriverGr
 	endpoint, err := s.endpointForBucket(ctx, region, bucket)
 	if err != nil {
 		log.ErrorContext(ctx, "Failed to select endpoint", "error", err)
-		return nil, status.Error(codes.InvalidArgument, err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 	log = log.With(slog.String(KeyBucketEndpointType, string(bucket.EndpointType)))
 
