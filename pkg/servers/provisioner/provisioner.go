@@ -320,6 +320,9 @@ func (s *Server) selectEndpointType(
 	}
 
 	if len(endpointTypes) > 0 {
+		if params[ParamEndpointType] != "" {
+			return "", fmt.Errorf("object storage endpoint type %s is not available for region: %s", endpointTypes[0], region)
+		}
 		return "", fmt.Errorf("no preferred object storage endpoint type is available for region: %s", region)
 	}
 
