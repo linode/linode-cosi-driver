@@ -23,6 +23,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/linode/linodego"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	cosi "sigs.k8s.io/container-object-storage-interface-spec"
@@ -74,7 +75,7 @@ func TestHappyPath(t *testing.T) {
 		return
 	}
 
-	region, err := resolveTestRegion(t.Context(), client, "")
+	region, err := resolveTestRegion(t.Context(), client, "", true)
 	if err != nil {
 		t.Errorf("failed to resolve test region: %v", err)
 		return
@@ -125,7 +126,7 @@ func TestBucketScopedKeyIsolation(t *testing.T) {
 		return
 	}
 
-	region, err = resolveTestRegion(t.Context(), client, region)
+	region, err = resolveTestRegion(t.Context(), client, region, false)
 	if err != nil {
 		t.Errorf("failed to resolve test region: %v", err)
 		return
@@ -155,7 +156,6 @@ func TestBucketScopedKeyIsolation(t *testing.T) {
 			Parameters: map[string]string{
 				provisioner.ParamRegion: region,
 				provisioner.ParamACL:    "private",
-				provisioner.ParamCORS:   string(provisioner.ParamCORSValueEnabled),
 			},
 		}
 		if _, err := srv.DriverCreateBucket(ctx, req); err != nil {
@@ -200,14 +200,13 @@ func TestBucketScopedKeyIsolation(t *testing.T) {
 		}
 	}()
 
-	endpoint, ok := testCache.Get(region)
-	if !ok || endpoint == "" {
-		t.Fatalf("failed to get endpoint for region: %s", region)
-	}
-
 	creds := grantRes.GetCredentials()[provisioner.S3]
 	if creds == nil {
 		t.Fatalf("missing s3 credentials in response")
+	}
+	endpoint := creds.Secrets[provisioner.S3Endpoint]
+	if endpoint == "" {
+		t.Fatalf("missing endpoint in response")
 	}
 	accessKey := creds.Secrets[provisioner.S3SecretAccessKeyID]
 	secretKey := creds.Secrets[provisioner.S3SecretAccessSecretKey]
@@ -246,8 +245,8 @@ func listObjectsErr(ctx context.Context, cli *minio.Client, bucket string) error
 	return nil
 }
 
-func resolveTestRegion(ctx context.Context, client linodeclient.Client, requested string) (string, error) {
-	if requested != "" {
+func resolveTestRegion(ctx context.Context, client linodeclient.Client, requested string, requireCORS bool) (string, error) {
+	if requested != "" && !requireCORS {
 		return requested, nil
 	}
 
@@ -256,13 +255,48 @@ func resolveTestRegion(ctx context.Context, client linodeclient.Client, requeste
 		return "", fmt.Errorf("list object storage endpoints: %w", err)
 	}
 
-	for _, endpoint := range endpoints {
-		if endpoint.Region != "" && endpoint.S3Endpoint != nil && *endpoint.S3Endpoint != "" {
-			return endpoint.Region, nil
+	if requested != "" {
+		if hasCORSEndpoint(endpoints, requested) {
+			return requested, nil
 		}
+
+		return "", fmt.Errorf("requested region %s does not have an object storage endpoint that supports CORS", requested)
+	}
+
+	for _, endpoint := range endpoints {
+		if endpoint.Region == "" || endpoint.S3Endpoint == nil || *endpoint.S3Endpoint == "" {
+			continue
+		}
+		if requireCORS && !endpointTypeSupportsCORS(endpoint.EndpointType) {
+			continue
+		}
+
+		return endpoint.Region, nil
+	}
+
+	if requireCORS {
+		return "", fmt.Errorf("no object storage endpoint with CORS support available")
 	}
 
 	return "", fmt.Errorf("no object storage endpoint with region and S3 endpoint available")
+}
+
+func hasCORSEndpoint(endpoints []linodego.ObjectStorageEndpoint, region string) bool {
+	for _, endpoint := range endpoints {
+		if endpoint.Region == region &&
+			endpoint.S3Endpoint != nil &&
+			*endpoint.S3Endpoint != "" &&
+			endpointTypeSupportsCORS(endpoint.EndpointType) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func endpointTypeSupportsCORS(endpointType linodego.ObjectStorageEndpointType) bool {
+	return endpointType != linodego.ObjectStorageEndpointE2 &&
+		endpointType != linodego.ObjectStorageEndpointE3
 }
 
 type suite struct {
