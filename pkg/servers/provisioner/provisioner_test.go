@@ -161,6 +161,46 @@ func expectGetBucket(t *testing.T, mockLinode *mock.MockLinodeClient, endpointTy
 		Times(2)
 }
 
+func expectCreateBucket(
+	t *testing.T,
+	mockLinode *mock.MockLinodeClient,
+	endpointType linodego.ObjectStorageEndpointType,
+	corsEnabled *bool,
+	bucket *linodego.ObjectStorageBucket,
+) {
+	t.Helper()
+
+	mockLinode.EXPECT().
+		CreateObjectStorageBucket(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, opts linodego.ObjectStorageBucketCreateOptions) (*linodego.ObjectStorageBucket, error) {
+			assertCreateBucketOptions(t, opts, endpointType, corsEnabled)
+			return bucket, nil
+		}).
+		Times(1)
+}
+
+func assertCreateBucketOptions(
+	t *testing.T,
+	opts linodego.ObjectStorageBucketCreateOptions,
+	endpointType linodego.ObjectStorageEndpointType,
+	corsEnabled *bool,
+) {
+	t.Helper()
+
+	if opts.EndpointType != endpointType {
+		t.Errorf("expected endpoint type %s, got %s", endpointType, opts.EndpointType)
+	}
+	if corsEnabled == nil {
+		if opts.CorsEnabled != nil {
+			t.Errorf("expected cors_enabled to be omitted")
+		}
+		return
+	}
+	if opts.CorsEnabled == nil || *opts.CorsEnabled != *corsEnabled {
+		t.Errorf("expected cors_enabled to be %t", *corsEnabled)
+	}
+}
+
 func TestDriverCreateBucket(t *testing.T) {
 	t.Parallel()
 
@@ -223,15 +263,7 @@ func TestDriverCreateBucket(t *testing.T) {
 					Return(nil, linodego.Error{Code: http.StatusNotFound}).
 					Times(1)
 				// Second call: CreateObjectStorageBucket creates the bucket
-				mockLinode.EXPECT().
-					CreateObjectStorageBucket(gomock.Any(), gomock.Any()).
-					DoAndReturn(func(_ context.Context, opts linodego.ObjectStorageBucketCreateOptions) (*linodego.ObjectStorageBucket, error) {
-						if opts.EndpointType != linodego.ObjectStorageEndpointE0 {
-							t.Errorf("expected endpoint type %s, got %s", linodego.ObjectStorageEndpointE0, opts.EndpointType)
-						}
-						return defaultLinodegoBucket, nil
-					}).
-					Times(1)
+				expectCreateBucket(t, mockLinode, "", nil, defaultLinodegoBucket)
 				// Third call (idempotency): GetObjectStorageBucket returns the bucket
 				mockLinode.EXPECT().
 					GetObjectStorageBucket(gomock.Any(), gomock.Eq(testRegion), gomock.Eq(testBucketName)).
@@ -283,15 +315,7 @@ func TestDriverCreateBucket(t *testing.T) {
 					GetObjectStorageBucket(gomock.Any(), gomock.Eq(testRegion), gomock.Eq(testBucketName)).
 					Return(nil, linodego.Error{Code: http.StatusNotFound}).
 					Times(1)
-				mockLinode.EXPECT().
-					CreateObjectStorageBucket(gomock.Any(), gomock.Any()).
-					DoAndReturn(func(_ context.Context, opts linodego.ObjectStorageBucketCreateOptions) (*linodego.ObjectStorageBucket, error) {
-						if opts.EndpointType != linodego.ObjectStorageEndpointE1 {
-							t.Errorf("expected endpoint type %s, got %s", linodego.ObjectStorageEndpointE1, opts.EndpointType)
-						}
-						return e1Bucket, nil
-					}).
-					Times(1)
+				expectCreateBucket(t, mockLinode, linodego.ObjectStorageEndpointE1, nil, e1Bucket)
 				mockLinode.EXPECT().
 					GetObjectStorageBucket(gomock.Any(), gomock.Eq(testRegion), gomock.Eq(testBucketName)).
 					Return(e1Bucket, nil).
@@ -341,22 +365,12 @@ func TestDriverCreateBucket(t *testing.T) {
 					ACL:         linodego.ACLPrivate,
 					CorsEnabled: true,
 				}
+				corsEnabled := true
 				mockLinode.EXPECT().
 					GetObjectStorageBucket(gomock.Any(), gomock.Eq(testRegion), gomock.Eq(testBucketName)).
 					Return(nil, linodego.Error{Code: http.StatusNotFound}).
 					Times(1)
-				mockLinode.EXPECT().
-					CreateObjectStorageBucket(gomock.Any(), gomock.Any()).
-					DoAndReturn(func(_ context.Context, opts linodego.ObjectStorageBucketCreateOptions) (*linodego.ObjectStorageBucket, error) {
-						if opts.EndpointType != linodego.ObjectStorageEndpointE1 {
-							t.Errorf("expected endpoint type %s, got %s", linodego.ObjectStorageEndpointE1, opts.EndpointType)
-						}
-						if opts.CorsEnabled == nil || !*opts.CorsEnabled {
-							t.Errorf("expected cors_enabled to be true")
-						}
-						return e1Bucket, nil
-					}).
-					Times(1)
+				expectCreateBucket(t, mockLinode, linodego.ObjectStorageEndpointE1, &corsEnabled, e1Bucket)
 				mockLinode.EXPECT().
 					GetObjectStorageBucket(gomock.Any(), gomock.Eq(testRegion), gomock.Eq(testBucketName)).
 					Return(e1Bucket, nil).

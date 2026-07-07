@@ -158,12 +158,14 @@ func (s *Server) DriverCreateBucket(ctx context.Context, req *cosi.DriverCreateB
 		return nil, status.Error(codes.InvalidArgument, "region was not provided")
 	}
 
-	endpoint, err := s.selectEndpoint(ctx, region, req.GetParameters())
+	endpointType, err := s.selectEndpointType(ctx, region, req.GetParameters())
 	if err != nil {
 		log.ErrorContext(ctx, "Failed to select endpoint", "error", err)
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
-	log = log.With(slog.String(KeyBucketEndpointType, string(endpoint.EndpointType)))
+	if endpointType != "" {
+		log = log.With(slog.String(KeyBucketEndpointType, string(endpointType)))
+	}
 
 	policy, err := s.buildBucketPolicy(policyTemplate, label)
 	if err != nil {
@@ -179,11 +181,11 @@ func (s *Server) DriverCreateBucket(ctx context.Context, req *cosi.DriverCreateB
 
 	if bucket == nil {
 		// Create the bucket if it doesn't exist, then apply policy if provided.
-		return s.createBucketAndApplyPolicy(ctx, log, region, label, endpoint.EndpointType, acl, cors, policy)
+		return s.createBucketAndApplyPolicy(ctx, log, region, label, endpointType, acl, cors, policy)
 	}
 
 	// Bucket exists: validate parameters and re-apply policy for idempotency.
-	return s.ensureExistingBucket(ctx, log, bucket, region, label, endpoint.EndpointType, acl, cors, policy)
+	return s.ensureExistingBucket(ctx, log, bucket, region, label, endpointType, acl, cors, policy)
 }
 
 func (s *Server) buildBucketPolicy(policyTemplate, label string) (string, error) {
@@ -205,11 +207,15 @@ func (s *Server) createBucketAndApplyPolicy(
 	policy string,
 ) (*cosi.DriverCreateBucketResponse, error) {
 	opts := linodego.ObjectStorageBucketCreateOptions{
-		Region:       region,
-		Label:        label,
-		EndpointType: endpointType,
-		ACL:          acl,
-		CorsEnabled:  cors.BoolP(),
+		Region: region,
+		Label:  label,
+		ACL:    acl,
+	}
+	if endpointType != "" {
+		opts.EndpointType = endpointType
+	}
+	if cors.Bool() {
+		opts.CorsEnabled = cors.BoolP()
 	}
 
 	log.InfoContext(ctx, "Creating bucket")
@@ -253,7 +259,7 @@ func (s *Server) ensureExistingBucket(
 		return nil, status.Error(codes.Internal, fmt.Sprintf("failed to check bucket access: %v", err))
 	}
 
-	if bucket.EndpointType != endpointType ||
+	if (endpointType != "" && bucket.EndpointType != endpointType) ||
 		access.ACL != acl ||
 		access.CorsEnabled != cors.Bool() {
 		log.ErrorContext(ctx, "Bucket with different parameters already exists",
@@ -282,58 +288,102 @@ func (s *Server) ensureExistingBucket(
 	}, status.Error(codes.OK, "bucket exists")
 }
 
-func (s *Server) selectEndpoint(
+func (s *Server) selectEndpointType(
 	ctx context.Context,
 	region string,
 	params map[string]string,
-) (linodego.ObjectStorageEndpoint, error) {
+) (linodego.ObjectStorageEndpointType, error) {
 	endpointTypes, err := parseEndpointTypePreference(params)
 	if err != nil {
-		return linodego.ObjectStorageEndpoint{}, err
+		return "", err
 	}
 
-	if endpointType := linodego.ObjectStorageEndpointType(params[ParamEndpointType]); endpointType != "" &&
-		!endpointTypeSupportsCORS(endpointType) &&
-		ParamCORSValue(params[ParamCORS]).Bool() {
-		return linodego.ObjectStorageEndpoint{}, fmt.Errorf("endpoint type %s does not support CORS", endpointType)
+	if err := validateExplicitEndpointTypeParams(params); err != nil {
+		return "", err
+	}
+
+	if len(endpointTypes) == 0 && !corsEnabled(params) {
+		return "", nil
 	}
 
 	endpoints, err := s.client.ListObjectStorageEndpoints(ctx, nil)
 	if err != nil {
-		return linodego.ObjectStorageEndpoint{}, fmt.Errorf("list object storage endpoints: %w", err)
+		return "", fmt.Errorf("list object storage endpoints: %w", err)
+	}
+
+	endpoint, ok := selectEndpoint(endpoints, region, endpointTypes, params)
+	if ok {
+		return endpoint.EndpointType, nil
 	}
 
 	if len(endpointTypes) > 0 {
-		for _, endpointType := range endpointTypes {
-			for _, endpoint := range endpoints {
-				if endpoint.Region != region ||
-					endpoint.S3Endpoint == nil ||
-					*endpoint.S3Endpoint == "" ||
-					!endpointSupportsParams(endpoint, params) {
-					continue
-				}
-
-				if endpoint.EndpointType == endpointType {
-					return endpoint, nil
-				}
-			}
-		}
-
-		return linodego.ObjectStorageEndpoint{}, fmt.Errorf("no preferred object storage endpoint type is available for region: %s", region)
+		return "", fmt.Errorf("no preferred object storage endpoint type is available for region: %s", region)
 	}
 
+	return "", fmt.Errorf("no object storage endpoint available for region: %s", region)
+}
+
+func selectEndpoint(
+	endpoints []linodego.ObjectStorageEndpoint,
+	region string,
+	endpointTypes []linodego.ObjectStorageEndpointType,
+	params map[string]string,
+) (linodego.ObjectStorageEndpoint, bool) {
+	if len(endpointTypes) == 0 {
+		return firstMatchingEndpoint(endpoints, region, params)
+	}
+
+	return firstPreferredEndpoint(endpoints, region, endpointTypes, params)
+}
+
+func firstPreferredEndpoint(
+	endpoints []linodego.ObjectStorageEndpoint,
+	region string,
+	endpointTypes []linodego.ObjectStorageEndpointType,
+	params map[string]string,
+) (linodego.ObjectStorageEndpoint, bool) {
+	for _, endpointType := range endpointTypes {
+		endpoint, ok := firstMatchingEndpointByType(endpoints, region, endpointType, params)
+		if ok {
+			return endpoint, true
+		}
+	}
+
+	return linodego.ObjectStorageEndpoint{}, false
+}
+
+func firstMatchingEndpointByType(
+	endpoints []linodego.ObjectStorageEndpoint,
+	region string,
+	endpointType linodego.ObjectStorageEndpointType,
+	params map[string]string,
+) (linodego.ObjectStorageEndpoint, bool) {
 	for _, endpoint := range endpoints {
-		if endpoint.Region != region ||
-			endpoint.S3Endpoint == nil ||
-			*endpoint.S3Endpoint == "" ||
-			!endpointSupportsParams(endpoint, params) {
+		if endpoint.EndpointType != endpointType ||
+			!endpointMatchesParams(endpoint, region, params) {
 			continue
 		}
 
-		return endpoint, nil
+		return endpoint, true
 	}
 
-	return linodego.ObjectStorageEndpoint{}, fmt.Errorf("no object storage endpoint available for region: %s", region)
+	return linodego.ObjectStorageEndpoint{}, false
+}
+
+func firstMatchingEndpoint(
+	endpoints []linodego.ObjectStorageEndpoint,
+	region string,
+	params map[string]string,
+) (linodego.ObjectStorageEndpoint, bool) {
+	for _, endpoint := range endpoints {
+		if !endpointMatchesParams(endpoint, region, params) {
+			continue
+		}
+
+		return endpoint, true
+	}
+
+	return linodego.ObjectStorageEndpoint{}, false
 }
 
 func (s *Server) endpointForType(
@@ -360,12 +410,44 @@ func (s *Server) endpointForType(
 	return linodego.ObjectStorageEndpoint{}, fmt.Errorf("object storage endpoint type %s is not available for region: %s", endpointType, region)
 }
 
-func endpointSupportsParams(endpoint linodego.ObjectStorageEndpoint, params map[string]string) bool {
-	if ParamCORSValue(params[ParamCORS]).Bool() && !endpointTypeSupportsCORS(endpoint.EndpointType) {
+func (s *Server) endpointForBucket(ctx context.Context, region string, bucket *linodego.ObjectStorageBucket) (string, error) {
+	if bucket.S3Endpoint != "" {
+		return bucket.S3Endpoint, nil
+	}
+
+	endpoint, err := s.endpointForType(ctx, region, bucket.EndpointType)
+	if err != nil {
+		return "", err
+	}
+
+	return *endpoint.S3Endpoint, nil
+}
+
+func endpointMatchesParams(endpoint linodego.ObjectStorageEndpoint, region string, params map[string]string) bool {
+	if endpoint.Region != region ||
+		endpoint.S3Endpoint == nil ||
+		*endpoint.S3Endpoint == "" {
+		return false
+	}
+
+	if corsEnabled(params) && !endpointTypeSupportsCORS(endpoint.EndpointType) {
 		return false
 	}
 
 	return true
+}
+
+func validateExplicitEndpointTypeParams(params map[string]string) error {
+	endpointType := linodego.ObjectStorageEndpointType(params[ParamEndpointType])
+	if endpointType == "" || endpointTypeSupportsCORS(endpointType) || !corsEnabled(params) {
+		return nil
+	}
+
+	return fmt.Errorf("endpoint type %s does not support CORS", endpointType)
+}
+
+func corsEnabled(params map[string]string) bool {
+	return ParamCORSValue(params[ParamCORS]).Bool()
 }
 
 func endpointTypeSupportsCORS(endpointType linodego.ObjectStorageEndpointType) bool {
@@ -471,12 +553,12 @@ func (s *Server) DriverGrantBucketAccess(ctx context.Context, req *cosi.DriverGr
 		return nil, status.Error(codes.Internal, fmt.Sprintf("failed to get bucket: %v", err))
 	}
 
-	endpoint, err := s.endpointForType(ctx, region, bucket.EndpointType)
+	endpoint, err := s.endpointForBucket(ctx, region, bucket)
 	if err != nil {
 		log.ErrorContext(ctx, "Failed to select endpoint", "error", err)
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
-	log = log.With(slog.String(KeyBucketEndpointType, string(endpoint.EndpointType)))
+	log = log.With(slog.String(KeyBucketEndpointType, string(bucket.EndpointType)))
 
 	opts := linodego.ObjectStorageKeyCreateOptions{
 		Label: name,
@@ -501,7 +583,7 @@ func (s *Server) DriverGrantBucketAccess(ctx context.Context, req *cosi.DriverGr
 
 	return &cosi.DriverGrantBucketAccessResponse{
 		AccountId:   fmt.Sprintf("%d", key.ID),
-		Credentials: credentials(region, *endpoint.S3Endpoint, label, key.AccessKey, key.SecretKey),
+		Credentials: credentials(region, endpoint, label, key.AccessKey, key.SecretKey),
 	}, status.Error(codes.OK, "bucket access granted")
 }
 
