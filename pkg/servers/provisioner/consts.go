@@ -22,12 +22,14 @@ import (
 )
 
 const (
-	prefix           = "cosi.linode.com/v1/"
-	ParamACL         = prefix + "acl"
-	ParamCORS        = prefix + "cors"
-	ParamPermissions = prefix + "permissions"
-	ParamPolicy      = prefix + "policy"
-	ParamRegion      = prefix + "region"
+	prefix                      = "cosi.linode.com/v1/"
+	ParamACL                    = prefix + "acl"
+	ParamCORS                   = prefix + "cors"
+	ParamEndpointType           = prefix + "endpoint-type"
+	ParamEndpointTypePreference = prefix + "endpoint-type-preference"
+	ParamPermissions            = prefix + "permissions"
+	ParamPolicy                 = prefix + "policy"
+	ParamRegion                 = prefix + "region"
 )
 
 // TODO(v1alpha2): add the cleanup:
@@ -79,6 +81,7 @@ var (
 	ErrNotFound            = linodego.Error{Code: http.StatusNotFound}
 	ErrUnsuportedAuth      = errors.New("unsupported authentication schema")
 	ErrMissingRegion       = errors.New("region was not provided")
+	ErrUnknownEndpointType = errors.New("unknown endpoint type")
 	ErrUnknownPermsissions = errors.New("unknown permissions")
 	ErrValidationError     = errors.New("required value cannot be empty")
 )
@@ -90,6 +93,7 @@ const (
 	KeyBucketCreationTimestamp = "bucket.created_at"
 	KeyBucketACL               = "bucket.acl"
 	KeyBucketCORS              = "bucket.cors_enabled"
+	KeyBucketEndpointType      = "bucket.endpoint_type"
 	KeyBucketAccessIDRaw       = "bucket.access.id_raw"
 	KeyBucketAccessID          = "bucket.access.id"
 	KeyBucketAccessName        = "bucket.access.name"

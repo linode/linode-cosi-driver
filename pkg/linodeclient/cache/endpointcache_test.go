@@ -41,12 +41,14 @@ func TestCache(t *testing.T) {
 		S3Endpoint: ptr("us-test-1.linodeobjects.com"),
 	}
 	testRegion2 := linodego.ObjectStorageEndpoint{
-		Region:     "de-test",
-		S3Endpoint: ptr("de-test-1.linodeobjects.com"),
+		Region:       "de-test",
+		S3Endpoint:   ptr("de-test-1.linodeobjects.com"),
+		EndpointType: linodego.ObjectStorageEndpointE0,
 	}
 	testRegion3 := linodego.ObjectStorageEndpoint{
-		Region:     "pl-test",
-		S3Endpoint: ptr("pl-test-1.linodeobjects.com"),
+		Region:       "pl-test",
+		S3Endpoint:   ptr("pl-test-1.linodeobjects.com"),
+		EndpointType: linodego.ObjectStorageEndpointE1,
 	}
 
 	ctrl := gomock.NewController(t)
@@ -77,6 +79,11 @@ func TestCache(t *testing.T) {
 	}
 
 	s3Endpoint, ok = cache.Get("pl-test")
+	if !ok || s3Endpoint != *testRegion3.S3Endpoint {
+		t.Errorf("expected %s, got %s", *testRegion3.S3Endpoint, s3Endpoint)
+	}
+
+	s3Endpoint, ok = cache.Get(Key("pl-test", linodego.ObjectStorageEndpointE1))
 	if !ok || s3Endpoint != *testRegion3.S3Endpoint {
 		t.Errorf("expected %s, got %s", *testRegion3.S3Endpoint, s3Endpoint)
 	}

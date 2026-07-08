@@ -89,12 +89,16 @@ Here’s the updated table with descriptions added:
 | `cosi.linode.com/v1/region` |            | https://techdocs.akamai.com/linode-api/reference/get-object-storage-endpoints                        | **REQUIRED** The region where the object storage bucket will be created.               |
 | `cosi.linode.com/v1/acl`    | `private`  | `private`, `public-read`, `authenticated-read`, `public-read-write`                                  | The access control list (ACL) policy that defines who can read or write to the bucket. |
 | `cosi.linode.com/v1/cors`   | `disabled` | `disabled`, `enabled`                                                                                | Enables or disables Cross-Origin Resource Sharing (CORS) for the bucket.               |
+| `cosi.linode.com/v1/endpoint-type` | first available | `E0`, `E1`, `E2`, `E3`                                                                       | Selects the Object Storage endpoint type used when creating the bucket.                |
+| `cosi.linode.com/v1/endpoint-type-preference` | first available | Comma-separated `E0`, `E1`, `E2`, `E3` values, for example `E3,E1`                 | Selects the first available Object Storage endpoint type for the bucket in preference order. Ignored when `endpoint-type` is set. |
 | `cosi.linode.com/v1/policy` |            | https://techdocs.akamai.com/cloud-computing/docs/define-access-and-permissions-using-bucket-policies | Defines custom bucket policies for fine-grained access control and permissions.        |
 
 ### BucketAccessClass
 
 | Parameter                        | Default     | Values                    | Description                                                                                                             |
 |----------------------------------|-------------|---------------------------|-------------------------------------------------------------------------------------------------------------------------|
+| `cosi.linode.com/v1/endpoint-type` | first available | `E0`, `E1`, `E2`, `E3` | Selects which Object Storage endpoint type to return in generated bucket credentials.                                   |
+| `cosi.linode.com/v1/endpoint-type-preference` | first available | Comma-separated `E0`, `E1`, `E2`, `E3` values, for example `E3,E1` | Selects the first available Object Storage endpoint type for generated bucket credentials in preference order. Ignored when `endpoint-type` is set. |
 | `cosi.linode.com/v1/permissions` | `read_only` | `read_only`, `read_write` | Defines the access permissions for the bucket, specifying whether users can only read data or also write to the bucket. |
 
 ## License

@@ -23,6 +23,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/linode/linodego"
+
 	"github.com/linode/linode-cosi-driver/pkg/linodeclient"
 )
 
@@ -33,6 +35,15 @@ const (
 
 type Cache interface {
 	Get(key string) (string, bool)
+}
+
+// Key returns the cache key for a region and endpoint type.
+func Key(region string, endpointType linodego.ObjectStorageEndpointType) string {
+	if endpointType == "" {
+		return region
+	}
+
+	return fmt.Sprintf("%s/%s", region, endpointType)
 }
 
 type EndpointCache struct {
@@ -88,9 +99,14 @@ func (c *EndpointCache) Refresh(ctx context.Context) error {
 		return fmt.Errorf("unable to list ObjectStorage endpoints: %w", err)
 	}
 
+	defaults := make(map[string]struct{})
 	for _, ep := range eps {
 		if ep.S3Endpoint != nil {
-			c.Set(ep.Region, *ep.S3Endpoint)
+			c.Set(Key(ep.Region, ep.EndpointType), *ep.S3Endpoint)
+			if _, ok := defaults[ep.Region]; !ok {
+				c.Set(ep.Region, *ep.S3Endpoint)
+				defaults[ep.Region] = struct{}{}
+			}
 		}
 	}
 
