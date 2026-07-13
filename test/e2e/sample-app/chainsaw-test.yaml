@@ -113,6 +113,8 @@ spec:
             name: s3-credentials
 
   - name: Run test upload
+    timeouts:
+      assert: 300s
     try:
     - apply:
         file: ./resources/job-apply.yaml
