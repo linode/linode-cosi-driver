@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/linode/linodego"
+	"github.com/linode/linodego/v2"
 )
 
 func parseEndpointType(params map[string]string) (linodego.ObjectStorageEndpointType, error) {

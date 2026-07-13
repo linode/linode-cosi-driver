@@ -24,7 +24,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/linode/linodego"
+	"github.com/linode/linodego/v2"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	cosi "sigs.k8s.io/container-object-storage-interface-spec"
@@ -85,7 +85,7 @@ func (s *Server) s3ClientForBucket(ctx context.Context, region, label string) (s
 	keyLabel := fmt.Sprintf("cosi-bucket-%s", uuid.NewString())
 	opts := linodego.ObjectStorageKeyCreateOptions{
 		Label: keyLabel,
-		BucketAccess: &[]linodego.ObjectStorageKeyBucketAccess{
+		BucketAccess: []linodego.ObjectStorageKeyBucketAccessCreateOptions{
 			{
 				Region:      region,
 				BucketName:  label,
@@ -285,11 +285,11 @@ func (s *Server) ensureExistingBucket(
 
 	if (endpointType != "" && bucket.EndpointType != endpointType) ||
 		access.ACL != acl ||
-		access.CorsEnabled != cors.Bool() {
+		bucketAccessCORSEnabled(access) != cors.Bool() {
 		log.ErrorContext(ctx, "Bucket with different parameters already exists",
 			"existing_"+KeyBucketEndpointType, bucket.EndpointType,
 			"existing_"+KeyBucketACL, access.ACL,
-			"existing_"+KeyBucketCORS, access.CorsEnabled,
+			"existing_"+KeyBucketCORS, bucketAccessCORSEnabled(access),
 		)
 
 		return nil, status.Error(codes.AlreadyExists, "bucket exists with different parameters")
@@ -486,6 +486,10 @@ func endpointTypeSupportsCORS(endpointType linodego.ObjectStorageEndpointType) b
 		endpointType != linodego.ObjectStorageEndpointE3
 }
 
+func bucketAccessCORSEnabled(access *linodego.ObjectStorageBucketAccess) bool {
+	return access.CorsEnabled != nil && *access.CorsEnabled
+}
+
 func (s *Server) applyBucketPolicy(
 	ctx context.Context,
 	log *slog.Logger,
@@ -598,7 +602,7 @@ func (s *Server) DriverGrantBucketAccess(ctx context.Context, req *cosi.DriverGr
 
 	opts := linodego.ObjectStorageKeyCreateOptions{
 		Label: name,
-		BucketAccess: &[]linodego.ObjectStorageKeyBucketAccess{
+		BucketAccess: []linodego.ObjectStorageKeyBucketAccessCreateOptions{
 			{
 				Region:      region,
 				BucketName:  label,

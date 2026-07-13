@@ -18,7 +18,7 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/linode/linodego"
+	"github.com/linode/linodego/v2"
 )
 
 const (

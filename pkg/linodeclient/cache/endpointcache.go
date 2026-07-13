@@ -23,7 +23,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/linode/linodego"
+	"github.com/linode/linodego/v2"
 
 	"github.com/linode/linode-cosi-driver/pkg/linodeclient"
 )
