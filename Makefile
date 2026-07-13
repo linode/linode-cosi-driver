@@ -246,7 +246,7 @@ KIND_VERSION                    ?= v0.29.0
 # renovate: datasource=go depName=golang.stackrox.io/kube-linter/cmd/kube-linter
 KUBE_LINTER_VERSION             ?= v0.7.1
 # renovate: datasource=github-tags depName=tilt-dev/tilt
-TILT_VERSION                    ?= 0.36.0
+TILT_VERSION                    ?= 0.37.5
 # renovate: datasource=github-tags depName=uber-go/mock
 GOMOCK_VERSION                  ?= v0.6.0
 
