@@ -1,19 +1,21 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
   "properties": {
     "affinity": {
-      "properties": {},
       "type": "object"
     },
     "apiToken": {
       "type": "string"
     },
     "driver": {
+      "type": "object",
       "properties": {
         "cacheTTL": {
           "type": "string"
         },
         "image": {
+          "type": "object",
           "properties": {
             "pullPolicy": {
               "type": "string"
@@ -24,11 +26,9 @@
             "tag": {
               "type": "string"
             }
-          },
-          "type": "object"
+          }
         }
-      },
-      "type": "object"
+      }
     },
     "fullnameOverride": {
       "type": "string"
@@ -46,10 +46,10 @@
       "type": "string"
     },
     "nodeSelector": {
-      "properties": {},
       "type": "object"
     },
     "podAnnotations": {
+      "type": "object",
       "properties": {
         "prometheus.io/path": {
           "type": "string"
@@ -60,10 +60,10 @@
         "prometheus.io/scrape": {
           "type": "string"
         }
-      },
-      "type": "object"
+      }
     },
     "podSecurityContext": {
+      "type": "object",
       "properties": {
         "runAsNonRoot": {
           "type": "boolean"
@@ -71,29 +71,27 @@
         "runAsUser": {
           "type": "integer"
         }
-      },
-      "type": "object"
+      }
     },
     "rbac": {
+      "type": "object",
       "properties": {
         "annotations": {
-          "properties": {},
           "type": "object"
         },
         "name": {
           "type": "string"
         }
-      },
-      "type": "object"
+      }
     },
     "replicaCount": {
       "type": "integer"
     },
     "resources": {
-      "properties": {},
       "type": "object"
     },
     "s3": {
+      "type": "object",
       "properties": {
         "accessKey": {
           "type": "string"
@@ -102,16 +100,15 @@
           "type": "boolean"
         },
         "secret": {
+          "type": "object",
           "properties": {
             "annotations": {
-              "properties": {},
               "type": "object"
             },
             "ref": {
               "type": "string"
             }
-          },
-          "type": "object"
+          }
         },
         "secretKey": {
           "type": "string"
@@ -119,32 +116,32 @@
         "ssl": {
           "type": "boolean"
         }
-      },
-      "type": "object"
+      }
     },
     "secret": {
+      "type": "object",
       "properties": {
         "annotations": {
-          "properties": {},
           "type": "object"
         },
         "ref": {
           "type": "string"
         }
-      },
-      "type": "object"
+      }
     },
     "securityContext": {
+      "type": "object",
       "properties": {
         "readOnlyRootFilesystem": {
           "type": "boolean"
         }
-      },
-      "type": "object"
+      }
     },
     "sidecar": {
+      "type": "object",
       "properties": {
         "image": {
+          "type": "object",
           "properties": {
             "pullPolicy": {
               "type": "string"
@@ -155,18 +152,15 @@
             "tag": {
               "type": "string"
             }
-          },
-          "type": "object"
+          }
         },
         "logVerbosity": {
           "type": "integer"
         }
-      },
-      "type": "object"
+      }
     },
     "tolerations": {
       "type": "array"
     }
-  },
-  "type": "object"
+  }
 }

@@ -104,10 +104,10 @@ generate-docs: helm-docs ## Run kube-linter on Kubernetes manifests.
 .PHONY: generate-schemas
 generate-schemas: helm-values-schema-json ## Run generate schema for Helm Chart values.
 	$(HELM_VALUES_SCHEMA_JSON) \
-		-draft=7 \
-		-indent=2 \
-		-input=helm/linode-cosi-driver/values.yaml \
-		-output=helm/linode-cosi-driver/values.schema.json \
+		--draft=7 \
+		--indent=2 \
+		--values=helm/linode-cosi-driver/values.yaml \
+		--output=helm/linode-cosi-driver/values.schema.json \
 
 .PHONY: test
 test: generate-mocks
@@ -239,7 +239,7 @@ GOLANGCI_LINT_VERSION           ?= v2.12.2
 HELM_VERSION                    ?= v4.2.3
 # renovate: datasource=go depName=github.com/norwoodj/helm-docs/cmd/helm-docs
 HELM_DOCS_VERSION               ?= v1.14.2
-# renovate: datasource=go depName=github.com/losisin/helm-values-schema-json
+# renovate: datasource=go depName=github.com/losisin/helm-values-schema-json/v2
 HELM_VALUES_SCHEMA_JSON_VERSION ?= v2.4.0
 # renovate: datasource=go depName=sigs.k8s.io/kind
 KIND_VERSION                    ?= v0.29.0
@@ -278,7 +278,7 @@ $(HELM_DOCS)-$(HELM_DOCS_VERSION): $(LOCALBIN)
 .PHONY: helm-values-schema-json
 helm-values-schema-json: $(HELM_VALUES_SCHEMA_JSON)-$(HELM_VALUES_SCHEMA_JSON_VERSION) ## Download helm-values-schema-json locally if necessary.
 $(HELM_VALUES_SCHEMA_JSON)-$(HELM_VALUES_SCHEMA_JSON_VERSION): $(LOCALBIN)
-	$(call go-install-tool,$(HELM_VALUES_SCHEMA_JSON),github.com/losisin/helm-values-schema-json,$(HELM_VALUES_SCHEMA_JSON_VERSION))
+	$(call go-install-tool,$(HELM_VALUES_SCHEMA_JSON),github.com/losisin/helm-values-schema-json/v2,$(HELM_VALUES_SCHEMA_JSON_VERSION))
 
 .PHONY: kind
 kind: $(KIND)-$(KIND_VERSION) ## Download kind locally if necessary.
