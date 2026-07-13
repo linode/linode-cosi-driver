@@ -54,6 +54,8 @@ spec:
             bucketClassName: ($namespace)
             protocols: ["S3"]
   - name: Check if BucketClaim is ready
+    timeouts:
+      assert: 600s
     try:
     - assert:
         resource:

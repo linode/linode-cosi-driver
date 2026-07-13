@@ -229,7 +229,7 @@ func shutdown(ctx context.Context,
 
 	slog.Info("Shutting down")
 
-	dctx, stop := context.WithTimeout(context.Background(), gracePeriod)
+	dctx, stop := context.WithTimeout(context.WithoutCancel(ctx), gracePeriod)
 	defer stop()
 
 	channel := make(chan struct{})

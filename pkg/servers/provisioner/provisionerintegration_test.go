@@ -144,7 +144,7 @@ func TestBucketScopedKeyIsolation(t *testing.T) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(t.Context(), 60*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 2*time.Minute)
 	defer cancel()
 
 	bucketA := fmt.Sprintf("integration-a-%d", time.Now().UnixNano())
@@ -223,7 +223,7 @@ func TestBucketScopedKeyIsolation(t *testing.T) {
 		t.Fatalf("failed to create s3 client: %v", err)
 	}
 
-	if err := listObjectsErr(ctx, s3cli, bucketA); err != nil {
+	if err := waitForListObjects(ctx, s3cli, bucketA); err != nil {
 		t.Fatalf("expected access to bucketA, got error: %v", err)
 	}
 
@@ -243,6 +243,29 @@ func listObjectsErr(ctx context.Context, cli *minio.Client, bucket string) error
 		}
 	}
 	return nil
+}
+
+func waitForListObjects(ctx context.Context, cli *minio.Client, bucket string) error {
+	waitCtx, cancel := context.WithTimeout(ctx, 45*time.Second)
+	defer cancel()
+
+	ticker := time.NewTicker(2 * time.Second)
+	defer ticker.Stop()
+
+	var lastErr error
+	for {
+		if err := listObjectsErr(waitCtx, cli, bucket); err == nil {
+			return nil
+		} else {
+			lastErr = err
+		}
+
+		select {
+		case <-waitCtx.Done():
+			return fmt.Errorf("timed out waiting for bucket access: %w", lastErr)
+		case <-ticker.C:
+		}
+	}
 }
 
 func resolveTestRegion(ctx context.Context, client linodeclient.Client, requested string, requireCORS bool) (string, error) {
