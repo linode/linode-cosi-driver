@@ -19,6 +19,8 @@ The Linode COSI Driver is an implementation of the Kubernetes [Container Object 
 
 Follow these steps to get started with Linode COSI Driver:
 
+
+
 1. **Prerequisites:**
     1. Install COSI Custom Resource Definitions.
     ```sh
