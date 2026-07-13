@@ -21,6 +21,13 @@ import (
 	cosi "sigs.k8s.io/container-object-storage-interface-spec"
 )
 
+const (
+	testCredentialsRegion    = "us-east"
+	testCredentialsEndpoint  = "us-east-1.linodeobjects.com"
+	testCredentialsAccessKey = "TESTACCESSKEY"
+	testCredentialsSecretKey = "TESTSECRETKEY"
+)
+
 func TestCredentials(t *testing.T) {
 	t.Parallel()
 
@@ -34,59 +41,59 @@ func TestCredentials(t *testing.T) {
 		shouldPanic bool
 	}{
 		"valid_credentials": {
-			region:    "us-east",
-			endpoint:  "us-east-1.linodeobjects.com",
+			region:    testCredentialsRegion,
+			endpoint:  testCredentialsEndpoint,
 			label:     "test-label",
-			accessKey: "TESTACCESSKEY",
-			secretKey: "TESTSECRETKEY",
+			accessKey: testCredentialsAccessKey,
+			secretKey: testCredentialsSecretKey,
 			expected: map[string]*cosi.CredentialDetails{
 				S3: {
 					Secrets: map[string]string{
-						S3Region:                "us-east",
-						S3Endpoint:              "us-east-1.linodeobjects.com",
-						S3SecretAccessKeyID:     "TESTACCESSKEY",
-						S3SecretAccessSecretKey: "TESTSECRETKEY",
+						S3Region:                testCredentialsRegion,
+						S3Endpoint:              testCredentialsEndpoint,
+						S3SecretAccessKeyID:     testCredentialsAccessKey,
+						S3SecretAccessSecretKey: testCredentialsSecretKey,
 					},
 				},
 			},
 		},
 		"missing_region": {
 			region:      "",
-			endpoint:    "us-east-1.linodeobjects.com",
+			endpoint:    testCredentialsEndpoint,
 			label:       "test-bucket",
-			accessKey:   "TESTACCESSKEY",
-			secretKey:   "TESTSECRETKEY",
+			accessKey:   testCredentialsAccessKey,
+			secretKey:   testCredentialsSecretKey,
 			shouldPanic: true,
 		},
 		"missing_endpoint": {
-			region:      "us-east",
+			region:      testCredentialsRegion,
 			endpoint:    "",
 			label:       "test-bucket",
-			accessKey:   "TESTACCESSKEY",
-			secretKey:   "TESTSECRETKEY",
+			accessKey:   testCredentialsAccessKey,
+			secretKey:   testCredentialsSecretKey,
 			shouldPanic: true,
 		},
 		"missing_label": {
-			region:      "us-east",
-			endpoint:    "us-east-1.linodeobjects.com",
+			region:      testCredentialsRegion,
+			endpoint:    testCredentialsEndpoint,
 			label:       "",
-			accessKey:   "TESTACCESSKEY",
-			secretKey:   "TESTSECRETKEY",
+			accessKey:   testCredentialsAccessKey,
+			secretKey:   testCredentialsSecretKey,
 			shouldPanic: true,
 		},
 		"missing_accessKey": {
-			region:      "us-east",
-			endpoint:    "us-east-1.linodeobjects.com",
+			region:      testCredentialsRegion,
+			endpoint:    testCredentialsEndpoint,
 			label:       "test-bucket",
 			accessKey:   "",
-			secretKey:   "TESTSECRETKEY",
+			secretKey:   testCredentialsSecretKey,
 			shouldPanic: true,
 		},
 		"missing_secretKey": {
-			region:      "us-east",
-			endpoint:    "us-east-1.linodeobjects.com",
+			region:      testCredentialsRegion,
+			endpoint:    testCredentialsEndpoint,
 			label:       "test-bucket",
-			accessKey:   "TESTACCESSKEY",
+			accessKey:   testCredentialsAccessKey,
 			secretKey:   "",
 			shouldPanic: true,
 		},
