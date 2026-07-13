@@ -37,7 +37,7 @@ sidecar:
     pullPolicy: IfNotPresent
 
     # -- Sidecar container image tag.
-    tag: "v0.2.1"
+    tag: "v0.2.2"
 
   # -- Log verbosity level for the sidecar container.
   logVerbosity: 4
