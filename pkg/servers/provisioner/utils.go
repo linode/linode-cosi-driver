@@ -15,17 +15,38 @@
 package provisioner
 
 import (
+	"fmt"
 	"strings"
 
 	cosi "sigs.k8s.io/container-object-storage-interface-spec"
 )
 
-func parseBucketID(id string) (region string, label string) {
-	chunks := 2
+const bucketIDParts = 3
 
-	s := strings.SplitN(id, "/", chunks)
+func parseBucketID(id string) (region, label string, cleanup bool, err error) {
+	parts := strings.SplitN(id, "/", bucketIDParts)
+	if len(parts) < 2 || parts[0] == "" || parts[1] == "" {
+		return "", "", false, fmt.Errorf("invalid bucket ID %q", id)
+	}
 
-	return s[0], s[1]
+	if len(parts) == bucketIDParts {
+		cleanupValue := ParamCleanupValue(parts[2])
+		if !cleanupValue.Force() {
+			return "", "", false, fmt.Errorf("invalid bucket cleanup policy %q", parts[2])
+		}
+		cleanup = true
+	}
+
+	return parts[0], parts[1], cleanup, nil
+}
+
+func bucketID(region, label string, cleanup ParamCleanupValue) string {
+	id := region + "/" + label
+	if cleanup.Force() {
+		return id + "/" + string(ParamCleanupForce)
+	}
+
+	return id
 }
 
 func bucketInfo(region string) *cosi.Protocol {

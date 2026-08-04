@@ -25,6 +25,7 @@ const (
 	prefix                      = "cosi.linode.com/v1/"
 	ParamACL                    = prefix + "acl"
 	ParamCORS                   = prefix + "cors"
+	ParamCleanup                = prefix + "cleanup"
 	ParamEndpointType           = prefix + "endpoint-type"
 	ParamEndpointTypePreference = prefix + "endpoint-type-preference"
 	ParamPermissions            = prefix + "permissions"
@@ -32,19 +33,13 @@ const (
 	ParamRegion                 = prefix + "region"
 )
 
-// TODO(v1alpha2): add the cleanup:
-//
-//	const ParamCleanup = prefix + "cleanup"
-//
-//	type ParamCleanupValue string
-//
-//	const (
-//		ParamCleanupForce ParamCleanupValue = "force"
-//	)
-//
-//	func (v ParamCleanupValue) Force() bool {
-//		return v == ParamCleanupForce
-//	}
+type ParamCleanupValue string
+
+const ParamCleanupForce ParamCleanupValue = "force"
+
+func (v ParamCleanupValue) Force() bool {
+	return v == ParamCleanupForce
+}
 
 type ParamCORSValue string
 

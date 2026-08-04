@@ -157,6 +157,7 @@ func (s *Server) DriverCreateBucket(ctx context.Context, req *cosi.DriverCreateB
 	label := req.GetName()
 	region := req.GetParameters()[ParamRegion]
 	cors := ParamCORSValue(req.GetParameters()[ParamCORS])
+	cleanup := ParamCleanupValue(req.GetParameters()[ParamCleanup])
 	policyTemplate := req.GetParameters()[ParamPolicy]
 
 	acl := linodego.ObjectStorageACL(req.GetParameters()[ParamACL])
@@ -202,11 +203,11 @@ func (s *Server) DriverCreateBucket(ctx context.Context, req *cosi.DriverCreateB
 
 	if bucket == nil {
 		// Create the bucket if it doesn't exist, then apply policy if provided.
-		return s.createBucketAndApplyPolicy(ctx, log, region, label, endpointType, acl, cors, policy)
+		return s.createBucketAndApplyPolicy(ctx, log, region, label, endpointType, acl, cors, cleanup, policy)
 	}
 
 	// Bucket exists: validate parameters and re-apply policy for idempotency.
-	return s.ensureExistingBucket(ctx, log, bucket, region, label, endpointType, acl, cors, policy)
+	return s.ensureExistingBucket(ctx, log, bucket, region, label, endpointType, acl, cors, cleanup, policy)
 }
 
 func (s *Server) buildBucketPolicy(policyTemplate, label string) (string, error) {
@@ -225,6 +226,7 @@ func (s *Server) createBucketAndApplyPolicy(
 	endpointType linodego.ObjectStorageEndpointType,
 	acl linodego.ObjectStorageACL,
 	cors ParamCORSValue,
+	cleanup ParamCleanupValue,
 	policy string,
 ) (*cosi.DriverCreateBucketResponse, error) {
 	opts := linodego.ObjectStorageBucketCreateOptions{
@@ -260,9 +262,8 @@ func (s *Server) createBucketAndApplyPolicy(
 			return nil, status.Error(codes.Internal, fmt.Sprintf("failed to set bucket policy: %v", err))
 		}
 	}
-
 	return &cosi.DriverCreateBucketResponse{
-		BucketId:   bucket.Region + "/" + bucket.Label,
+		BucketId:   bucketID(bucket.Region, bucket.Label, cleanup),
 		BucketInfo: bucketInfo(bucket.Region),
 	}, status.Error(codes.OK, "bucket created")
 }
@@ -275,6 +276,7 @@ func (s *Server) ensureExistingBucket(
 	endpointType linodego.ObjectStorageEndpointType,
 	acl linodego.ObjectStorageACL,
 	cors ParamCORSValue,
+	cleanup ParamCleanupValue,
 	policy string,
 ) (*cosi.DriverCreateBucketResponse, error) {
 	access, err := s.client.GetObjectStorageBucketAccess(ctx, region, label)
@@ -303,11 +305,10 @@ func (s *Server) ensureExistingBucket(
 			return nil, status.Error(codes.Internal, fmt.Sprintf("failed to set bucket policy: %v", err))
 		}
 	}
-
 	log.InfoContext(ctx, "Bucket exists")
 
 	return &cosi.DriverCreateBucketResponse{
-		BucketId:   region + "/" + label,
+		BucketId:   bucketID(region, label, cleanup),
 		BucketInfo: bucketInfo(region),
 	}, status.Error(codes.OK, "bucket exists")
 }
@@ -514,10 +515,10 @@ func (s *Server) applyBucketPolicy(
 // NOTE: this call needs to be idempotent.
 // If the bucket has already been deleted, then no error should be returned.
 func (s *Server) DriverDeleteBucket(ctx context.Context, req *cosi.DriverDeleteBucketRequest) (*cosi.DriverDeleteBucketResponse, error) {
-	region, label := parseBucketID(req.GetBucketId())
-	// TODO(v1alpha2): add the cleanup
-	// := ParamCleanupValue(req.GetParameters()[ParamCleanup]).Force()
-	cleanup := false
+	region, label, cleanup, err := parseBucketID(req.GetBucketId())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
 
 	log := s.logAttr(
 		slog.String(KeyBucketID, req.GetBucketId()),
@@ -529,19 +530,22 @@ func (s *Server) DriverDeleteBucket(ctx context.Context, req *cosi.DriverDeleteB
 
 	if cleanup {
 		s3cli, keyCleanup, err := s.s3ClientForBucket(ctx, region, label)
+		if errors.Is(err, ErrNotFound) {
+			log.InfoContext(ctx, "Bucket already deleted")
+			return &cosi.DriverDeleteBucketResponse{}, status.Error(codes.OK, "bucket deleted")
+		}
 		if err != nil {
 			log.ErrorContext(ctx, "Failed to create bucket-scoped credentials", "error", err)
 			return nil, status.Error(codes.Internal, fmt.Sprintf("failed to create bucket-scoped credentials: %v", err))
 		}
 		defer cleanupWithTimeout(ctx, log, keyCleanup)
 
-		err = s3cli.Prune(ctx, region, label)
-		if err != nil && !s3.IsNotFound(err) {
+		if err := s3cli.Prune(ctx, region, label); err != nil && !s3.IsNotFound(err) {
 			return nil, status.Error(codes.Internal, fmt.Sprintf("failed to cleanup bucket: %v", err))
 		}
 	}
 
-	err := s.client.DeleteObjectStorageBucket(ctx, region, label)
+	err = s.client.DeleteObjectStorageBucket(ctx, region, label)
 	if err == nil || errors.Is(err, ErrNotFound) {
 		log.InfoContext(ctx, "Bucket deleted")
 		return &cosi.DriverDeleteBucketResponse{}, status.Error(codes.OK, "bucket deleted")
@@ -559,7 +563,10 @@ func (s *Server) DriverDeleteBucket(ctx context.Context, req *cosi.DriverDeleteB
 // The account_id returned in the response will be used as the unique identifier for deleting this access when calling DriverRevokeBucketAccess.
 // The returned secret does not need to be the same each call to achieve idempotency.
 func (s *Server) DriverGrantBucketAccess(ctx context.Context, req *cosi.DriverGrantBucketAccessRequest) (*cosi.DriverGrantBucketAccessResponse, error) {
-	region, label := parseBucketID(req.GetBucketId())
+	region, label, _, err := parseBucketID(req.GetBucketId())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
 	name := req.GetName()
 	auth := req.GetAuthenticationType()
 	perms := ParamPermissionsValue(req.GetParameters()[ParamPermissions])
@@ -631,7 +638,10 @@ func (s *Server) DriverGrantBucketAccess(ctx context.Context, req *cosi.DriverGr
 //
 // NOTE: this call needs to be idempotent.
 func (s *Server) DriverRevokeBucketAccess(ctx context.Context, req *cosi.DriverRevokeBucketAccessRequest) (*cosi.DriverRevokeBucketAccessResponse, error) {
-	region, label := parseBucketID(req.GetBucketId())
+	region, label, _, err := parseBucketID(req.GetBucketId())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
 	id, err := strconv.Atoi(req.GetAccountId())
 
 	log := s.logAttr(

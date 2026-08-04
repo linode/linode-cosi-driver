@@ -237,20 +237,24 @@ func TestDriverCreateBucket(t *testing.T) {
 		setupMockLinode  func(*testing.T) linodeclient.Client
 	}{
 		{
-			testName: "base",
+			testName: "encodes forced cleanup in bucket ID",
 			request: &cosi.DriverCreateBucketRequest{
-				Name:       testBucketName,
-				Parameters: defaultBucketParameters,
+				Name: testBucketName,
+				Parameters: map[string]string{
+					provisioner.ParamRegion:  testRegion,
+					provisioner.ParamACL:     string(linodego.ACLPrivate),
+					provisioner.ParamCORS:    string(provisioner.ParamCORSValueDisabled),
+					provisioner.ParamCleanup: string(provisioner.ParamCleanupForce),
+				},
 			},
 			expectedResponse: &cosi.DriverCreateBucketResponse{
-				BucketId:   testBucketID,
+				BucketId:   testBucketID + "/force",
 				BucketInfo: defaultBucketInfo,
 			},
 			setupMockS3: func(t *testing.T) s3.Client {
 				t.Helper()
 				ctrl := gomock.NewController(t)
 				mockS3 := mock.NewMockS3Client(ctrl)
-				// No S3 calls expected - no policy provided
 				return mockS3
 			},
 			setupMockLinode: func(t *testing.T) linodeclient.Client {
@@ -824,12 +828,12 @@ func TestDriverDeleteBucket(t *testing.T) {
 	for _, tc := range []struct {
 		testName        string
 		request         *cosi.DriverDeleteBucketRequest
-		expectedError   error
+		expectedCode    grpccodes.Code
 		setupMockS3     func(*testing.T) s3.Client
 		setupMockLinode func(*testing.T) linodeclient.Client
 	}{
 		{
-			testName: "base",
+			testName: "base without object pruning",
 			request: &cosi.DriverDeleteBucketRequest{
 				BucketId: testBucketID,
 			},
@@ -837,7 +841,36 @@ func TestDriverDeleteBucket(t *testing.T) {
 				t.Helper()
 				ctrl := gomock.NewController(t)
 				mockS3 := mock.NewMockS3Client(ctrl)
-				// No S3 calls expected - cleanup is disabled (hardcoded to false in provisioner.go:278)
+				return mockS3
+			},
+			setupMockLinode: func(t *testing.T) linodeclient.Client {
+				t.Helper()
+				ctrl := gomock.NewController(t)
+				mockLinode := mock.NewMockLinodeClient(ctrl)
+				mockLinode.EXPECT().
+					DeleteObjectStorageBucket(gomock.Any(), gomock.Eq(testRegion), gomock.Eq(testBucketName)).
+					Return(nil).
+					Times(2)
+				mockLinode.EXPECT().
+					ListObjectStorageEndpoints(gomock.Any(), gomock.Any()).
+					Return([]linodego.ObjectStorageEndpoint{defaultLinodegoEndpoint}, nil).
+					AnyTimes()
+				return mockLinode
+			},
+		},
+		{
+			testName: "prunes objects before deleting bucket when forced",
+			request: &cosi.DriverDeleteBucketRequest{
+				BucketId: testBucketID + "/force",
+			},
+			setupMockS3: func(t *testing.T) s3.Client {
+				t.Helper()
+				ctrl := gomock.NewController(t)
+				mockS3 := mock.NewMockS3Client(ctrl)
+				mockS3.EXPECT().
+					Prune(gomock.Any(), gomock.Eq(testRegion), gomock.Eq(testBucketName)).
+					Return(nil).
+					Times(2)
 				return mockS3
 			},
 			setupMockLinode: func(t *testing.T) linodeclient.Client {
@@ -850,6 +883,52 @@ func TestDriverDeleteBucket(t *testing.T) {
 					Return(nil).
 					Times(2)
 				// ListObjectStorageEndpoints is called to populate cache
+				mockLinode.EXPECT().
+					ListObjectStorageEndpoints(gomock.Any(), gomock.Any()).
+					Return([]linodego.ObjectStorageEndpoint{defaultLinodegoEndpoint}, nil).
+					AnyTimes()
+				return mockLinode
+			},
+		},
+		{
+			testName: "rejects malformed bucket ID",
+			request: &cosi.DriverDeleteBucketRequest{
+				BucketId: "malformed",
+			},
+			expectedCode: grpccodes.InvalidArgument,
+			setupMockS3: func(t *testing.T) s3.Client {
+				t.Helper()
+				ctrl := gomock.NewController(t)
+				return mock.NewMockS3Client(ctrl)
+			},
+			setupMockLinode: func(t *testing.T) linodeclient.Client {
+				t.Helper()
+				ctrl := gomock.NewController(t)
+				mockLinode := mock.NewMockLinodeClient(ctrl)
+				mockLinode.EXPECT().
+					ListObjectStorageEndpoints(gomock.Any(), gomock.Any()).
+					Return([]linodego.ObjectStorageEndpoint{defaultLinodegoEndpoint}, nil).
+					AnyTimes()
+				return mockLinode
+			},
+		},
+		{
+			testName: "cleanup is idempotent when bucket is already deleted",
+			request: &cosi.DriverDeleteBucketRequest{
+				BucketId: testBucketID + "/force",
+			},
+			setupMockS3: func(t *testing.T) s3.Client {
+				t.Helper()
+				return nil
+			},
+			setupMockLinode: func(t *testing.T) linodeclient.Client {
+				t.Helper()
+				ctrl := gomock.NewController(t)
+				mockLinode := mock.NewMockLinodeClient(ctrl)
+				mockLinode.EXPECT().
+					GetObjectStorageBucket(gomock.Any(), gomock.Eq(testRegion), gomock.Eq(testBucketName)).
+					Return(nil, provisioner.ErrNotFound).
+					Times(2)
 				mockLinode.EXPECT().
 					ListObjectStorageEndpoints(gomock.Any(), gomock.Any()).
 					Return([]linodego.ObjectStorageEndpoint{defaultLinodegoEndpoint}, nil).
@@ -881,8 +960,8 @@ func TestDriverDeleteBucket(t *testing.T) {
 
 			for i := 0; i < 2; i++ { // run twice to check idempotency
 				_, err = srv.DriverDeleteBucket(ctx, tc.request)
-				if !errors.Is(err, tc.expectedError) {
-					t.Errorf("call %d: expected error: %q, but got: %q", i, tc.expectedError, err)
+				if code := status.Code(err); code != tc.expectedCode {
+					t.Errorf("call %d: expected status code %q, but got %q: %v", i, tc.expectedCode, code, err)
 				}
 			}
 		})
