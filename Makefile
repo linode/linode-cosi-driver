@@ -230,7 +230,7 @@ KUBE_LINTER             ?= $(LOCALBIN)/kube-linter
 TILT           			?= $(LOCALBIN)/tilt
 
 ## Tool Versions
-CHAINSAW_VERSION                ?= v0.2.12
+CHAINSAW_VERSION                ?= v0.2.15
 # renovate: datasource=go depName=github.com/tilt-dev/ctlptl
 CTLPTL_VERSION                  ?= v0.9.4
 # renovate: datasource=github-tags depName=golangci/golangci-lint
