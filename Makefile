@@ -63,7 +63,8 @@ all: build
 clean:
 	-rm -r bin/
 
-## Location to install dependencies to
+## Temporary compatibility path for pull_request_target workflows running from
+## a base branch that predates the mise migration.
 LOCALBIN ?= $(shell pwd)/bin
 $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
@@ -98,11 +99,11 @@ build: # Build the binary.
 		./cmd/linode-cosi-driver
 
 .PHONY: generate-docs
-generate-docs: helm-docs ## Run kube-linter on Kubernetes manifests.
+generate-docs: ## Generate Helm chart documentation.
 	$(HELM_DOCS) --badge-style=flat
 
 .PHONY: generate-schemas
-generate-schemas: helm-values-schema-json ## Run generate schema for Helm Chart values.
+generate-schemas: ## Generate the Helm chart values schema.
 	$(HELM_VALUES_SCHEMA_JSON) \
 		--draft=7 \
 		--indent=2 \
@@ -135,15 +136,15 @@ test-e2e: local-deploy chainsaw ## Run the e2e tests against a k8s instance usin
 	$(CHAINSAW) test ${CHAINSAW_ARGS}
 
 .PHONY: lint
-lint: golangci-lint ## Run golangci-lint linter.
+lint: ## Run golangci-lint linter.
 	$(GOLANGCI_LINT) run
 
 .PHONY: lint-fix
-lint-fix: golangci-lint ## Run golangci-lint linter and perform fixes.
+lint-fix: ## Run golangci-lint linter and perform fixes.
 	$(GOLANGCI_LINT) run --fix
 
 .PHONY: lint-manifests
-lint-manifests: kube-linter ## Run kube-linter on Kubernetes manifests.
+lint-manifests: ## Run kube-linter on Kubernetes manifests.
 	$(KUBE_LINTER) lint --config=helm/.kube-linter.yaml ./helm/**
 
 .PHONY: hadolint
@@ -152,8 +153,8 @@ hadolint: ## Run hadolint on Dockerfile
 
 .PHONY: generate-mocks
 generate-mocks:
-	go run go.uber.org/mock/mockgen@$(GOMOCK_VERSION) -source=./pkg/s3/s3.go -destination=./testing/mock/s3.gen.go -package=mock -typed -mock_names=Client=MockS3Client
-	go run go.uber.org/mock/mockgen@$(GOMOCK_VERSION) -source=./pkg/linodeclient/linodeclient.go -destination=./testing/mock/linodeclient.gen.go -package=mock -typed -mock_names=Client=MockLinodeClient
+	$(MOCKGEN) -source=./pkg/s3/s3.go -destination=./testing/mock/s3.gen.go -package=mock -typed -mock_names=Client=MockS3Client
+	$(MOCKGEN) -source=./pkg/linodeclient/linodeclient.go -destination=./testing/mock/linodeclient.gen.go -package=mock -typed -mock_names=Client=MockLinodeClient
 
 ##@ CI
 
@@ -199,7 +200,7 @@ undeploy-deps: ## Deploy all dependencies of Linode COSI Driver. This step insta
 	kubectl delete -k github.com/kubernetes-sigs/container-object-storage-interface/?ref=${COSI_VERSION}
 
 .PHONY: deploy
-deploy: helm ## Deploy driver to the K8s cluster specified in ~/.kube/config.
+deploy: ## Deploy driver to the K8s cluster specified in ~/.kube/config.
 	$(HELM) upgrade --install \
 		linode-cosi-driver \
 		./helm/linode-cosi-driver \
@@ -212,101 +213,54 @@ local-deploy: cluster tilt
 	$(TILT) ci -f Tiltfile
 
 .PHONY: undeploy
-undeploy: helm ## Undeploy driver from the K8s cluster specified in ~/.kube/config.
+undeploy: ## Undeploy driver from the K8s cluster specified in ~/.kube/config.
 	$(HELM) uninstall linode-cosi-driver
 
 ##@ Dependencies
 
 ## Tool Binaries
 KUBECTL ?= kubectl
-CHAINSAW                ?= $(LOCALBIN)/chainsaw
-CTLPTL                  ?= $(LOCALBIN)/ctlptl
-GOLANGCI_LINT           ?= $(LOCALBIN)/golangci-lint
-HELM                    ?= $(LOCALBIN)/helm
-HELM_DOCS               ?= $(LOCALBIN)/helm-docs
-HELM_VALUES_SCHEMA_JSON ?= $(LOCALBIN)/helm-values-schema-json
-KIND                    ?= $(LOCALBIN)/kind
-KUBE_LINTER             ?= $(LOCALBIN)/kube-linter
-TILT           			?= $(LOCALBIN)/tilt
+CHAINSAW                ?= chainsaw
+CTLPTL                  ?= ctlptl
+GOLANGCI_LINT           ?= golangci-lint
+HELM                    ?= helm
+HELM_DOCS               ?= helm-docs
+HELM_VALUES_SCHEMA_JSON ?= helm-values-schema-json
+KIND                    ?= kind
+KUBE_LINTER             ?= kube-linter
+MOCKGEN                 ?= mockgen
+TILT                    ?= tilt
 
-## Tool Versions
-CHAINSAW_VERSION                ?= v0.2.15
-# renovate: datasource=go depName=github.com/tilt-dev/ctlptl
-CTLPTL_VERSION                  ?= v0.9.4
-# renovate: datasource=github-tags depName=golangci/golangci-lint
-GOLANGCI_LINT_VERSION           ?= v2.12.2
-# renovate: datasource=go depName=helm.sh/helm/v3/cmd/helm
-HELM_VERSION                    ?= v4.2.3
-# renovate: datasource=go depName=github.com/norwoodj/helm-docs/cmd/helm-docs
-HELM_DOCS_VERSION               ?= v1.14.2
-# renovate: datasource=go depName=github.com/losisin/helm-values-schema-json/v2
-HELM_VALUES_SCHEMA_JSON_VERSION ?= v2.4.0
-# renovate: datasource=go depName=sigs.k8s.io/kind
-KIND_VERSION                    ?= v0.29.0
-# renovate: datasource=go depName=golang.stackrox.io/kube-linter/cmd/kube-linter
-KUBE_LINTER_VERSION             ?= v0.7.1
-# renovate: datasource=github-tags depName=tilt-dev/tilt
-TILT_VERSION                    ?= 0.37.5
-# renovate: datasource=github-tags depName=uber-go/mock
-GOMOCK_VERSION                  ?= v0.6.0
+## Tool versions used only by the temporary pull_request_target fallback.
+CHAINSAW_VERSION ?= v0.2.15
+CTLPTL_VERSION   ?= v0.9.4
+KIND_VERSION     ?= v0.29.0
+TILT_VERSION     ?= 0.37.5
 
 .PHONY: chainsaw
-chainsaw: $(CHAINSAW)-$(CHAINSAW_VERSION) ## Download chainsaw locally if necessary.
-$(CHAINSAW)-$(CHAINSAW_VERSION): $(LOCALBIN)
-	$(call go-install-tool,$(CHAINSAW),github.com/kyverno/chainsaw,$(CHAINSAW_VERSION))
+chainsaw: $(LOCALBIN)
+	@if ! command -v "$(CHAINSAW)" >/dev/null 2>&1; then \
+		echo "Installing github.com/kyverno/chainsaw@$(CHAINSAW_VERSION)"; \
+		GOBIN=$(LOCALBIN) go install github.com/kyverno/chainsaw@$(CHAINSAW_VERSION); \
+	fi
 
 .PHONY: ctlptl
-ctlptl: $(CTLPTL)-$(CTLPTL_VERSION) ## Download ctlptl locally if necessary.
-$(CTLPTL)-$(CTLPTL_VERSION): $(LOCALBIN)
-	$(call go-install-tool,$(CTLPTL),github.com/tilt-dev/ctlptl/cmd/ctlptl,$(CTLPTL_VERSION))
-
-.PHONY: golangci-lint
-golangci-lint: $(GOLANGCI_LINT)-$(GOLANGCI_LINT_VERSION) ## Download golangci-lint locally if necessary.
-$(GOLANGCI_LINT)-$(GOLANGCI_LINT_VERSION): $(LOCALBIN)
-	$(call go-install-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/v2/cmd/golangci-lint,$(GOLANGCI_LINT_VERSION))
-
-.PHONY: helm
-helm: $(HELM)-$(HELM_VERSION) ## Download helm locally if necessary.
-$(HELM)-$(HELM_VERSION): $(LOCALBIN)
-	$(call go-install-tool,$(HELM),helm.sh/helm/v3/cmd/helm,$(HELM_VERSION))
-
-.PHONY: helm-docs
-helm-docs: $(HELM_DOCS)-$(HELM_DOCS_VERSION) ## Download helm-docs locally if necessary.
-$(HELM_DOCS)-$(HELM_DOCS_VERSION): $(LOCALBIN)
-	$(call go-install-tool,$(HELM_DOCS),github.com/norwoodj/helm-docs/cmd/helm-docs,$(HELM_DOCS_VERSION))
-
-.PHONY: helm-values-schema-json
-helm-values-schema-json: $(HELM_VALUES_SCHEMA_JSON)-$(HELM_VALUES_SCHEMA_JSON_VERSION) ## Download helm-values-schema-json locally if necessary.
-$(HELM_VALUES_SCHEMA_JSON)-$(HELM_VALUES_SCHEMA_JSON_VERSION): $(LOCALBIN)
-	$(call go-install-tool,$(HELM_VALUES_SCHEMA_JSON),github.com/losisin/helm-values-schema-json/v2,$(HELM_VALUES_SCHEMA_JSON_VERSION))
+ctlptl: $(LOCALBIN)
+	@if ! command -v "$(CTLPTL)" >/dev/null 2>&1; then \
+		echo "Installing github.com/tilt-dev/ctlptl/cmd/ctlptl@$(CTLPTL_VERSION)"; \
+		GOBIN=$(LOCALBIN) go install github.com/tilt-dev/ctlptl/cmd/ctlptl@$(CTLPTL_VERSION); \
+	fi
 
 .PHONY: kind
-kind: $(KIND)-$(KIND_VERSION) ## Download kind locally if necessary.
-$(KIND)-$(KIND_VERSION): $(LOCALBIN)
-	$(call go-install-tool,$(KIND),sigs.k8s.io/kind,$(KIND_VERSION))
-
-.PHONY: kube-linter
-kube-linter: $(KUBE_LINTER)-$(KUBE_LINTER_VERSION) ## Download kube-linter locally if necessary.
-$(KUBE_LINTER)-$(KUBE_LINTER_VERSION): $(LOCALBIN)
-	$(call go-install-tool,$(KUBE_LINTER),golang.stackrox.io/kube-linter/cmd/kube-linter,$(KUBE_LINTER_VERSION))
+kind: $(LOCALBIN)
+	@if ! command -v "$(KIND)" >/dev/null 2>&1; then \
+		echo "Installing sigs.k8s.io/kind@$(KIND_VERSION)"; \
+		GOBIN=$(LOCALBIN) go install sigs.k8s.io/kind@$(KIND_VERSION); \
+	fi
 
 .PHONY: tilt
-tilt: $(TILT) ## Download tilt locally if necessary.
-$(TILT): $(LOCALBIN)
-	curl -fsSL https://github.com/tilt-dev/tilt/releases/download/v$(TILT_VERSION)/tilt.$(TILT_VERSION).$(TILT_OS).$(ARCH).tar.gz | tar -xzvm -C $(LOCALBIN) tilt
-
-# go-install-tool will 'go install' any package with custom target and name of binary, if it doesn't exist
-# $1 - target path with name of binary
-# $2 - package url which can be installed
-# $3 - specific version of package
-define go-install-tool
-@[ -f "$(1)-$(3)" ] || { \
-set -e; \
-package=$(2)@$(3) ;\
-echo "Downloading $${package}" ;\
-rm -f $(1) || true ;\
-GOBIN=$(LOCALBIN) go install $${package} ;\
-mv $(1) $(1)-$(3) ;\
-} ;\
-ln -sf $(1)-$(3) $(1)
-endef
+tilt: $(LOCALBIN)
+	@if ! command -v "$(TILT)" >/dev/null 2>&1; then \
+		echo "Installing tilt v$(TILT_VERSION)"; \
+		curl -fsSL "https://github.com/tilt-dev/tilt/releases/download/v$(TILT_VERSION)/tilt.$(TILT_VERSION).$(TILT_OS).$(ARCH).tar.gz" | tar -xzm -C $(LOCALBIN) tilt; \
+	fi
