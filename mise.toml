@@ -1,0 +1,27 @@
+[tools]
+go = "1.26.5"
+
+# Build, test, lint, and generation tools.
+golangci-lint = "2.12.2"
+"go:go.uber.org/mock/mockgen" = "0.6.0"
+"github:norwoodj/helm-docs" = "1.14.2"
+"go:github.com/losisin/helm-values-schema-json/v2" = "2.4.0"
+kube-linter = "0.7.1"
+
+# Kubernetes and local-cluster tooling.
+kubectl = "1.35.0"
+helm = "4.2.3"
+kind = "0.29.0"
+ctlptl = "0.9.4"
+tilt = "0.37.5"
+"github:kyverno/chainsaw" = "0.2.15"
+
+[tasks]
+setup = "mise install"
+build = "make build"
+test = "make test"
+test-integration = "make test-integration"
+test-e2e = "make test-e2e"
+lint = "make lint"
+lint-manifests = "make lint-manifests"
+generate = "make generate-docs generate-schemas"

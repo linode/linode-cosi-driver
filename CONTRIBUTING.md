@@ -8,10 +8,8 @@
     - [Issue Lifecycle](#issue-lifecycle)
   - [Pull Requests](#pull-requests)
   - [Developing](#developing)
-    - [Go Environment and Go Modules](#go-environment-and-go-modules)
+    - [Development toolchain](#development-toolchain)
     - [Code Linting with golangci-lint](#code-linting-with-golangci-lint)
-      - [Installing golangci-lint via Homebrew (macOS)](#installing-golangci-lint-via-homebrew-macos)
-      - [Installing golangci-lint via `go install`](#installing-golangci-lint-via-go-install)
     - [Testing](#testing)
       - [Unit tests](#unit-tests)
       - [Integration tests](#integration-tests)
@@ -59,61 +57,26 @@ commit rights to the repository so that all contributors follow the same process
 
 ## Developing
 
-### Go Environment and Go Modules
+### Development toolchain
 
-To contribute to linode-cosi-driver, you need to have Go installed on your system and set up with Go modules. Follow these steps to get started:
+The repository uses [mise](https://mise.jdx.dev/) to install and run the exact
+versions of Go and the development tools used by CI. After installing mise,
+clone the repository and install its toolchain:
 
-1. Install Go:
-   - For macOS users, the recommended way is to use Homebrew:
-     ```
-     $ brew install go
-     ```
-   - For other platforms or manual installation, you can download and install Go from the [official website](https://golang.org/dl/).
+```sh
+git clone https://github.com/linode/linode-cosi-driver.git
+cd linode-cosi-driver
+mise install
+```
 
-2. Clone the `linode-cosi-driver` repository to your local machine:
-   ```
-   $ git clone https://github.com/linode/linode-cosi-driver.git
-   ```
-
-3. Change into the `linode-cosi-driver` directory:
-   ```
-   $ cd linode-cosi-driver
-   ```
-
-4. Now you're all set with the Go environment and Go modules!
+Use `mise run` for the common development tasks listed in `mise.toml`.
 
 ### Code Linting with golangci-lint
 
-To ensure consistent code quality, we use `golangci-lint` as a single point for code linting. You can install `golangci-lint` via Homebrew (for macOS users) or using the `go install` command (for all platforms).
-
-#### Installing golangci-lint via Homebrew (macOS)
-
-If you're on macOS and using Homebrew, you can install `golangci-lint` with the following command:
+Run the repository's pinned version of `golangci-lint` through mise:
 
 ```sh
-$ brew install golangci-lint
-```
-
-Make sure to update `golangci-lint` regularly to get the latest improvements:
-
-```sh
-$ brew upgrade golangci-lint
-```
-
-#### Installing golangci-lint via `go install`
-
-For other platforms, you can install `golangci-lint` using the `go install` command:
-
-```sh
-$ go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-```
-
-Ensure that your Go binary is in your system's PATH for the `go install` command to work correctly.
-
-With `golangci-lint` installed, you can now run it against the linode-cosi-driver codebase to check for any linting issues:
-
-```sh
-$ golangci-lint run
+mise run lint
 ```
 
 Fix any linting issues reported by `golangci-lint` before submitting your changes.
@@ -154,10 +117,10 @@ func TestAdd(t *testing.T) {
 > - **Linode Token**: Set the `LINODE_TOKEN` environment variable with your Linode API token.
 > - **Environment Variables**: Additional environment variables, such as `LINODE_API_URL` and `LINODE_API_VERSION`, can be set as needed.
 
-To run the end-to-end tests, execute the following:
+To run the integration tests, execute the following:
 
 ```bash
-make test-integration
+mise run test-integration
 ```
 
 The tests cover various operations such as creating a bucket, granting and revoking bucket access, and deleting a bucket. These operations are performed multiple times to ensure idempotency. You can controll number of times the idempotent operations are run and `IDEMPOTENCY_ITERATIONS` (default is 2).
@@ -173,11 +136,11 @@ The tests cover various operations such as creating a bucket, granting and revok
 To run the end-to-end tests, execute the following:
 
 ```bash
-make test-e2e
+mise run test-e2e
 ```
 
-To run specific tests only please use label selector via `TEST_SELECTOR` environment variable.
+To run specific tests only, pass a label selector through the `CHAINSAW_ARGS` environment variable.
 
 ```bash
-TEST_SELECTOR=name=examples make test-e2e
+CHAINSAW_ARGS='--selector name=examples' mise run test-e2e
 ```

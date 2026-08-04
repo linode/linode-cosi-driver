@@ -33,14 +33,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-go@v6
+      - name: Set up Mise
+        uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d # v4.2.0
         with:
-          go-version-file: ./go.mod
-          cache: false
+          install_args: go kube-linter github:norwoodj/helm-docs go:github.com/losisin/helm-values-schema-json/v2
       - run: |
-          make lint-manifests
+          mise run lint-manifests
       - run: |
-          make \
-            generate-docs \
-            generate-schemas \
-            diff
+          mise run generate
+          make diff
