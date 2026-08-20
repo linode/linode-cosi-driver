@@ -1,13 +1,22 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    // Keep every GitHub Action referenced by a commit SHA, with the human-readable
+    // tag preserved as a trailing comment.
+    "helpers:pinGitHubActionDigests",
+    // Resolve those SHAs back to release notes so digest bumps have a changelog.
+    "helpers:githubDigestChangelogs",
+  ],
+  "configMigration": true,
   "schedule": [
     "* 0 1,15 * *",
   ],
-  "extends": ["config:recommended"],
   "labels": ["dependencies"],
   "postUpdateOptions": ["gomodTidy"],
   "vulnerabilityAlerts": {
-    "enabled": true
+    "enabled": true,
+    "groupName": "security updates",
   },
   "osvVulnerabilityAlerts": true,
   "platformAutomerge": true,
@@ -15,27 +24,58 @@
     {
       "customType": "regex",
       "managerFilePatterns": [
-        "/(^|/)Makefile$/",
-        "/(^|/)makefile$/",
-        "/(^|/)GNUMakefile$/",
-        "/\\.mk$/"
+        "/(^|/)justfile$/",
+        "/(^|/)Justfile$/",
+        "/(^|/)\\.justfile$/",
+        "/\\.just$/",
       ],
       "matchStrings": [
-        "# renovate: datasource=(?<datasource>[a-zA-Z0-9-._]+?) depName=(?<depName>[^\\s]+?)(?: (?:packageName)=(?<packageName>[^\\s]+?))?(?: versioning=(?<versioning>[^\\s]+?))?(?: extractVersion=(?<extractVersion>[^\\s]+?))?(?: registryUrl=(?<registryUrl>[^\\s]+?))?\\s+[A-Za-z0-9_]+?_VERSION\\s*:*\\??=\\s*[\"']?(?<currentValue>.+?)[\"']?\\s"
+        "# renovate: datasource=(?<datasource>[a-zA-Z0-9-._]+?) depName=(?<depName>[^\\s]+?)(?: (?:packageName)=(?<packageName>[^\\s]+?))?(?: versioning=(?<versioning>[^\\s]+?))?(?: extractVersion=(?<extractVersion>[^\\s]+?))?(?: registryUrl=(?<registryUrl>[^\\s]+?))?\\s+[A-Za-z0-9_]+?(?:_VERSION|_version)\\s*:*\\??=\\s*[\"']?(?<currentValue>.+?)[\"']?\\s",
       ]
     }
   ],
   "packageRules": [
     {
+      "description": "Ship security fixes as soon as they land, outside the normal schedule.",
+      "matchCategories": ["security"],
+      "schedule": ["at any time"],
+      "prPriority": 10,
+      "minimumReleaseAge": "7 days"
+    },
+    {
       "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
       "automerge": true,
     },
     {
+      "description": "Group GitHub Actions bumps, including SHA re-pins, into one PR.",
+      "matchManagers": ["github-actions"],
+      "groupName": "GitHub Actions",
+      "groupSlug": "github-actions",
+      "separateMajorMinor": false,
+    },
+    {
+      "description": "Group development toolchain bumps from mise.toml.",
+      "matchManagers": ["mise"],
+      "groupName": "mise tools",
+    },
+    {
+      // Keeps the Go toolchain in mise.toml and go.mod moving together. Listed after
+      // the mise rule so a Go bump lands here rather than in the "mise tools" PR.
       "groupName": "go Version",
       "groupSlug": "go-version",
       "matchDatasources": [
-        "dockerfile",
         "golang-version"
+      ]
+    },
+    {
+      "groupName": "kubernetes",
+      "groupSlug": "kubernetes-go",
+      "matchDatasources": [
+        "go"
+      ],
+      "matchPackageNames": [
+        "k8s.io/**",
+        "sigs.k8s.io/**"
       ]
     }
   ]

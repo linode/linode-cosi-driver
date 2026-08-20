@@ -4,6 +4,14 @@
 
 A Kubernetes Container Object Storage Interface (COSI) Driver for Linode
 
+**Homepage:** <https://github.com/linode/linode-cosi-driver>
+
+## Maintainers
+
+| Name | Email | Url |
+| ---- | ------ | --- |
+| linode |  |  |
+
 ## Values
 
 | Key | Type | Default | Description |

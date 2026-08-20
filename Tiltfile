@@ -1,3 +1,4 @@
+load('ext://ko', 'ko_build')
 load('ext://namespace', 'namespace_inject', 'namespace_create')
 k8s_yaml(kustomize("./hack/container-object-storage-controller"))
 k8s_resource(
@@ -36,9 +37,11 @@ k8s_resource(
         "linode-cosi-driver:namespace",
     ],
 )
-if os.getenv("SKIP_DOCKER_BUILD", "false") != "true":
-    docker_build(
+if os.getenv("SKIP_IMAGE_BUILD", "false") != "true":
+    # ko reads IMAGE_VERSION and KO_DEFAULTPLATFORMS from the environment; the
+    # local-deploy target sets both before invoking tilt.
+    ko_build(
         "docker.io/linode/linode-cosi-driver",
-        context=".",
-        only=("Dockerfile", "Makefile", "vendor", "go.mod", "go.sum", "./pkg", "./cmd"),
+        "./cmd/linode-cosi-driver",
+        deps=["./cmd", "./pkg", "go.mod", "go.sum", ".ko.yaml"],
     )

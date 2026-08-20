@@ -4,7 +4,7 @@ on:
     branches:
       - main
     tags:
-      - "*"
+      - "v*.*.*"
   workflow_dispatch:
 
 permissions:
@@ -15,30 +15,31 @@ jobs:
   build-push:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - name: Harden Runner
+        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
+        with:
+          disable-sudo: true
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      - name: Docker Meta
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: linode/linode-cosi-driver
+          persist-credentials: false
+
+      - name: Set up Mise
+        uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4.2.5
+
       - name: Login to Docker Hub
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         env:
           DOCKERHUB_OIDC_CONNECTIONID: ${{ secrets.DOCKERHUB_OIDC_CONNECTIONID }}
         with:
           username: ${{ github.repository_owner }}
-      - name: Build and Push to Docker Hub
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          build-args: VERSION=${{ github.ref_name == 'main' && format('main-{0}', github.sha) || github.ref_name }}
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Publish image with ko
+        env:
+          KO_DOCKER_REPO: docker.io/linode/linode-cosi-driver
+          IMAGE_VERSION: ${{ github.ref_name == 'main' && format('main-{0}', github.sha) || github.ref_name }}
+          IMAGE_TAGS: ${{ startsWith(github.ref, 'refs/tags/') && format('{0},latest', github.ref_name) || format('{0},{0}-{1}', github.ref_name, github.sha) }}
+        run: mise run ko-publish

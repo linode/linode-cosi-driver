@@ -5,21 +5,22 @@ on:
   pull_request_target:
     types: [opened, reopened, synchronize]
 
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   label-pr:
     name: Update PR labels
-    permissions:
-      contents: write
-      pull-requests: write
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
+      - name: Harden Runner
+        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
         with:
-          fetch-depth: 0
+          disable-sudo: true
+          egress-policy: audit
+
       - name: Label PR
-        uses: release-drafter/release-drafter@v6
-        with:
-          disable-releaser: github.ref != 'refs/heads/main'
+        uses: release-drafter/release-drafter/autolabeler@34d80673e067bdc0c24568d3af899c216adcfaa9 # v7.7.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
