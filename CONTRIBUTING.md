@@ -1,6 +1,6 @@
 # Contributing to linode-cosi-driver
 
-**Table of Contents**
+## Table of Contents
 
 - [Contributing to linode-cosi-driver](#contributing-to-linode-cosi-driver)
   - [Issues](#issues)
@@ -28,12 +28,12 @@ lets us merge or address your contributions quickly.
 
 ### Reporting an Issue
 
-* Make sure you test against the latest released version. It is possible
+- Make sure you test against the latest released version. It is possible
   we already fixed the bug you're experiencing.
-* If you experienced a panic, please create a [gist](https://gist.github.com)
-  of the *entire* generated crash log for us to look at. Double check
+- If you experienced a panic, please create a [gist](https://gist.github.com)
+  of the _entire_ generated crash log for us to look at. Double check
   no sensitive items were in the log.
-* Respond as promptly as possible to any questions made by the _linode-cosi-driver_
+- Respond as promptly as possible to any questions made by the _linode-cosi-driver_
   team to your issue. Stale issues will be closed.
 
 ### Issue Lifecycle
@@ -111,8 +111,9 @@ func TestAdd(t *testing.T) {
 #### Integration tests
 
 > [!IMPORTANT]
-> 
+>
 > Before running the integration tests, ensure the following prerequisites are met:
+>
 > - **Linode Account**: You need a valid Linode account with access to the Linode API.
 > - **Linode Token**: Set the `LINODE_TOKEN` environment variable with your Linode API token.
 > - **Environment Variables**: Additional environment variables, such as `LINODE_API_URL` and `LINODE_API_VERSION`, can be set as needed.
@@ -128,8 +129,9 @@ The tests cover various operations such as creating a bucket, granting and revok
 #### End-to-end tests
 
 > [!IMPORTANT]
-> 
+>
 > Before running the integration tests, ensure the following prerequisites are met:
+>
 > - **Linode Account**: You need a valid Linode account with access to the Linode API.
 > - **Linode Token**: Set the `LINODE_TOKEN` environment variable with your Linode API token.
 
