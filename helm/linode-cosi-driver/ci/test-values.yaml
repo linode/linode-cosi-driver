@@ -1,0 +1,4 @@
+# Values used by `ct lint` in CI. The chart marks `apiToken` as required, so a
+# placeholder is supplied here to let the templates render during linting.
+# This file is never used for a real install.
+apiToken: "ci-lint-placeholder"

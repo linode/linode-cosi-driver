@@ -1,0 +1,125 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/kyverno/chainsaw/main/.schemas/json/test-chainsaw-v1alpha1.json
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: sample-app
+spec:
+  template: true
+  steps:
+
+  - name: Check if COSI Controller exist
+    try:
+    - assert:
+        resource:
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: container-object-storage-controller
+            namespace: container-object-storage-system
+          status:
+            availableReplicas: 1
+
+  - name: Create test BucketClass and BucketAccessClass
+    try:
+    - apply:
+        resource:
+          apiVersion: objectstorage.k8s.io/v1alpha1
+          kind: BucketClass
+          metadata:
+            name: ($namespace)
+          driverName: objectstorage.cosi.linode.com
+          deletionPolicy: Delete
+          parameters:
+            cosi.linode.com/v1/region: us-ord
+            cosi.linode.com/v1/policy: |-
+              {
+                "Version": "2012-10-17",
+                "Statement": [
+                  {
+                    "Effect": "Allow",
+                    "Principal": "*",
+                    "Action": "*",
+                    "Resource": [
+                      "arn:aws:s3:::{{ .BucketName }}",
+                      "arn:aws:s3:::{{ .BucketName }}/*"
+                    ]
+                  }
+                ]
+              }
+    - assert:
+        resource:
+          apiVersion: objectstorage.k8s.io/v1alpha1
+          kind: BucketClass
+          metadata:
+            name: ($namespace)
+    - apply:
+        resource:
+          apiVersion: objectstorage.k8s.io/v1alpha1
+          kind: BucketAccessClass
+          metadata:
+            name: ($namespace)
+          driverName: objectstorage.cosi.linode.com
+          authenticationType: Key
+          parameters:
+            cosi.linode.com/v1/permissions: read_write
+    - assert:
+        resource:
+          apiVersion: objectstorage.k8s.io/v1alpha1
+          kind: BucketAccessClass
+          metadata:
+            name: ($namespace)
+
+  - name: Create BucketClaim
+    try:
+    - apply:
+        resource:
+          apiVersion: objectstorage.k8s.io/v1alpha1
+          kind: BucketClaim
+          metadata:
+            name: cosi-sample-app
+          spec:
+            bucketClassName: ($namespace)
+            protocols:
+            - S3
+
+  - name: Check if BucketClaim is ready
+    timeouts:
+      assert: 600s
+    try:
+    - assert:
+        file: ./resources/bucketclaim-assert.yaml
+
+  - name: Create BucketAccess
+    try:
+    - apply:
+        resource:
+          apiVersion: objectstorage.k8s.io/v1alpha1
+          kind: BucketAccess
+          metadata:
+            name: cosi-sample-app
+          spec:
+            bucketAccessClassName: ($namespace)
+            bucketClaimName: cosi-sample-app
+            credentialsSecretName: s3-credentials
+            protocol: S3
+    - assert:
+        file: ./resources/bucketaccess-assert.yaml
+    - assert:
+        resource:
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: s3-credentials
+
+  - name: Run test upload
+    timeouts:
+      assert: 300s
+    try:
+    - apply:
+        file: ./resources/job-apply.yaml
+    - assert:
+        file: ./resources/job-assert.yaml
+    catch:
+      - podLogs:
+          selector: job-name=cosi-sample-upload

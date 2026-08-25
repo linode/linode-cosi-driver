@@ -1,0 +1,12 @@
+name: Question
+description: Have a generic question? Open this one.
+title: "[QUESTION]: <title>"
+labels:
+  - kind/support
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: Ask a question!
+    validations:
+      required: true

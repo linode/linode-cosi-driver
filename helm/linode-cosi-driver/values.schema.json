@@ -1,0 +1,166 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "affinity": {
+      "type": "object"
+    },
+    "apiToken": {
+      "type": "string"
+    },
+    "driver": {
+      "type": "object",
+      "properties": {
+        "cacheTTL": {
+          "type": "string"
+        },
+        "image": {
+          "type": "object",
+          "properties": {
+            "pullPolicy": {
+              "type": "string"
+            },
+            "repository": {
+              "type": "string"
+            },
+            "tag": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "fullnameOverride": {
+      "type": "string"
+    },
+    "imagePullSecrets": {
+      "type": "array"
+    },
+    "linodeApiUrl": {
+      "type": "string"
+    },
+    "linodeApiVersion": {
+      "type": "string"
+    },
+    "nameOverride": {
+      "type": "string"
+    },
+    "nodeSelector": {
+      "type": "object"
+    },
+    "podAnnotations": {
+      "type": "object",
+      "properties": {
+        "prometheus.io/path": {
+          "type": "string"
+        },
+        "prometheus.io/port": {
+          "type": "string"
+        },
+        "prometheus.io/scrape": {
+          "type": "string"
+        }
+      }
+    },
+    "podSecurityContext": {
+      "type": "object",
+      "properties": {
+        "runAsNonRoot": {
+          "type": "boolean"
+        },
+        "runAsUser": {
+          "type": "integer"
+        }
+      }
+    },
+    "rbac": {
+      "type": "object",
+      "properties": {
+        "annotations": {
+          "type": "object"
+        },
+        "name": {
+          "type": "string"
+        }
+      }
+    },
+    "replicaCount": {
+      "type": "integer"
+    },
+    "resources": {
+      "type": "object"
+    },
+    "s3": {
+      "type": "object",
+      "properties": {
+        "accessKey": {
+          "type": "string"
+        },
+        "ephemeralCredentials": {
+          "type": "boolean"
+        },
+        "secret": {
+          "type": "object",
+          "properties": {
+            "annotations": {
+              "type": "object"
+            },
+            "ref": {
+              "type": "string"
+            }
+          }
+        },
+        "secretKey": {
+          "type": "string"
+        },
+        "ssl": {
+          "type": "boolean"
+        }
+      }
+    },
+    "secret": {
+      "type": "object",
+      "properties": {
+        "annotations": {
+          "type": "object"
+        },
+        "ref": {
+          "type": "string"
+        }
+      }
+    },
+    "securityContext": {
+      "type": "object",
+      "properties": {
+        "readOnlyRootFilesystem": {
+          "type": "boolean"
+        }
+      }
+    },
+    "sidecar": {
+      "type": "object",
+      "properties": {
+        "image": {
+          "type": "object",
+          "properties": {
+            "pullPolicy": {
+              "type": "string"
+            },
+            "repository": {
+              "type": "string"
+            },
+            "tag": {
+              "type": "string"
+            }
+          }
+        },
+        "logVerbosity": {
+          "type": "integer"
+        }
+      }
+    },
+    "tolerations": {
+      "type": "array"
+    }
+  }
+}

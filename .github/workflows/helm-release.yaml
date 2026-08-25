@@ -1,0 +1,77 @@
+name: Helm
+
+on:
+  pull_request:
+    paths:
+      - 'helm/**'
+  push:
+    tags:
+      - "helm-v*"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  helm-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
+        with:
+          disable-sudo: true
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Mise
+        uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4.2.5
+
+      - name: Set Version
+        run: mise run set-chart-version
+
+      - name: Run chart-testing (lint)
+        run: mise run lint-chart ${{ github.event.repository.default_branch }}
+
+  helm-release:
+    if: ${{ startsWith(github.ref, 'refs/tags/') }}
+    needs: helm-test
+    permissions:
+      contents: write  # for helm/chart-releaser-action to push chart release and create a release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
+        with:
+          disable-sudo: true
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Set up Mise
+        uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4.2.5
+
+      - name: Set Version
+        run: mise run set-chart-version
+
+      - name: Configure Git
+        run: |
+          git config user.name "$GITHUB_ACTOR"
+          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+
+      - name: Run chart-releaser
+        uses: helm/chart-releaser-action@cae68fefc6b5f367a0275617c9f83181ba54714f # v1.7.0
+        env:
+          CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+          CR_RELEASE_NAME_TEMPLATE: "helm-{{ .Version }}"
+        with:
+          charts_dir: helm
+          skip_existing: true
+          mark_as_latest: false

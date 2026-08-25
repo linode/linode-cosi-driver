@@ -1,0 +1,89 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/kyverno/chainsaw/main/.schemas/json/test-chainsaw-v1alpha1.json
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: examples
+spec:
+  steps:
+  - name: Apply example manifests
+    try:
+    - apply:
+        file: ../../../examples/linode-objectstorage.BucketClass.yaml
+    - assert:
+        file: ../../../examples/linode-objectstorage.BucketClass.yaml
+    - apply:
+        file: ../../../examples/linode-objectstorage-retain.BucketClass.yaml
+    - assert:
+        file: ../../../examples/linode-objectstorage-retain.BucketClass.yaml
+    - apply:
+        file: ../../../examples/linode-objectstorage.BucketAccessClass.yaml
+    - assert:
+        file: ../../../examples/linode-objectstorage.BucketAccessClass.yaml
+    - apply:
+        file: ../../../examples/example.BucketClaim.yaml
+  - name: Check if BucketClaim is ready
+    timeouts:
+      assert: 600s
+    try:
+    - assert:
+        file: ./example.BucketClaim.yaml
+  - name: Create BucketAccess
+    try:
+    - apply:
+        file: ../../../examples/example.BucketAccess.yaml
+    - assert:
+        resource:
+          apiVersion: objectstorage.k8s.io/v1alpha1
+          kind: BucketAccess
+          metadata:
+            name: example
+          status:
+            accessGranted: true
+    - assert:
+        resource:
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: s3-credentials
+  - name: Run bucket-test pod
+    try:
+    - create:
+        resource:
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: bucket-test
+          spec:
+            terminationGracePeriodSeconds: 0
+            containers:
+            - name: test
+              image: busybox:stable
+              command: [ sleep, infinity ]
+              volumeMounts:
+              - mountPath: /conf
+                name: example-secret-vol
+            volumes:
+            - name: example-secret-vol
+              secret:
+                secretName: s3-credentials
+                items:
+                - key: BucketInfo
+                  path: BucketInfo.json
+    - assert:
+        resource:
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: bucket-test
+          status:
+            phase: Running
+    - command:
+        env:
+        - name: NAMESPACE
+          value: ($namespace)
+        entrypoint: kubectl
+        args: [ exec, -n, "$NAMESPACE", bucket-test, --, head, -c12, /conf/BucketInfo.json ]
+        check:
+          ($error): ~
+          (starts_with($stdout, '{"metadata"')): true

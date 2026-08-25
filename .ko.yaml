@@ -1,0 +1,8 @@
+defaultBaseImage: gcr.io/distroless/static:nonroot
+defaultPlatforms:
+  - linux/arm64
+  - linux/amd64
+defaultLdflags:
+  - -s
+  - -w
+  - -X github.com/linode/linode-cosi-driver/pkg/version.Version={{.Env.IMAGE_VERSION}}

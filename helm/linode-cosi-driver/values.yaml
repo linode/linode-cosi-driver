@@ -1,0 +1,129 @@
+# Default values for linode-cosi-driver.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# -- Number of pod replicas.
+replicaCount: 1
+
+# -- Linode API token. This field is **required** unless secret is created before deployment (see `secret.ref` value).
+apiToken: ""
+
+# -- Linode API URL, leave empty for default.
+linodeApiUrl: ""
+
+# -- Linode API version, leave empty for default.
+linodeApiVersion: ""
+
+driver:
+  image:
+    # -- Driver container image repository.
+    repository: docker.io/linode/linode-cosi-driver
+
+    # -- Driver container image pull policy.
+    pullPolicy: IfNotPresent
+
+    # -- Overrides the image tag whose default is the chart appVersion.
+    tag: ""
+
+  # -- TTL of the Object Storage region/endpoint cache.
+  cacheTTL: 30s
+
+sidecar:
+  image:
+    # -- Sidecar container image repository.
+    repository: gcr.io/k8s-staging-sig-storage/objectstorage-sidecar
+
+    # -- Sidecar container image pull policy.
+    pullPolicy: IfNotPresent
+
+    # -- Sidecar container image tag.
+    tag: "v0.2.2"
+
+  # -- Log verbosity level for the sidecar container.
+  logVerbosity: 4
+
+# -- List of Docker registry secret names to pull images.
+imagePullSecrets: []
+
+# -- Overrides the chart name.
+nameOverride: ""
+
+# -- Overrides the full chart name.
+fullnameOverride: ""
+
+rbac:
+  # -- Annotations to add to the service account, cluster role, and cluster role binding.
+  annotations: {}
+
+  # -- The name of the service account, cluster role, and cluster role binding to use.
+  # If not set, a name is generated using the fullname template.
+  name: ""
+
+secret:
+  # -- Name of existing secret. If not set, a new secret is created.
+  ref: ""
+
+  # -- Annotations to add to the secret.
+  annotations: {}
+
+s3:
+  secret:
+    # -- Name of existing secret. If not set, a new secret is created.
+    ref: ""
+
+    # -- Annotations to add to the secret.
+    annotations: {}
+
+  # -- Generate ephemeral credentials, that are used in s3 client. Those might not be properly cleaned up if
+  # the container exits unexpectedly.
+  ephemeralCredentials: true
+
+  # -- Enable or disable SSL in S3 client.
+  ssl: true
+
+  # -- S3 Secret Key. This field is **required** unless secret is created before deployment (see `s3.secret.ref` value)
+  # or ephemeral credentials are enabled (see `s3.ephemeralCredentials` value).
+  secretKey: ""
+
+
+  # -- S3 Access Key. This field is **required** unless secret is created before deployment (see `s3.secret.ref` value)
+  # or ephemeral credentials are enabled (see `s3.ephemeralCredentials` value).
+  accessKey: ""
+
+podSecurityContext:
+  # -- Run the pod as a non-root user.
+  runAsNonRoot: true
+
+  # -- User ID to run the pod as.
+  runAsUser: 65532
+
+securityContext:
+  # -- Container runs with a read-only root filesystem.
+  readOnlyRootFilesystem: true
+
+# -- Annotations to add to the pod.
+podAnnotations:
+  prometheus.io/scrape: 'true'
+  prometheus.io/path: '/metrics'
+  prometheus.io/port: '9464'
+
+# -- Specify CPU and memory resource limits if needed.
+# The value defined for CPU limits affects the number of threads used in the driver.
+# The number of CPU seconds allocated above 1 is rounded using floor operation, so it should be done in integer steps (e.g. from 1 to 2).
+# This means that assigning CPU limit of 1.5 will result in only one CPU being used at a time.
+resources: {}
+  # limits:
+  #   cpu: 2
+  #   memory: 256Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 256Mi
+
+# -- Node labels for pod assignment.
+nodeSelector: {}
+
+# -- Tolerations for pod assignment.
+tolerations: []
+
+# -- Node affinity rules for pod assignment.
+affinity: {}

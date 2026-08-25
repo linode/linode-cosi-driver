@@ -1,0 +1,45 @@
+[settings]
+# Only install versions released more than 7 days ago.
+# https://mise.jdx.dev/security.html#minimum-release-age
+minimum_release_age = "7d"
+
+[tools]
+go = "1.26.5"
+
+
+# Build, test, lint, and generation tools.
+just = "1.58.0"
+golangci-lint = "2.12.2"
+ko = "0.18.1"
+"go:go.uber.org/mock/mockgen" = "0.6.0"
+"github:norwoodj/helm-docs" = "1.14.2"
+"go:github.com/losisin/helm-values-schema-json/v2" = "2.4.0"
+kube-linter = "0.7.1"
+"aqua:helm/chart-testing" = "3.14.0"
+yq = "4.53.3"
+uv = "0.12.3"
+"pipx:yamllint" = "1.38.0"
+"pipx:yamale" = "6.1.0"
+
+# Kubernetes and local-cluster tooling.
+kubectl = "1.35.0"
+helm = "4.2.3"
+kind = "0.29.0"
+ctlptl = "0.9.4"
+tilt = "0.37.5"
+"github:kyverno/chainsaw" = "0.2.15"
+
+[tasks]
+setup = "mise install"
+build = "just build"
+ko-build = "just ko-build"
+ko-publish = "just ko-publish"
+test = "just test"
+test-integration = "just test-integration"
+test-e2e = "just test-e2e"
+lint = "just lint"
+lint-manifests = "just lint-manifests"
+lint-chart = "just lint-chart"
+set-chart-version = "just set-chart-version"
+generate = "just generate"
+diff = "just diff"

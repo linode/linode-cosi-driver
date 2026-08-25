@@ -1,0 +1,47 @@
+load('ext://ko', 'ko_build')
+load('ext://namespace', 'namespace_inject', 'namespace_create')
+k8s_yaml(kustomize("./hack/container-object-storage-controller"))
+k8s_resource(
+    workload="container-object-storage-controller",
+    objects=[
+        "container-object-storage-system:namespace",
+        "bucketaccessclasses.objectstorage.k8s.io:customresourcedefinition",
+        "bucketaccesses.objectstorage.k8s.io:customresourcedefinition",
+        "bucketclaims.objectstorage.k8s.io:customresourcedefinition",
+        "bucketclasses.objectstorage.k8s.io:customresourcedefinition",
+        "buckets.objectstorage.k8s.io:customresourcedefinition",
+        "container-object-storage-controller-sa:serviceaccount",
+        "container-object-storage-controller:role",
+        "container-object-storage-controller-role:clusterrole",
+        "container-object-storage-controller:rolebinding",
+        "container-object-storage-controller:clusterrolebinding",
+])
+namespace_create("linode-cosi-driver")
+args = ["apiToken=" + os.getenv("LINODE_TOKEN")]
+if os.getenv("LINODE_URL"):
+    args.append("linodeApiUrl=" + os.getenv("LINODE_URL"))
+
+k8s_yaml(helm( "./helm/linode-cosi-driver",
+    "linode-cosi-driver",
+    namespace="linode-cosi-driver",
+    set=args,
+))
+
+k8s_resource(
+    workload="linode-cosi-driver",
+    objects=[
+        "linode-cosi-driver:serviceaccount",
+        "linode-cosi-driver:clusterrole",
+        "linode-cosi-driver:clusterrolebinding",
+        "linode-cosi-driver:secret",
+        "linode-cosi-driver:namespace",
+    ],
+)
+if os.getenv("SKIP_IMAGE_BUILD", "false") != "true":
+    # ko reads IMAGE_VERSION and KO_DEFAULTPLATFORMS from the environment; the
+    # local-deploy target sets both before invoking tilt.
+    ko_build(
+        "docker.io/linode/linode-cosi-driver",
+        "./cmd/linode-cosi-driver",
+        deps=["./cmd", "./pkg", "go.mod", "go.sum", ".ko.yaml"],
+    )
