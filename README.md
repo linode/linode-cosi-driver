@@ -21,6 +21,7 @@ Follow these steps to get started with Linode COSI Driver:
 
 1. **Prerequisites:**
     1. Install COSI Custom Resource Definitions.
+
     ```sh
     kubectl create -k 'github.com/kubernetes-sigs/container-object-storage-interface/?ref=v0.2.1'
     ```
@@ -30,6 +31,7 @@ Follow these steps to get started with Linode COSI Driver:
         - **Object Storage** - Read/Write
 
     2. Install Linode COSI Driver using Helm.
+
     ```sh
     helm repo add linode-cosi-driver https://linode.github.io/linode-cosi-driver
     helm repo update
@@ -41,26 +43,31 @@ Follow these steps to get started with Linode COSI Driver:
 
 3. **Usage:**
     1. Create Bucket Class (see the [example.BucketClass.yaml](./examples/linode-objectstorage.BucketClass.yaml)).
+
     ```sh
     kubectl create -f ./examples/example.BucketClass.yaml
     ```
 
     2. Create Bucket Access Class (see the [example.BucketAccessClass.yaml](./examples/linode-objectstorage.BucketAccessClass.yaml)).
+
     ```sh
     kubectl create -f ./examples/example.BucketAccessClass.yaml
     ```
 
     3. Create Bucket Claim (see the [example.BucketClaim.yaml](./examples/example.BucketClaim.yaml)).
+
     ```sh
     kubectl create -f ./examples/example.BucketClaim.yaml
     ```
 
     4. Create Bucket Access Class (see the [example.BucketAccess.yaml](./examples/example.BucketAccess.yaml)).
+
     ```sh
     kubectl create -f ./examples/example.BucketAccess.yaml
     ```
 
     5. Use the `example-secret` secret in your workload, e.g. in deployment:
+
     ```yaml
     spec:
       template:
@@ -86,13 +93,13 @@ Here’s the updated table with descriptions added:
 
 | Parameter                   | Default    | Values                                                                                               | Description                                                                            |
 |-----------------------------|------------|------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------|
-| `cosi.linode.com/v1/region` |            | https://techdocs.akamai.com/linode-api/reference/get-object-storage-endpoints                        | **REQUIRED** The region where the object storage bucket will be created.               |
+| `cosi.linode.com/v1/region` |            | <https://techdocs.akamai.com/linode-api/reference/get-object-storage-endpoints>                        | **REQUIRED** The region where the object storage bucket will be created.               |
 | `cosi.linode.com/v1/acl`    | `private`  | `private`, `public-read`, `authenticated-read`, `public-read-write`                                  | The access control list (ACL) policy that defines who can read or write to the bucket. |
 | `cosi.linode.com/v1/cors`   | `disabled` | `disabled`, `enabled`                                                                                | Enables or disables Cross-Origin Resource Sharing (CORS) for the bucket.               |
 | `cosi.linode.com/v1/cleanup` |            | `force`                                                                                              | Deletes all objects before deleting the bucket. If omitted, deletion of a non-empty bucket fails. |
 | `cosi.linode.com/v1/endpoint-type` | first available | `E0`, `E1`, `E2`, `E3`                                                                       | Selects the Object Storage endpoint type used when creating the bucket.                |
 | `cosi.linode.com/v1/endpoint-type-preference` | first available | Comma-separated `E0`, `E1`, `E2`, `E3` values, for example `E3,E1`                 | Selects the first available Object Storage endpoint type for the bucket in preference order. Ignored when `endpoint-type` is set. |
-| `cosi.linode.com/v1/policy` |            | https://techdocs.akamai.com/cloud-computing/docs/define-access-and-permissions-using-bucket-policies | Defines custom bucket policies for fine-grained access control and permissions.        |
+| `cosi.linode.com/v1/policy` |            | <https://techdocs.akamai.com/cloud-computing/docs/define-access-and-permissions-using-bucket-policies> | Defines custom bucket policies for fine-grained access control and permissions.        |
 
 ### BucketAccessClass
 

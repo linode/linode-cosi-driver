@@ -1,0 +1,45 @@
+remote_theme: just-the-docs/just-the-docs
+
+# GitHub Pages turns the plugins below on by default; a local `jekyll build`
+# does not, which is why pages that rely on them (markdown without front
+# matter, titles taken from the first heading) are missing from the local nav
+# unless they are listed here. Listing them changes nothing in production.
+plugins:
+  - jekyll-remote-theme
+  - jekyll-default-layout
+  - jekyll-optional-front-matter
+  - jekyll-readme-index
+  - jekyll-relative-links
+  - jekyll-titles-from-headings
+
+title: Linode COSI Driver
+search_enabled: true
+heading_anchors: true
+color_scheme: dark
+
+# jekyll-optional-front-matter skips a fixed list of repository files,
+# CONTRIBUTING.md among them, unless they are listed here. Without this the
+# README's link to it resolves to the raw markdown instead of a page.
+include:
+  - CONTRIBUTING.md
+
+# Everything that is not documentation. Without this the site carries the whole
+# Go tree, and the Helm chart's generated README lands in the nav as a second
+# "linode-cosi-driver" entry. examples/ stays in: the README links to the
+# manifests there.
+exclude:
+  - cmd/
+  - examples/
+  - hack/
+  - helm/
+  - pkg/
+  - test/
+  - testing/
+  - coverage.out
+  - go.mod
+  - go.sum
+  - justfile
+  - mise.lock
+  - mise.toml
+  - renovate.json5
+  - Tiltfile
