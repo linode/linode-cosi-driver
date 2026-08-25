@@ -76,4 +76,9 @@ spec:
         emptyDir:
           sizeLimit: 50Mi
       restartPolicy: Never
+      dnsPolicy: None
+      dnsConfig:
+        nameservers:
+        - 1.1.1.1
+        - 8.8.8.8
   backoffLimit: 1

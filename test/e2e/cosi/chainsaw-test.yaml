@@ -220,6 +220,11 @@ spec:
             template:
               spec:
                 restartPolicy: Never
+                dnsPolicy: None
+                dnsConfig:
+                  nameservers:
+                  - 1.1.1.1
+                  - 8.8.8.8
                 containers:
                 - name: secret-test
                   image: docker.io/library/python:3.12
@@ -246,6 +251,8 @@ spec:
                       path: BucketInfo.json
 
   - name: Check if ObjectStorage secret validation tool completed succesfully
+    timeouts:
+      assert: 300s
     try:
     - assert:
         resource:
@@ -255,3 +262,6 @@ spec:
             name: validation
           status:
             succeeded: 1
+    catch:
+    - podLogs:
+        selector: job-name=validation
