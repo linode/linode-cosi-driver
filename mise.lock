@@ -476,6 +476,10 @@ url = "https://dl.k8s.io/v1.35.0/bin/darwin/amd64/kubectl"
 checksum = "sha256:4c5d14b8673bd55f813a8965ad70d5150e3960ee5f274025e2286aea3a0fa8b6"
 url = "https://dl.k8s.io/v1.35.0/bin/windows/amd64/kubectl.exe"
 
+[[tools."pipx:check-jsonschema"]]
+version = "0.38.0"
+backend = "pipx:check-jsonschema"
+
 [[tools."pipx:yamale"]]
 version = "6.1.0"
 backend = "pipx:yamale"
