@@ -33,4 +33,8 @@ release/
 # Intellij config
 .idea
 
+# Jekyll local preview
+_site/
+.sass-cache/
+
 .envrc
