@@ -56,6 +56,13 @@ ko_labels := "--image-label org.opencontainers.image.title=linode-cosi-driver" +
 # Versions of COSI dependencies
 cosi_version := "7ddc93baaa3f08c9c8990a17c7b958955d93c044"
 
+# Documentation site preview; the pages tag carries the same gem set GitHub
+# Pages builds with, so a local build matches what the site serves.
+docs_image := env('DOCS_IMAGE', 'jekyll/jekyll:pages')
+docs_container := env('DOCS_CONTAINER', 'cosi-docs')
+docs_port := env('DOCS_PORT', '4000')
+docs_livereload_port := env('DOCS_LIVERELOAD_PORT', '35729')
+
 # flags for the Go build
 goflags := trim(env('GOFLAGS', '') + " -trimpath")
 ldflags := trim(env('LDFLAGS', '') + " -X " + module_name + "/pkg/version.Version=" + version + " -s -w -extldflags \"-static\"")
@@ -167,6 +174,25 @@ lint-chart target_branch='main':
         --lint-conf=helm/.ct/lintconf.yaml \
         --check-version-increment=false \
         --target-branch={{ target_branch }}
+
+# Serve the documentation site locally with live reload.
+[group('Documentation')]
+serve-docs:
+    @echo "Serving the docs on http://localhost:{{ docs_port }}, press ctrl-c to stop"
+    docker run --rm --interactive --tty --name {{ docs_container }} \
+        --publish {{ docs_port }}:4000 \
+        --publish {{ docs_livereload_port }}:35729 \
+        --volume "{{ justfile_directory() }}:/srv/jekyll" \
+        {{ docs_image }} \
+        jekyll serve --host 0.0.0.0 --livereload --force-polling
+
+# Build the documentation site the way GitHub Pages does.
+[group('Documentation')]
+build-docs:
+    docker run --rm \
+        --volume "{{ justfile_directory() }}:/srv/jekyll" \
+        {{ docs_image }} \
+        jekyll build
 
 # Run git diff to check if any changes are made.
 [group('CI')]
