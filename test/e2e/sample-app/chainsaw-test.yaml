@@ -115,6 +115,9 @@ spec:
   - name: Build the mc client configuration from the BucketInfo secret
     try:
     - script:
+        shell: bash
+        shellArgs:
+          - -c
         content: |
           set -eu
           bucketinfo="$(kubectl get secret s3-credentials \
