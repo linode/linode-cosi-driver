@@ -8,72 +8,48 @@ spec:
       containers:
       - name: mc
         image: minio/mc:latest
+        env:
+        - name: BUCKET_NAME
+          valueFrom:
+            secretKeyRef:
+              name: mc-config
+              key: BUCKET_NAME
         command:
         - /bin/sh
         - -c
         - |
            set -eu
-           cat /root/.mc/config.json
-           bucket="$(cat /root/.mc/BUCKET_NAME)"
+           # mc needs a writable config dir, so the read-only Secret mount
+           # cannot serve as one directly.
+           mkdir -p /root/.mc
+           cp /mc-config/config.json /root/.mc/config.json
 
            for attempt in $(seq 1 24); do
-             if mc ls "cosi/${bucket}" >/dev/null 2>&1; then
+             if mc ls "cosi/${BUCKET_NAME}" >/dev/null 2>&1; then
                break
              fi
-             echo "waiting for bucket ${bucket} to be reachable over s3 (${attempt}/24)"
+             echo "waiting for bucket ${BUCKET_NAME} to be reachable over s3 (${attempt}/24)"
              sleep 5
            done
 
            for attempt in $(seq 1 12); do
-             if date | mc pipe "cosi/${bucket}/test.txt"; then
-               mc rm "cosi/${bucket}/test.txt"
+             if date | mc pipe "cosi/${BUCKET_NAME}/test.txt"; then
+               mc rm "cosi/${BUCKET_NAME}/test.txt"
                exit 0
              fi
-             echo "upload failed for bucket ${bucket} (${attempt}/12), retrying"
+             echo "upload failed for bucket ${BUCKET_NAME} (${attempt}/12), retrying"
              sleep 5
            done
 
-           echo "upload failed for bucket ${bucket} after retries" >&2
+           echo "upload failed for bucket ${BUCKET_NAME} after retries" >&2
            exit 1
         volumeMounts:
-        - name: s3-credentials
-          mountPath: /cosi
+        - name: mc-config
+          mountPath: /mc-config
           readOnly: true
-        - name: mc
-          mountPath: /root/.mc
-      initContainers:
-        - name: populate-creds
-          image: busybox:stable
-          command:
-            - 'sh'
-            - '-c'
-            - |
-              set -ex
-              wget -O /usr/bin/jq https://github.com/jqlang/jq/releases/download/jq-1.8.1/jq-linux-amd64
-              chmod +x /usr/bin/jq
-              # Extract credentials from the mounted Secret
-              cat /cosi/BucketInfo | jq -r '.spec.bucketName' > /root/.mc/BUCKET_NAME
-              ENDPOINT="https://$(cat /cosi/BucketInfo | jq -r '.spec.secretS3.endpoint')"
-              ACCESS_KEY=$(cat /cosi/BucketInfo | jq -r '.spec.secretS3.accessKeyID')
-              SECRET_KEY=$(cat /cosi/BucketInfo | jq -r '.spec.secretS3.accessSecretKey')
-              mkdir -p /root/.mc
-
-              jq -n --arg url "${ENDPOINT}" \
-                --arg accessKey "${ACCESS_KEY}" \
-                --arg secretKey "${SECRET_KEY}"  \
-                '{"version": "10", "aliases": {"cosi": {"url": $url, "accessKey": $accessKey, "secretKey": $secretKey, "api": "S3v4", "path": "auto"}}}' > /root/.mc/config.json
-          volumeMounts:
-            - name: s3-credentials
-              mountPath: /cosi
-              readOnly: true
-            - name: mc
-              mountPath: /root/.mc
       volumes:
-      - name: s3-credentials
+      - name: mc-config
         secret:
-          secretName: s3-credentials
-      - name: mc
-        emptyDir:
-          sizeLimit: 50Mi
+          secretName: mc-config
       restartPolicy: Never
   backoffLimit: 1
