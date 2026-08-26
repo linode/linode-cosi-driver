@@ -112,6 +112,38 @@ spec:
           metadata:
             name: s3-credentials
 
+  - name: Build the mc client configuration from the BucketInfo secret
+    try:
+    - script:
+        shell: bash
+        shellArgs:
+          - -c
+        content: |
+          set -eu
+          bucketinfo="$(kubectl get secret s3-credentials \
+            --namespace "${NAMESPACE}" \
+            --output jsonpath='{.data.BucketInfo}' | base64 -d)"
+
+          config="$(printf '%s' "${bucketinfo}" | yq --input-format=json --output-format=json '{
+            "version": "10",
+            "aliases": {
+              "cosi": {
+                "url": "https://" + .spec.secretS3.endpoint,
+                "accessKey": .spec.secretS3.accessKeyID,
+                "secretKey": .spec.secretS3.accessSecretKey,
+                "api": "S3v4",
+                "path": "auto"
+              }
+            }
+          }')"
+
+          bucket="$(printf '%s' "${bucketinfo}" | yq --input-format=json '.spec.bucketName')"
+
+          kubectl create secret generic mc-config \
+            --namespace "${NAMESPACE}" \
+            --from-literal=config.json="${config}" \
+            --from-literal=BUCKET_NAME="${bucket}"
+
   - name: Run test upload
     timeouts:
       assert: 300s
