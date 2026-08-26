@@ -52,9 +52,4 @@ spec:
         secret:
           secretName: mc-config
       restartPolicy: Never
-      dnsPolicy: None
-      dnsConfig:
-        nameservers:
-        - 1.1.1.1
-        - 8.8.8.8
   backoffLimit: 1
