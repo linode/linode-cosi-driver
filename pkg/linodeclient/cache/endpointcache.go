@@ -47,7 +47,7 @@ func Key(region string, endpointType linodego.ObjectStorageEndpointType) string 
 }
 
 type EndpointCache struct {
-	sync.RWMutex
+	mu sync.RWMutex
 
 	log    *slog.Logger
 	ttl    time.Duration
@@ -76,14 +76,13 @@ func (c *EndpointCache) Start(ctx context.Context) error {
 		c.log.ErrorContext(ctx, "Failed to refresh cache", "error", err)
 	}
 
+	ctx, cancel := context.WithTimeout(ctx, defaultTimeout)
+	defer cancel()
 	for {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-ticker.C:
-			ctx, cancel := context.WithTimeout(ctx, defaultTimeout)
-			defer cancel()
-
 			if err := c.Refresh(ctx); err != nil {
 				c.log.ErrorContext(ctx, "Failed to refresh cache", "error", err)
 			}
@@ -113,22 +112,22 @@ func (c *EndpointCache) Refresh(ctx context.Context) error {
 	return nil
 }
 
-func (c *EndpointCache) Insert(iter iter.Seq2[string, string]) {
-	c.Lock()
-	defer c.Unlock()
+func (c *EndpointCache) Insert(iterator iter.Seq2[string, string]) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
-	maps.Insert(c.data, iter)
+	maps.Insert(c.data, iterator)
 }
 
 func (c *EndpointCache) Set(key, val string) {
-	c.Lock()
-	defer c.Unlock()
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	c.data[key] = val
 }
 
 func (c *EndpointCache) Get(key string) (string, bool) {
-	c.RLock()
-	defer c.RUnlock()
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 
 	val, ok := c.data[key]
 

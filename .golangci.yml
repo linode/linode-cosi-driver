@@ -30,8 +30,7 @@ linters:
     - gochecksumtype
     - gocognit
     - goconst
-    # TODO: enable in gocritic in it's own PR
-#    - gocritic
+    - gocritic
     - goprintffuncname
     - gosec
     - gosmopolitan

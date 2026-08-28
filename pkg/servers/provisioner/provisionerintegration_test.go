@@ -83,7 +83,7 @@ func TestHappyPath(t *testing.T) {
 
 	testCache := cache.New(slog.Default(), client, cache.DefaultTTL)
 	if err := testCache.Refresh(t.Context()); err != nil {
-		t.Errorf("failed to refresh cache: %v", err.Error())
+		t.Errorf("failed to refresh serverCache: %v", err.Error())
 		return
 	}
 
@@ -134,7 +134,7 @@ func TestBucketScopedKeyIsolation(t *testing.T) {
 
 	testCache := cache.New(slog.Default(), client, cache.DefaultTTL)
 	if err := testCache.Refresh(t.Context()); err != nil {
-		t.Errorf("failed to refresh cache: %v", err.Error())
+		t.Errorf("failed to refresh serverCache: %v", err.Error())
 		return
 	}
 
