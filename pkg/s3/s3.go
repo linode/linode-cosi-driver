@@ -33,7 +33,7 @@ type Client interface {
 }
 
 type ClientS3 struct {
-	cache       cache.Cache
+	clientCache cache.Cache
 	endpoint    string
 	s3AccessKey string
 	s3SecretKey string
@@ -43,12 +43,12 @@ type ClientS3 struct {
 var _ Client = (*ClientS3)(nil)
 
 func New(
-	cache cache.Cache,
+	clientCache cache.Cache,
 	s3AccessKey, s3SecretKey string,
 	s3SSL bool,
 ) *ClientS3 {
 	return &ClientS3{
-		cache:       cache,
+		clientCache: clientCache,
 		s3AccessKey: s3AccessKey,
 		s3SecretKey: s3SecretKey,
 		s3SSL:       s3SSL,
@@ -72,8 +72,8 @@ func (c *ClientS3) new(region string) (*minio.Client, error) {
 	endpoint := c.endpoint
 	if endpoint == "" {
 		var ok bool
-		if c.cache != nil {
-			endpoint, ok = c.cache.Get(region)
+		if c.clientCache != nil {
+			endpoint, ok = c.clientCache.Get(region)
 		}
 		if !ok || endpoint == "" {
 			return nil, fmt.Errorf("failed to get endpoint for region: %s", region)

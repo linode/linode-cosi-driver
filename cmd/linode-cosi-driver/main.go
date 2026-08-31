@@ -198,8 +198,8 @@ func run(ctx context.Context, log *slog.Logger, opts mainOptions) error {
 
 func grpcServer(ctx context.Context,
 	log *slog.Logger,
-	identity cosi.IdentityServer,
-	provisioner cosi.ProvisionerServer,
+	identityServer cosi.IdentityServer,
+	provisionerServer cosi.ProvisionerServer,
 ) (*grpc.Server, error) {
 	server := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
@@ -208,12 +208,12 @@ func grpcServer(ctx context.Context,
 		),
 	)
 
-	if identity == nil || provisioner == nil {
-		return nil, errors.New("provisioner and identity servers cannot be nil")
+	if identityServer == nil || provisionerServer == nil {
+		return nil, errors.New("provisionerServer and identityServer servers cannot be nil")
 	}
 
-	cosi.RegisterIdentityServer(server, identity)
-	cosi.RegisterProvisionerServer(server, provisioner)
+	cosi.RegisterIdentityServer(server, identityServer)
+	cosi.RegisterProvisionerServer(server, provisionerServer)
 
 	return server, nil
 }
