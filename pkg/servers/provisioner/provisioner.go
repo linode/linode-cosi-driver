@@ -39,10 +39,10 @@ type Server struct {
 	log  *slog.Logger
 	once sync.Once
 
-	client linodeclient.Client
-	cache  cache.Cache
-	s3cli  s3.Client
-	s3SSL  bool
+	client      linodeclient.Client
+	serverCache cache.Cache
+	s3cli       s3.Client
+	s3SSL       bool
 }
 
 // Interface guards.
@@ -52,16 +52,16 @@ var _ cosi.ProvisionerServer = (*Server)(nil)
 func New(
 	logger *slog.Logger,
 	client linodeclient.Client,
-	cache cache.Cache,
+	serverCache cache.Cache,
 	s3cli s3.Client,
 	s3SSL bool,
 ) (*Server, error) {
 	srv := &Server{
-		log:    logger,
-		client: client,
-		cache:  cache,
-		s3cli:  s3cli,
-		s3SSL:  s3SSL,
+		log:         logger,
+		client:      client,
+		serverCache: serverCache,
+		s3cli:       s3cli,
+		s3SSL:       s3SSL,
 	}
 
 	return srv, nil
@@ -443,7 +443,7 @@ func (s *Server) endpointForBucket(ctx context.Context, region string, bucket *l
 		return bucket.S3Endpoint, nil
 	}
 
-	if endpoint, ok := s.cache.Get(cache.Key(region, bucket.EndpointType)); ok && endpoint != "" {
+	if endpoint, ok := s.serverCache.Get(cache.Key(region, bucket.EndpointType)); ok && endpoint != "" {
 		return endpoint, nil
 	}
 

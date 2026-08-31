@@ -20,7 +20,7 @@ import (
 	"time"
 )
 
-func String(envKey string, defaultValue string, expectedValues ...string) string {
+func String(envKey, defaultValue string, expectedValues ...string) string {
 	val, ok := os.LookupEnv(envKey)
 	if !ok {
 		val = defaultValue

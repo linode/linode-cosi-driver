@@ -278,7 +278,7 @@ func TestDriverCreateBucket(t *testing.T) {
 					GetObjectStorageBucketAccess(gomock.Any(), gomock.Eq(testRegion), gomock.Eq(testBucketName)).
 					Return(defaultLinodegoBucketAccess, nil).
 					Times(1)
-				// ListObjectStorageEndpoints is called to populate cache
+				// ListObjectStorageEndpoints is called to populate serverCache
 				mockLinode.EXPECT().
 					ListObjectStorageEndpoints(gomock.Any(), gomock.Any()).
 					Return([]linodego.ObjectStorageEndpoint{defaultLinodegoEndpoint}, nil).
@@ -456,7 +456,7 @@ func TestDriverCreateBucket(t *testing.T) {
 					GetObjectStorageBucketAccess(gomock.Any(), gomock.Eq(testRegion), gomock.Eq(testBucketName)).
 					Return(defaultLinodegoBucketAccess, nil).
 					Times(2)
-				// ListObjectStorageEndpoints is called to populate cache
+				// ListObjectStorageEndpoints is called to populate serverCache
 				mockLinode.EXPECT().
 					ListObjectStorageEndpoints(gomock.Any(), gomock.Any()).
 					Return([]linodego.ObjectStorageEndpoint{defaultLinodegoEndpoint}, nil).
@@ -512,7 +512,7 @@ func TestDriverCreateBucket(t *testing.T) {
 					GetObjectStorageBucketAccess(gomock.Any(), gomock.Eq(testRegion), gomock.Eq(testBucketName)).
 					Return(defaultLinodegoBucketAccess, nil).
 					Times(1)
-				// ListObjectStorageEndpoints is called to populate cache
+				// ListObjectStorageEndpoints is called to populate serverCache
 				mockLinode.EXPECT().
 					ListObjectStorageEndpoints(gomock.Any(), gomock.Any()).
 					Return([]linodego.ObjectStorageEndpoint{defaultLinodegoEndpoint}, nil).
@@ -558,7 +558,7 @@ func TestDriverCreateBucket(t *testing.T) {
 					GetObjectStorageBucketAccess(gomock.Any(), gomock.Eq(testRegion), gomock.Eq(testBucketName)).
 					Return(defaultLinodegoBucketAccess, nil).
 					Times(2)
-				// ListObjectStorageEndpoints is called to populate cache
+				// ListObjectStorageEndpoints is called to populate serverCache
 				mockLinode.EXPECT().
 					ListObjectStorageEndpoints(gomock.Any(), gomock.Any()).
 					Return([]linodego.ObjectStorageEndpoint{defaultLinodegoEndpoint}, nil).
@@ -612,7 +612,7 @@ func TestDriverCreateBucket(t *testing.T) {
 					GetObjectStorageBucketAccess(gomock.Any(), gomock.Eq(testRegion), gomock.Eq(testBucketName)).
 					Return(defaultLinodegoBucketAccess, nil).
 					Times(1)
-				// ListObjectStorageEndpoints is called to populate cache
+				// ListObjectStorageEndpoints is called to populate serverCache
 				mockLinode.EXPECT().
 					ListObjectStorageEndpoints(gomock.Any(), gomock.Any()).
 					Return([]linodego.ObjectStorageEndpoint{defaultLinodegoEndpoint}, nil).
@@ -639,7 +639,7 @@ func TestDriverCreateBucket(t *testing.T) {
 				ctrl := gomock.NewController(t)
 				mockLinode := mock.NewMockLinodeClient(ctrl)
 				// No Linode calls expected - validation fails before any API operations
-				// ListObjectStorageEndpoints is called to populate cache
+				// ListObjectStorageEndpoints is called to populate serverCache
 				mockLinode.EXPECT().
 					ListObjectStorageEndpoints(gomock.Any(), gomock.Any()).
 					Return([]linodego.ObjectStorageEndpoint{defaultLinodegoEndpoint}, nil).
@@ -665,7 +665,7 @@ func TestDriverCreateBucket(t *testing.T) {
 				ctrl := gomock.NewController(t)
 				mockLinode := mock.NewMockLinodeClient(ctrl)
 				// No Linode calls expected - validation fails before any API operations
-				// ListObjectStorageEndpoints is called to populate cache
+				// ListObjectStorageEndpoints is called to populate serverCache
 				mockLinode.EXPECT().
 					ListObjectStorageEndpoints(gomock.Any(), gomock.Any()).
 					Return([]linodego.ObjectStorageEndpoint{defaultLinodegoEndpoint}, nil).
@@ -685,7 +685,7 @@ func TestDriverCreateBucket(t *testing.T) {
 			linodeCli := tc.setupMockLinode(t)
 			epc := cache.New(discardLog, linodeCli, 0)
 			if err := epc.Refresh(ctx); err != nil {
-				t.Fatalf("failed to refresh cache: %v", err)
+				t.Fatalf("failed to refresh serverCache: %v", err)
 			}
 
 			s3cli := tc.setupMockS3(t)
@@ -769,16 +769,16 @@ func TestDriverCreateBucketWithPolicyTemplate(t *testing.T) {
 		Return(defaultLinodegoBucketAccess, nil).
 		Times(1)
 
-	// ListObjectStorageEndpoints is called to populate cache
+	// ListObjectStorageEndpoints is called to populate serverCache
 	mockLinode.EXPECT().
 		ListObjectStorageEndpoints(gomock.Any(), gomock.Any()).
 		Return([]linodego.ObjectStorageEndpoint{defaultLinodegoEndpoint}, nil).
 		AnyTimes()
 
-	// Create cache and provisioner
+	// Create serverCache and provisioner
 	epc := cache.New(discardLog, mockLinode, 0)
 	if err := epc.Refresh(ctx); err != nil {
-		t.Fatalf("failed to refresh cache: %v", err)
+		t.Fatalf("failed to refresh serverCache: %v", err)
 	}
 
 	srv, err := provisioner.New(nil, mockLinode, epc, mockS3, true)
@@ -882,7 +882,7 @@ func TestDriverDeleteBucket(t *testing.T) {
 					DeleteObjectStorageBucket(gomock.Any(), gomock.Eq(testRegion), gomock.Eq(testBucketName)).
 					Return(nil).
 					Times(2)
-				// ListObjectStorageEndpoints is called to populate cache
+				// ListObjectStorageEndpoints is called to populate serverCache
 				mockLinode.EXPECT().
 					ListObjectStorageEndpoints(gomock.Any(), gomock.Any()).
 					Return([]linodego.ObjectStorageEndpoint{defaultLinodegoEndpoint}, nil).
@@ -948,7 +948,7 @@ func TestDriverDeleteBucket(t *testing.T) {
 			linodeCli := tc.setupMockLinode(t)
 			epc := cache.New(discardLog, linodeCli, 0)
 			if err := epc.Refresh(ctx); err != nil {
-				t.Fatalf("failed to refresh cache: %v", err)
+				t.Fatalf("failed to refresh serverCache: %v", err)
 			}
 
 			s3cli := tc.setupMockS3(t)
@@ -1012,7 +1012,7 @@ func TestDriverGrantBucketAccess(t *testing.T) {
 						SecretKey: testSecretKey,
 					}, nil).
 					Times(2)
-				// ListObjectStorageEndpoints is called to populate cache
+				// ListObjectStorageEndpoints is called to populate serverCache
 				mockLinode.EXPECT().
 					ListObjectStorageEndpoints(gomock.Any(), gomock.Any()).
 					Return([]linodego.ObjectStorageEndpoint{defaultLinodegoEndpoint}, nil).
@@ -1209,7 +1209,7 @@ func TestDriverGrantBucketAccess(t *testing.T) {
 				ctrl := gomock.NewController(t)
 				mockLinode := mock.NewMockLinodeClient(ctrl)
 				// No Linode calls expected - validation fails before any API operations
-				// ListObjectStorageEndpoints is called to populate cache
+				// ListObjectStorageEndpoints is called to populate serverCache
 				mockLinode.EXPECT().
 					ListObjectStorageEndpoints(gomock.Any(), gomock.Any()).
 					Return([]linodego.ObjectStorageEndpoint{defaultLinodegoEndpoint}, nil).
@@ -1243,7 +1243,7 @@ func TestDriverGrantBucketAccess(t *testing.T) {
 				ctrl := gomock.NewController(t)
 				mockLinode := mock.NewMockLinodeClient(ctrl)
 				// No Linode calls expected - validation fails before any API operations
-				// ListObjectStorageEndpoints is called to populate cache
+				// ListObjectStorageEndpoints is called to populate serverCache
 				mockLinode.EXPECT().
 					ListObjectStorageEndpoints(gomock.Any(), gomock.Any()).
 					Return([]linodego.ObjectStorageEndpoint{defaultLinodegoEndpoint}, nil).
@@ -1263,7 +1263,7 @@ func TestDriverGrantBucketAccess(t *testing.T) {
 			linodeCli := tc.setupMockLinode(t)
 			epc := cache.New(discardLog, linodeCli, 0)
 			if err := epc.Refresh(ctx); err != nil {
-				t.Fatalf("failed to refresh cache: %v", err)
+				t.Fatalf("failed to refresh serverCache: %v", err)
 			}
 
 			s3cli := tc.setupMockS3(t)
@@ -1322,7 +1322,7 @@ func TestDriverRevokeBucketAccess(t *testing.T) {
 					DeleteObjectStorageKey(gomock.Any(), gomock.Eq(0)).
 					Return(nil).
 					Times(2)
-				// ListObjectStorageEndpoints is called to populate cache
+				// ListObjectStorageEndpoints is called to populate serverCache
 				mockLinode.EXPECT().
 					ListObjectStorageEndpoints(gomock.Any(), gomock.Any()).
 					Return([]linodego.ObjectStorageEndpoint{defaultLinodegoEndpoint}, nil).
@@ -1342,7 +1342,7 @@ func TestDriverRevokeBucketAccess(t *testing.T) {
 			linodeCli := tc.setupMockLinode(t)
 			epc := cache.New(discardLog, linodeCli, 0)
 			if err := epc.Refresh(ctx); err != nil {
-				t.Fatalf("failed to refresh cache: %v", err)
+				t.Fatalf("failed to refresh serverCache: %v", err)
 			}
 
 			s3cli := tc.setupMockS3(t)
