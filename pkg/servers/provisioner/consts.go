@@ -24,7 +24,6 @@ import (
 const (
 	prefix                      = "cosi.linode.com/v1/"
 	ParamACL                    = prefix + "acl"
-	ParamAllowPublicPolicy      = prefix + "allow-public-policy"
 	ParamCORS                   = prefix + "cors"
 	ParamCleanup                = prefix + "cleanup"
 	ParamEndpointType           = prefix + "endpoint-type"
@@ -77,8 +76,7 @@ var (
 	ErrNotFound            = linodego.Error{Code: http.StatusNotFound}
 	ErrUnsuportedAuth      = errors.New("unsupported authentication schema")
 	ErrMissingRegion       = errors.New("region was not provided")
-	ErrPublicPolicy        = errors.New("policy grants access to a wildcard principal; set allow-public-policy to true to permit public access")
-	ErrPublicPolicyACL     = errors.New("policy grants access to a wildcard principal but bucket ACL is private")
+	ErrPublicPolicy        = errors.New("policy grants access to a wildcard principal but bucket ACL does not allow public access")
 	ErrUnknownEndpointType = errors.New("unknown endpoint type")
 	ErrUnknownPermsissions = errors.New("unknown permissions")
 	ErrValidationError     = errors.New("required value cannot be empty")

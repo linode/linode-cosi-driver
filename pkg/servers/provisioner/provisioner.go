@@ -194,7 +194,7 @@ func (s *Server) DriverCreateBucket(ctx context.Context, req *cosi.DriverCreateB
 		log.ErrorContext(ctx, "Failed to generate bucket policy", "error", err)
 		return nil, status.Error(codes.Internal, fmt.Sprintf("failed to generate bucket policy: %v", err))
 	}
-	if err := validateBucketPolicy(policy, req.GetParameters()[ParamAllowPublicPolicy], acl); err != nil {
+	if err := validateBucketPolicy(policy, acl); err != nil {
 		log.ErrorContext(ctx, "Invalid bucket policy", "error", err)
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
@@ -223,7 +223,7 @@ func (s *Server) buildBucketPolicy(policyTemplate, label string) (string, error)
 	})
 }
 
-func validateBucketPolicy(policy, allowPublicPolicy string, acl linodego.ObjectStorageACL) error {
+func validateBucketPolicy(policy string, acl linodego.ObjectStorageACL) error {
 	if policy == "" {
 		return nil
 	}
@@ -235,11 +235,8 @@ func validateBucketPolicy(policy, allowPublicPolicy string, acl linodego.ObjectS
 	if !publicPolicy {
 		return nil
 	}
-	if allowPublicPolicy != strconv.FormatBool(true) {
+	if acl != linodego.ACLPublicRead && acl != linodego.ACLPublicReadWrite {
 		return ErrPublicPolicy
-	}
-	if acl == linodego.ACLPrivate {
-		return ErrPublicPolicyACL
 	}
 	return nil
 }

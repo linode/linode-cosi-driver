@@ -72,7 +72,6 @@ const (
 	testBucketAccessID   = "0"
 	testAccessKey        = "TEST_ACCESS_KEY"
 	testSecretKey        = "TEST_SECRET_KEY"
-	testTrue             = "true"
 )
 
 var (
@@ -92,6 +91,10 @@ var (
 	}
 	publicLinodegoBucketAccess = &linodego.ObjectStorageBucketAccess{
 		ACL:         linodego.ACLPublicRead,
+		CorsEnabled: provisioner.ParamCORSValueDisabled.BoolP(),
+	}
+	publicReadWriteLinodegoBucketAccess = &linodego.ObjectStorageBucketAccess{
+		ACL:         linodego.ACLPublicReadWrite,
 		CorsEnabled: provisioner.ParamCORSValueDisabled.BoolP(),
 	}
 
@@ -474,10 +477,9 @@ func TestDriverCreateBucket(t *testing.T) {
 			request: &cosi.DriverCreateBucketRequest{
 				Name: testBucketName,
 				Parameters: map[string]string{
-					provisioner.ParamRegion:            testRegion,
-					provisioner.ParamACL:               string(linodego.ACLPublicRead),
-					provisioner.ParamPolicy:            testPolicyTemplate,
-					provisioner.ParamAllowPublicPolicy: testTrue,
+					provisioner.ParamRegion: testRegion,
+					provisioner.ParamACL:    string(linodego.ACLPublicRead),
+					provisioner.ParamPolicy: testPolicyTemplate,
 				},
 			},
 			expectedResponse: &cosi.DriverCreateBucketResponse{
@@ -528,14 +530,13 @@ func TestDriverCreateBucket(t *testing.T) {
 			},
 		},
 		{
-			testName: "with policy template, bucket exists",
+			testName: "with policy template and public-read-write ACL, bucket exists",
 			request: &cosi.DriverCreateBucketRequest{
 				Name: testBucketName,
 				Parameters: map[string]string{
-					provisioner.ParamRegion:            testRegion,
-					provisioner.ParamACL:               string(linodego.ACLPublicRead),
-					provisioner.ParamPolicy:            testPolicyTemplate,
-					provisioner.ParamAllowPublicPolicy: testTrue,
+					provisioner.ParamRegion: testRegion,
+					provisioner.ParamACL:    string(linodego.ACLPublicReadWrite),
+					provisioner.ParamPolicy: testPolicyTemplate,
 				},
 			},
 			expectedResponse: &cosi.DriverCreateBucketResponse{
@@ -565,7 +566,7 @@ func TestDriverCreateBucket(t *testing.T) {
 				// Both calls: GetObjectStorageBucketAccess validates parameters
 				mockLinode.EXPECT().
 					GetObjectStorageBucketAccess(gomock.Any(), gomock.Eq(testRegion), gomock.Eq(testBucketName)).
-					Return(publicLinodegoBucketAccess, nil).
+					Return(publicReadWriteLinodegoBucketAccess, nil).
 					Times(2)
 				// ListObjectStorageEndpoints is called to populate serverCache
 				mockLinode.EXPECT().
@@ -580,10 +581,9 @@ func TestDriverCreateBucket(t *testing.T) {
 			request: &cosi.DriverCreateBucketRequest{
 				Name: testBucketName,
 				Parameters: map[string]string{
-					provisioner.ParamRegion:            testRegion,
-					provisioner.ParamACL:               string(linodego.ACLPublicRead),
-					provisioner.ParamPolicy:            testPolicyTemplate,
-					provisioner.ParamAllowPublicPolicy: testTrue,
+					provisioner.ParamRegion: testRegion,
+					provisioner.ParamACL:    string(linodego.ACLPublicRead),
+					provisioner.ParamPolicy: testPolicyTemplate,
 				},
 			},
 			expectedError: status.Error(grpccodes.Internal, "failed to set bucket policy: S3 connection failed"),
@@ -632,7 +632,7 @@ func TestDriverCreateBucket(t *testing.T) {
 			},
 		},
 		{
-			testName: "rejects wildcard principal without explicit opt-in",
+			testName: "rejects wildcard principal with default private ACL",
 			request: &cosi.DriverCreateBucketRequest{
 				Name: testBucketName,
 				Parameters: map[string]string{
@@ -656,17 +656,16 @@ func TestDriverCreateBucket(t *testing.T) {
 			},
 		},
 		{
-			testName: "rejects wildcard principal with private ACL",
+			testName: "rejects wildcard principal with authenticated-read ACL",
 			request: &cosi.DriverCreateBucketRequest{
 				Name: testBucketName,
 				Parameters: map[string]string{
-					provisioner.ParamRegion:            testRegion,
-					provisioner.ParamACL:               string(linodego.ACLPrivate),
-					provisioner.ParamPolicy:            testPolicyTemplate,
-					provisioner.ParamAllowPublicPolicy: testTrue,
+					provisioner.ParamRegion: testRegion,
+					provisioner.ParamACL:    string(linodego.ACLAuthenticatedRead),
+					provisioner.ParamPolicy: testPolicyTemplate,
 				},
 			},
-			expectedError: status.Error(grpccodes.InvalidArgument, provisioner.ErrPublicPolicyACL.Error()),
+			expectedError: status.Error(grpccodes.InvalidArgument, provisioner.ErrPublicPolicy.Error()),
 			setupMockS3: func(t *testing.T) s3.Client {
 				t.Helper()
 				return mock.NewMockS3Client(gomock.NewController(t))
@@ -850,10 +849,9 @@ func TestDriverCreateBucketWithPolicyTemplate(t *testing.T) {
 	req := &cosi.DriverCreateBucketRequest{
 		Name: testBucketName,
 		Parameters: map[string]string{
-			provisioner.ParamRegion:            testRegion,
-			provisioner.ParamACL:               string(linodego.ACLPublicRead),
-			provisioner.ParamPolicy:            testBucketPolicyTemplate,
-			provisioner.ParamAllowPublicPolicy: testTrue,
+			provisioner.ParamRegion: testRegion,
+			provisioner.ParamACL:    string(linodego.ACLPublicRead),
+			provisioner.ParamPolicy: testBucketPolicyTemplate,
 		},
 	}
 
