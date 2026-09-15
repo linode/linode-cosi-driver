@@ -82,6 +82,68 @@ func TestApplyTemplate(t *testing.T) {
 	}
 }
 
+func TestValidatePolicy(t *testing.T) {
+	t.Parallel()
+
+	for name, tc := range map[string]struct {
+		policy  string
+		wantErr bool
+	}{
+		"wildcard string": {
+			policy: `{"Statement":[{"Effect":"Allow","Principal":"*","Action":"s3:GetObject","Resource":"arn:aws:s3:::bucket/*"}]}`,
+		},
+		"deny wildcard": {
+			policy: `{"Statement":[{"Effect":"Deny","Principal":"*","Action":"s3:GetObject","Resource":"arn:aws:s3:::bucket/*"}]}`,
+		},
+		"named principal": {
+			policy: `{"Statement":[{"Effect":"Allow","Principal":{"AWS":"user"},"Action":["s3:GetObject"],"Resource":["arn:aws:s3:::bucket/*"]}]}`,
+		},
+		"invalid JSON": {
+			policy:  `{`,
+			wantErr: true,
+		},
+		"missing action": {
+			policy:  `{"Statement":[{"Effect":"Allow","Principal":"*","Resource":"arn:aws:s3:::bucket/*"}]}`,
+			wantErr: true,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			err := ValidatePolicy(tc.policy)
+			if (err != nil) != tc.wantErr {
+				t.Errorf("ValidatePolicy() error = %v, wantErr %t", err, tc.wantErr)
+			}
+		})
+	}
+}
+
+func TestIsPublicPolicy(t *testing.T) {
+	t.Parallel()
+
+	for name, tc := range map[string]struct {
+		policy string
+		want   bool
+	}{
+		"wildcard allow": {
+			policy: `{"Statement":[{"Effect":"Allow","Principal":"*","Action":"s3:GetObject","Resource":"arn:aws:s3:::bucket/*"}]}`,
+			want:   true,
+		},
+		"wildcard deny": {
+			policy: `{"Statement":[{"Effect":"Deny","Principal":"*","Action":"s3:GetObject","Resource":"arn:aws:s3:::bucket/*"}]}`,
+		},
+		"named principal": {
+			policy: `{"Statement":[{"Effect":"Allow","Principal":{"AWS":"user"},"Action":"s3:GetObject","Resource":"arn:aws:s3:::bucket/*"}]}`,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			if got := IsPublicPolicy(tc.policy); got != tc.want {
+				t.Errorf("IsPublicPolicy() = %t, want %t", got, tc.want)
+			}
+		})
+	}
+}
+
 func normalizeJSON(t *testing.T, input string) string {
 	t.Helper()
 
