@@ -39,12 +39,9 @@ const integrationBucketPolicyTemplate = `{
 	"Version":"2012-10-17",
 	"Statement":[
 		{
-			"Effect":"Allow",
-			"Action":"*",
-			"Resource":[
-			"arn:aws:s3:::{{ .BucketName }}",
-			"arn:aws:s3:::{{ .BucketName }}/*"
-			],
+			"Effect":"Deny",
+			"Action":"s3:GetObject",
+			"Resource":"arn:aws:s3:::{{ .BucketName }}/*",
 			"Principal":"*"
 		}
 	]

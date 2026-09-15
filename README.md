@@ -99,7 +99,7 @@ Here’s the updated table with descriptions added:
 | `cosi.linode.com/v1/cleanup` |            | `force`                                                                                              | Deletes all objects before deleting the bucket. If omitted, deletion of a non-empty bucket fails. |
 | `cosi.linode.com/v1/endpoint-type` | first available | `E0`, `E1`, `E2`, `E3`                                                                       | Selects the Object Storage endpoint type used when creating the bucket.                |
 | `cosi.linode.com/v1/endpoint-type-preference` | first available | Comma-separated `E0`, `E1`, `E2`, `E3` values, for example `E3,E1`                 | Selects the first available Object Storage endpoint type for the bucket in preference order. Ignored when `endpoint-type` is set. |
-| `cosi.linode.com/v1/policy` |            | <https://techdocs.akamai.com/cloud-computing/docs/define-access-and-permissions-using-bucket-policies> | Defines custom bucket policies for fine-grained access control and permissions.        |
+| `cosi.linode.com/v1/policy` |            | <https://techdocs.akamai.com/cloud-computing/docs/define-access-and-permissions-using-bucket-policies> | Defines custom bucket policies for fine-grained access control and permissions. Policies granting a wildcard principal require the `public-read` or `public-read-write` ACL. |
 
 ### BucketAccessClass
 

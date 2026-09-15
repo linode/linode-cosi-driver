@@ -194,6 +194,10 @@ func (s *Server) DriverCreateBucket(ctx context.Context, req *cosi.DriverCreateB
 		log.ErrorContext(ctx, "Failed to generate bucket policy", "error", err)
 		return nil, status.Error(codes.Internal, fmt.Sprintf("failed to generate bucket policy: %v", err))
 	}
+	if err := validateBucketPolicy(policy, acl); err != nil {
+		log.ErrorContext(ctx, "Invalid bucket policy", "error", err)
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
 
 	bucket, err := s.client.GetObjectStorageBucket(ctx, region, label)
 	if err != nil && !errors.Is(err, ErrNotFound) {
@@ -217,6 +221,24 @@ func (s *Server) buildBucketPolicy(policyTemplate, label string) (string, error)
 	return s3.ApplyTemplate(policyTemplate, s3.PolicyTemplateParams{
 		BucketName: label,
 	})
+}
+
+func validateBucketPolicy(policy string, acl linodego.ObjectStorageACL) error {
+	if policy == "" {
+		return nil
+	}
+
+	if err := s3.ValidatePolicy(policy); err != nil {
+		return fmt.Errorf("invalid bucket policy: %w", err)
+	}
+	publicPolicy := s3.IsPublicPolicy(policy)
+	if !publicPolicy {
+		return nil
+	}
+	if acl != linodego.ACLPublicRead && acl != linodego.ACLPublicReadWrite {
+		return ErrPublicPolicy
+	}
+	return nil
 }
 
 func (s *Server) createBucketAndApplyPolicy(
