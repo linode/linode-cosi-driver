@@ -228,10 +228,10 @@ func validateBucketPolicy(policy string, acl linodego.ObjectStorageACL) error {
 		return nil
 	}
 
-	publicPolicy, err := s3.ValidatePolicy(policy)
-	if err != nil {
+	if err := s3.ValidatePolicy(policy); err != nil {
 		return fmt.Errorf("invalid bucket policy: %w", err)
 	}
+	publicPolicy := s3.IsPublicPolicy(policy)
 	if !publicPolicy {
 		return nil
 	}
