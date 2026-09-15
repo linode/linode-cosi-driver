@@ -76,6 +76,7 @@ var (
 	ErrNotFound            = linodego.Error{Code: http.StatusNotFound}
 	ErrUnsuportedAuth      = errors.New("unsupported authentication schema")
 	ErrMissingRegion       = errors.New("region was not provided")
+	ErrPublicPolicy        = errors.New("policy grants access to a wildcard principal but bucket ACL does not allow public access")
 	ErrUnknownEndpointType = errors.New("unknown endpoint type")
 	ErrUnknownPermsissions = errors.New("unknown permissions")
 	ErrValidationError     = errors.New("required value cannot be empty")

@@ -89,6 +89,14 @@ var (
 		ACL:         linodego.ACLPrivate,
 		CorsEnabled: provisioner.ParamCORSValueDisabled.BoolP(),
 	}
+	publicLinodegoBucketAccess = &linodego.ObjectStorageBucketAccess{
+		ACL:         linodego.ACLPublicRead,
+		CorsEnabled: provisioner.ParamCORSValueDisabled.BoolP(),
+	}
+	publicReadWriteLinodegoBucketAccess = &linodego.ObjectStorageBucketAccess{
+		ACL:         linodego.ACLPublicReadWrite,
+		CorsEnabled: provisioner.ParamCORSValueDisabled.BoolP(),
+	}
 
 	defaultBucketParameters = map[string]string{
 		provisioner.ParamRegion: testRegion,
@@ -470,6 +478,7 @@ func TestDriverCreateBucket(t *testing.T) {
 				Name: testBucketName,
 				Parameters: map[string]string{
 					provisioner.ParamRegion: testRegion,
+					provisioner.ParamACL:    string(linodego.ACLPublicRead),
 					provisioner.ParamPolicy: testPolicyTemplate,
 				},
 			},
@@ -510,7 +519,7 @@ func TestDriverCreateBucket(t *testing.T) {
 				// Fourth call (idempotency): GetObjectStorageBucketAccess validates parameters
 				mockLinode.EXPECT().
 					GetObjectStorageBucketAccess(gomock.Any(), gomock.Eq(testRegion), gomock.Eq(testBucketName)).
-					Return(defaultLinodegoBucketAccess, nil).
+					Return(publicLinodegoBucketAccess, nil).
 					Times(1)
 				// ListObjectStorageEndpoints is called to populate serverCache
 				mockLinode.EXPECT().
@@ -521,11 +530,12 @@ func TestDriverCreateBucket(t *testing.T) {
 			},
 		},
 		{
-			testName: "with policy template, bucket exists",
+			testName: "with policy template and public-read-write ACL, bucket exists",
 			request: &cosi.DriverCreateBucketRequest{
 				Name: testBucketName,
 				Parameters: map[string]string{
 					provisioner.ParamRegion: testRegion,
+					provisioner.ParamACL:    string(linodego.ACLPublicReadWrite),
 					provisioner.ParamPolicy: testPolicyTemplate,
 				},
 			},
@@ -556,7 +566,7 @@ func TestDriverCreateBucket(t *testing.T) {
 				// Both calls: GetObjectStorageBucketAccess validates parameters
 				mockLinode.EXPECT().
 					GetObjectStorageBucketAccess(gomock.Any(), gomock.Eq(testRegion), gomock.Eq(testBucketName)).
-					Return(defaultLinodegoBucketAccess, nil).
+					Return(publicReadWriteLinodegoBucketAccess, nil).
 					Times(2)
 				// ListObjectStorageEndpoints is called to populate serverCache
 				mockLinode.EXPECT().
@@ -572,6 +582,7 @@ func TestDriverCreateBucket(t *testing.T) {
 				Name: testBucketName,
 				Parameters: map[string]string{
 					provisioner.ParamRegion: testRegion,
+					provisioner.ParamACL:    string(linodego.ACLPublicRead),
 					provisioner.ParamPolicy: testPolicyTemplate,
 				},
 			},
@@ -610,9 +621,58 @@ func TestDriverCreateBucket(t *testing.T) {
 				// Fourth call (idempotency): GetObjectStorageBucketAccess validates parameters
 				mockLinode.EXPECT().
 					GetObjectStorageBucketAccess(gomock.Any(), gomock.Eq(testRegion), gomock.Eq(testBucketName)).
-					Return(defaultLinodegoBucketAccess, nil).
+					Return(publicLinodegoBucketAccess, nil).
 					Times(1)
 				// ListObjectStorageEndpoints is called to populate serverCache
+				mockLinode.EXPECT().
+					ListObjectStorageEndpoints(gomock.Any(), gomock.Any()).
+					Return([]linodego.ObjectStorageEndpoint{defaultLinodegoEndpoint}, nil).
+					AnyTimes()
+				return mockLinode
+			},
+		},
+		{
+			testName: "rejects wildcard principal with default private ACL",
+			request: &cosi.DriverCreateBucketRequest{
+				Name: testBucketName,
+				Parameters: map[string]string{
+					provisioner.ParamRegion: testRegion,
+					provisioner.ParamPolicy: testPolicyTemplate,
+				},
+			},
+			expectedError: status.Error(grpccodes.InvalidArgument, provisioner.ErrPublicPolicy.Error()),
+			setupMockS3: func(t *testing.T) s3.Client {
+				t.Helper()
+				return mock.NewMockS3Client(gomock.NewController(t))
+			},
+			setupMockLinode: func(t *testing.T) linodeclient.Client {
+				t.Helper()
+				mockLinode := mock.NewMockLinodeClient(gomock.NewController(t))
+				mockLinode.EXPECT().
+					ListObjectStorageEndpoints(gomock.Any(), gomock.Any()).
+					Return([]linodego.ObjectStorageEndpoint{defaultLinodegoEndpoint}, nil).
+					AnyTimes()
+				return mockLinode
+			},
+		},
+		{
+			testName: "rejects wildcard principal with authenticated-read ACL",
+			request: &cosi.DriverCreateBucketRequest{
+				Name: testBucketName,
+				Parameters: map[string]string{
+					provisioner.ParamRegion: testRegion,
+					provisioner.ParamACL:    string(linodego.ACLAuthenticatedRead),
+					provisioner.ParamPolicy: testPolicyTemplate,
+				},
+			},
+			expectedError: status.Error(grpccodes.InvalidArgument, provisioner.ErrPublicPolicy.Error()),
+			setupMockS3: func(t *testing.T) s3.Client {
+				t.Helper()
+				return mock.NewMockS3Client(gomock.NewController(t))
+			},
+			setupMockLinode: func(t *testing.T) linodeclient.Client {
+				t.Helper()
+				mockLinode := mock.NewMockLinodeClient(gomock.NewController(t))
 				mockLinode.EXPECT().
 					ListObjectStorageEndpoints(gomock.Any(), gomock.Any()).
 					Return([]linodego.ObjectStorageEndpoint{defaultLinodegoEndpoint}, nil).
@@ -766,7 +826,7 @@ func TestDriverCreateBucketWithPolicyTemplate(t *testing.T) {
 	// Fourth call (idempotency): GetObjectStorageBucketAccess validates parameters
 	mockLinode.EXPECT().
 		GetObjectStorageBucketAccess(gomock.Any(), gomock.Eq(testRegion), gomock.Eq(testBucketName)).
-		Return(defaultLinodegoBucketAccess, nil).
+		Return(publicLinodegoBucketAccess, nil).
 		Times(1)
 
 	// ListObjectStorageEndpoints is called to populate serverCache
@@ -790,6 +850,7 @@ func TestDriverCreateBucketWithPolicyTemplate(t *testing.T) {
 		Name: testBucketName,
 		Parameters: map[string]string{
 			provisioner.ParamRegion: testRegion,
+			provisioner.ParamACL:    string(linodego.ACLPublicRead),
 			provisioner.ParamPolicy: testBucketPolicyTemplate,
 		},
 	}
