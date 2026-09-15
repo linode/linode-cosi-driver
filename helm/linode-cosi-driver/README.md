@@ -31,8 +31,9 @@ A Kubernetes Container Object Storage Interface (COSI) Driver for Linode
 | podAnnotations | object | `{"prometheus.io/path":"/metrics","prometheus.io/port":"9464","prometheus.io/scrape":"true"}` | Annotations to add to the pod. |
 | podSecurityContext.runAsNonRoot | bool | `true` | Run the pod as a non-root user. |
 | podSecurityContext.runAsUser | int | `65532` | User ID to run the pod as. |
-| rbac.annotations | object | `{}` | Annotations to add to the service account, cluster role, and cluster role binding. |
-| rbac.name | string | `""` | The name of the service account, cluster role, and cluster role binding to use. If not set, a name is generated using the fullname template. |
+| rbac.annotations | object | `{}` | Annotations to add to the cluster role and cluster role binding. |
+| rbac.create | bool | `true` | Create the ClusterRole and ClusterRoleBinding used by the driver. Disable when RBAC is managed out-of-band, or when the sidecar authenticates only against a remote cluster via sidecar.kubeconfigSecret and doesn't need local permissions. Independent of serviceAccount.create — you can create the ServiceAccount without the ClusterRole/ ClusterRoleBinding, or vice versa. |
+| rbac.name | string | `""` | The name of the cluster role and cluster role binding to use. If not set, a name is generated using the fullname template. |
 | replicaCount | int | `1` | Number of pod replicas. |
 | resources | object | `{}` | Specify CPU and memory resource limits if needed. The value defined for CPU limits affects the number of threads used in the driver. The number of CPU seconds allocated above 1 is rounded using floor operation, so it should be done in integer steps (e.g. from 1 to 2). This means that assigning CPU limit of 1.5 will result in only one CPU being used at a time. |
 | s3.accessKey | string | `""` | S3 Access Key. This field is **required** unless secret is created before deployment (see `s3.secret.ref` value) or ephemeral credentials are enabled (see `s3.ephemeralCredentials` value). |
@@ -44,9 +45,15 @@ A Kubernetes Container Object Storage Interface (COSI) Driver for Linode
 | secret.annotations | object | `{}` | Annotations to add to the secret. |
 | secret.ref | string | `""` | Name of existing secret. If not set, a new secret is created. |
 | securityContext.readOnlyRootFilesystem | bool | `true` | Container runs with a read-only root filesystem. |
+| serviceAccount.annotations | object | `{}` | Annotations to add to the service account. |
+| serviceAccount.automountServiceAccountToken | bool | `true` | Automatically mount the ServiceAccount's token into the driver pod. |
+| serviceAccount.create | bool | `true` | Create the ServiceAccount used by the driver. Disable when supplying an existing ServiceAccount out-of-band, e.g. when the sidecar authenticates only against a remote cluster via sidecar.kubeconfigSecret and doesn't need a local identity. |
+| serviceAccount.name | string | `""` | The name of the service account to use. If not set, a name is generated using the fullname template. If serviceAccount.create is false and this is left unset, the pod uses the namespace's default ServiceAccount. |
 | sidecar.image.pullPolicy | string | `"IfNotPresent"` | Sidecar container image pull policy. |
 | sidecar.image.repository | string | `"gcr.io/k8s-staging-sig-storage/objectstorage-sidecar"` | Sidecar container image repository. |
 | sidecar.image.tag | string | `"v0.2.2"` | Sidecar container image tag. |
+| sidecar.kubeconfigSecret.key | string | `"kubeconfig"` | Key within the secret whose value is the kubeconfig file. |
+| sidecar.kubeconfigSecret.ref | string | `""` | Name of an existing Secret containing a kubeconfig for the sidecar to use when watching BucketClaims/BucketAccesses, instead of the cluster the driver is running in. Leave empty to use in-cluster credentials. |
 | sidecar.logVerbosity | int | `4` | Log verbosity level for the sidecar container. |
 | tolerations | list | `[]` | Tolerations for pod assignment. |
 

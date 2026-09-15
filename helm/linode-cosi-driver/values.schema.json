@@ -79,6 +79,9 @@
         "annotations": {
           "type": "object"
         },
+        "create": {
+          "type": "boolean"
+        },
         "name": {
           "type": "string"
         }
@@ -137,6 +140,23 @@
         }
       }
     },
+    "serviceAccount": {
+      "type": "object",
+      "properties": {
+        "annotations": {
+          "type": "object"
+        },
+        "automountServiceAccountToken": {
+          "type": "boolean"
+        },
+        "create": {
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string"
+        }
+      }
+    },
     "sidecar": {
       "type": "object",
       "properties": {
@@ -150,6 +170,17 @@
               "type": "string"
             },
             "tag": {
+              "type": "string"
+            }
+          }
+        },
+        "kubeconfigSecret": {
+          "type": "object",
+          "properties": {
+            "key": {
+              "type": "string"
+            },
+            "ref": {
               "type": "string"
             }
           }
