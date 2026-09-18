@@ -1,3 +1,4 @@
+{{- if .Values.rbac.create }}
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
@@ -10,9 +11,10 @@ metadata:
   {{- end }}
 subjects:
   - kind: ServiceAccount
-    name: {{ include "linode-cosi-driver.rbacName" . }}
+    name: {{ include "linode-cosi-driver.effectiveServiceAccountName" . }}
     namespace: {{ .Release.Namespace }}
 roleRef:
   kind: ClusterRole
   name: {{ include "linode-cosi-driver.rbacName" . }}
   apiGroup: rbac.authorization.k8s.io
+{{- end }}

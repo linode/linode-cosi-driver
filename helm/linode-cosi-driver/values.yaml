@@ -42,6 +42,15 @@ sidecar:
   # -- Log verbosity level for the sidecar container.
   logVerbosity: 4
 
+  kubeconfigSecret:
+    # -- Name of an existing Secret containing a kubeconfig for the sidecar to use when watching
+    # BucketClaims/BucketAccesses, instead of the cluster the driver is running in. Leave empty to
+    # use in-cluster credentials.
+    ref: ""
+
+    # -- Key within the secret whose value is the kubeconfig file.
+    key: kubeconfig
+
 # -- List of Docker registry secret names to pull images.
 imagePullSecrets: []
 
@@ -51,11 +60,35 @@ nameOverride: ""
 # -- Overrides the full chart name.
 fullnameOverride: ""
 
-rbac:
-  # -- Annotations to add to the service account, cluster role, and cluster role binding.
+serviceAccount:
+  # -- Create the ServiceAccount used by the driver. Disable when supplying an existing
+  # ServiceAccount out-of-band, e.g. when the sidecar authenticates only against a remote
+  # cluster via sidecar.kubeconfigSecret and doesn't need a local identity.
+  create: true
+
+  # -- Automatically mount the ServiceAccount's token into the driver pod.
+  automountServiceAccountToken: true
+
+  # -- Annotations to add to the service account.
   annotations: {}
 
-  # -- The name of the service account, cluster role, and cluster role binding to use.
+  # -- The name of the service account to use. If not set, a name is generated using the
+  # fullname template. If serviceAccount.create is false and this is left unset, the pod uses
+  # the namespace's default ServiceAccount.
+  name: ""
+
+rbac:
+  # -- Create the ClusterRole and ClusterRoleBinding used by the driver. Disable when RBAC is
+  # managed out-of-band, or when the sidecar authenticates only against a remote cluster via
+  # sidecar.kubeconfigSecret and doesn't need local permissions. Independent of
+  # serviceAccount.create — you can create the ServiceAccount without the ClusterRole/
+  # ClusterRoleBinding, or vice versa.
+  create: true
+
+  # -- Annotations to add to the cluster role and cluster role binding.
+  annotations: {}
+
+  # -- The name of the cluster role and cluster role binding to use.
   # If not set, a name is generated using the fullname template.
   name: ""
 

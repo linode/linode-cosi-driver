@@ -35,7 +35,10 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      serviceAccountName: {{ include "linode-cosi-driver.rbacName" . }}
+      {{- if or .Values.serviceAccount.create .Values.serviceAccount.name }}
+      serviceAccountName: {{ include "linode-cosi-driver.serviceAccountName" . }}
+      {{- end }}
+      automountServiceAccountToken: {{ .Values.serviceAccount.automountServiceAccountToken }}
       {{- with .Values.podSecurityContext }}
       securityContext:
         {{- toYaml . | nindent 8 }}
@@ -74,6 +77,9 @@ spec:
           imagePullPolicy: {{ .Values.sidecar.image.pullPolicy }}
           args:
             - "-v={{ include "linode-cosi-driver.provisionerSidecarVerbosity" . }}"
+            {{- if .Values.sidecar.kubeconfigSecret.ref }}
+            - "--kubeconfig=/etc/cosi/remote-kubeconfig/{{ .Values.sidecar.kubeconfigSecret.key }}"
+            {{- end }}
           {{- with .Values.securityContext }}
           securityContext:
             {{- toYaml . | nindent 12 }}
@@ -85,6 +91,11 @@ spec:
           volumeMounts:
             - name: cosi-socket-dir
               mountPath: /var/lib/cosi
+            {{- if .Values.sidecar.kubeconfigSecret.ref }}
+            - name: remote-kubeconfig
+              mountPath: /etc/cosi/remote-kubeconfig
+              readOnly: true
+            {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
@@ -100,3 +111,8 @@ spec:
       volumes:
         - name: cosi-socket-dir
           emptyDir: {}
+        {{- if .Values.sidecar.kubeconfigSecret.ref }}
+        - name: remote-kubeconfig
+          secret:
+            secretName: {{ .Values.sidecar.kubeconfigSecret.ref }}
+        {{- end }}
