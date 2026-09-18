@@ -111,6 +111,7 @@ url = "https://github.com/kyverno/chainsaw/releases/download/v0.2.15/multiple.in
 checksum = "sha256:502bef17dd822217e82590e9ccf01c1e26a56b3fa34a835789b9af73e82a169a"
 url = "https://github.com/kyverno/chainsaw/releases/download/v0.2.15/chainsaw_darwin_arm64.tar.gz"
 url_api = "https://api.github.com/repos/kyverno/chainsaw/releases/assets/413798810"
+provenance_verified = true
 
 [tools."github:kyverno/chainsaw"."platforms.macos-arm64".provenance.slsa]
 url = "https://github.com/kyverno/chainsaw/releases/download/v0.2.15/multiple.intoto.jsonl"

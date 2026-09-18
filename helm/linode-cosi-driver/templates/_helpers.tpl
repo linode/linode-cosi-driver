@@ -51,10 +51,29 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
-Create the name of the service account to use.
+Create the name of the ClusterRole and ClusterRoleBinding to use.
 */}}
 {{- define "linode-cosi-driver.rbacName" -}}
   {{- default (include "linode-cosi-driver.fullname" .) .Values.rbac.name }}
+{{- end }}
+
+{{/*
+Create the name of the service account to use.
+*/}}
+{{- define "linode-cosi-driver.serviceAccountName" -}}
+  {{- default (include "linode-cosi-driver.fullname" .) .Values.serviceAccount.name }}
+{{- end }}
+
+{{/*
+Resolve the ServiceAccount name actually bound to the driver pod, falling back to the
+namespace's default ServiceAccount when one isn't created or explicitly named.
+*/}}
+{{- define "linode-cosi-driver.effectiveServiceAccountName" -}}
+  {{- if or .Values.serviceAccount.create .Values.serviceAccount.name }}
+    {{- include "linode-cosi-driver.serviceAccountName" . }}
+  {{- else }}
+    {{- print "default" }}
+  {{- end }}
 {{- end }}
 
 {{/*
