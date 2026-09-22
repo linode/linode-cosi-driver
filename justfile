@@ -199,20 +199,21 @@ build-docs:
 diff:
     git --no-pager diff HEAD --
 
-# Stamp version and appVersion into Chart.yaml, defaulting to the newest helm-v* tag.
+# Stamp a release tag into Chart.yaml.
 [group('CI')]
-set-chart-version chart_version='':
+set-chart-version release_version:
     #!/usr/bin/env bash
     set -eo pipefail
-    chart_version='{{ chart_version }}'
-    if [ -z "$chart_version" ]; then
-        tag=$(git describe --tags --abbrev=0 --match 'helm-v*')
-        chart_version=${tag#helm-}
+    app_version='{{ release_version }}'
+    if [[ ! "$app_version" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([+-][0-9A-Za-z.-]+)?$ ]]; then
+        echo "release version must be a v-prefixed semantic version (for example, v0.9.3)" >&2
+        exit 1
     fi
+    chart_version=${app_version#v}
     # Assign rather than substitute a placeholder, so this cannot silently
     # no-op when the committed Chart.yaml already carries a real version.
     yq --inplace \
-        ".version = \"${chart_version}\" | .appVersion = \"${chart_version}\"" \
+        ".version = \"${chart_version}\" | .appVersion = \"${app_version}\"" \
         helm/linode-cosi-driver/Chart.yaml
     yq '{"version": .version, "appVersion": .appVersion}' helm/linode-cosi-driver/Chart.yaml
 
