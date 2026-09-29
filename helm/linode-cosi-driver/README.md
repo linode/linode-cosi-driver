@@ -19,10 +19,12 @@ A Kubernetes Container Object Storage Interface (COSI) Driver for Linode
 | affinity | object | `{}` | Node affinity rules for pod assignment. |
 | apiToken | string | `""` | Linode API token. This field is **required** unless secret is created before deployment (see `secret.ref` value). |
 | driver.cacheTTL | string | `"30s"` | TTL of the Object Storage region/endpoint cache. |
+| driver.extraVolumeMounts | list | `[]` | Additional volume mounts for the driver container. |
 | driver.image.pullPolicy | string | `"IfNotPresent"` | Driver container image pull policy. |
 | driver.image.repository | string | `"docker.io/linode/linode-cosi-driver"` | Driver container image repository. |
 | driver.image.tag | string | `""` | Overrides the image tag whose default is the chart appVersion. |
 | fullnameOverride | string | `""` | Overrides the full chart name. |
+| extraVolumes | list | `[]` | Additional volumes to add to the pod. |
 | imagePullSecrets | list | `[]` | List of Docker registry secret names to pull images. |
 | linodeApiUrl | string | `""` | Linode API URL, leave empty for default. |
 | linodeApiVersion | string | `""` | Linode API version, leave empty for default. |
