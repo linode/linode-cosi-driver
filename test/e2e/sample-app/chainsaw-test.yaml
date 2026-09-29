@@ -97,7 +97,7 @@ spec:
           metadata:
             name: s3-credentials
 
-  - name: Build the mc client configuration from the BucketInfo secret
+  - name: Build the AWS CLI configuration from the BucketInfo secret
     try:
     - script:
         shell: bash
@@ -109,24 +109,18 @@ spec:
             --namespace "${NAMESPACE}" \
             --output jsonpath='{.data.BucketInfo}' | base64 -d)"
 
-          config="$(printf '%s' "${bucketinfo}" | yq --input-format=json --output-format=json '{
-            "version": "10",
-            "aliases": {
-              "cosi": {
-                "url": "https://" + .spec.secretS3.endpoint,
-                "accessKey": .spec.secretS3.accessKeyID,
-                "secretKey": .spec.secretS3.accessSecretKey,
-                "api": "S3v4",
-                "path": "auto"
-              }
-            }
-          }')"
-
+          endpoint="$(printf '%s' "${bucketinfo}" | yq --input-format=json '.spec.secretS3.endpoint')"
+          region="$(printf '%s' "${bucketinfo}" | yq --input-format=json '.spec.secretS3.region')"
+          access_key_id="$(printf '%s' "${bucketinfo}" | yq --input-format=json '.spec.secretS3.accessKeyID')"
+          access_secret_key="$(printf '%s' "${bucketinfo}" | yq --input-format=json '.spec.secretS3.accessSecretKey')"
           bucket="$(printf '%s' "${bucketinfo}" | yq --input-format=json '.spec.bucketName')"
 
-          kubectl create secret generic mc-config \
+          kubectl create secret generic aws-cli-config \
             --namespace "${NAMESPACE}" \
-            --from-literal=config.json="${config}" \
+            --from-literal=AWS_ACCESS_KEY_ID="${access_key_id}" \
+            --from-literal=AWS_SECRET_ACCESS_KEY="${access_secret_key}" \
+            --from-literal=AWS_DEFAULT_REGION="${region}" \
+            --from-literal=AWS_ENDPOINT_URL="https://${endpoint}" \
             --from-literal=BUCKET_NAME="${bucket}"
 
   - name: Run test upload
