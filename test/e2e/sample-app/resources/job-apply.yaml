@@ -6,26 +6,19 @@ spec:
   template:
     spec:
       containers:
-      - name: mc
-        image: quay.io/minio/mc@sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727
-        env:
-        - name: BUCKET_NAME
-          valueFrom:
-            secretKeyRef:
-              name: mc-config
-              key: BUCKET_NAME
+      - name: aws-cli
+        image: amazon/aws-cli:2.27.41
+        envFrom:
+        - secretRef:
+            name: aws-cli-config
         command:
         - /bin/sh
         - -c
         - |
            set -eu
-           # mc needs a writable config dir, so the read-only Secret mount
-           # cannot serve as one directly.
-           mkdir -p /root/.mc
-           cp /mc-config/config.json /root/.mc/config.json
-
+           aws configure set default.s3.addressing_style path
            for attempt in $(seq 1 24); do
-             if mc ls "cosi/${BUCKET_NAME}" >/dev/null 2>&1; then
+             if aws s3api head-bucket --bucket "${BUCKET_NAME}" >/dev/null 2>&1; then
                break
              fi
              echo "waiting for bucket ${BUCKET_NAME} to be reachable over s3 (${attempt}/24)"
@@ -33,8 +26,8 @@ spec:
            done
 
            for attempt in $(seq 1 12); do
-             if date | mc pipe "cosi/${BUCKET_NAME}/test.txt"; then
-               mc rm "cosi/${BUCKET_NAME}/test.txt"
+             if date | aws s3 cp - "s3://${BUCKET_NAME}/test.txt"; then
+               aws s3 rm "s3://${BUCKET_NAME}/test.txt"
                exit 0
              fi
              echo "upload failed for bucket ${BUCKET_NAME} (${attempt}/12), retrying"
@@ -43,13 +36,5 @@ spec:
 
            echo "upload failed for bucket ${BUCKET_NAME} after retries" >&2
            exit 1
-        volumeMounts:
-        - name: mc-config
-          mountPath: /mc-config
-          readOnly: true
-      volumes:
-      - name: mc-config
-        secret:
-          secretName: mc-config
       restartPolicy: Never
   backoffLimit: 1
