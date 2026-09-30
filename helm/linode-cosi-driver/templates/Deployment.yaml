@@ -72,6 +72,9 @@ spec:
           volumeMounts:
             - name: cosi-socket-dir
               mountPath: /var/lib/cosi
+            {{- with .Values.driver.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
         - name: objectstorage-provisioner-sidecar
           image: {{ include "linode-cosi-driver.provisionerSidecarImageName" . }}
           imagePullPolicy: {{ .Values.sidecar.image.pullPolicy }}
@@ -115,4 +118,7 @@ spec:
         - name: remote-kubeconfig
           secret:
             secretName: {{ .Values.sidecar.kubeconfigSecret.ref }}
+        {{- end }}
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
         {{- end }}

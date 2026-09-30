@@ -28,6 +28,9 @@ driver:
   # -- TTL of the Object Storage region/endpoint cache.
   cacheTTL: 30s
 
+  # -- Additional volume mounts for the driver container.
+  extraVolumeMounts: []
+
 sidecar:
   image:
     # -- Sidecar container image repository.
@@ -53,6 +56,9 @@ sidecar:
 
 # -- List of Docker registry secret names to pull images.
 imagePullSecrets: []
+
+# -- Additional volumes to add to the pod.
+extraVolumes: []
 
 # -- Overrides the chart name.
 nameOverride: ""

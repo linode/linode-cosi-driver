@@ -16,14 +16,14 @@ k8s_resource(
         "container-object-storage-controller:rolebinding",
         "container-object-storage-controller:clusterrolebinding",
 ])
-namespace_create("linode-cosi-driver")
+namespace_create(os.getenv("COSI_NAMESPACE") or "linode-cosi-driver")
 args = ["apiToken=" + os.getenv("LINODE_TOKEN")]
 if os.getenv("LINODE_URL"):
     args.append("linodeApiUrl=" + os.getenv("LINODE_URL"))
 
 k8s_yaml(helm( "./helm/linode-cosi-driver",
     "linode-cosi-driver",
-    namespace="linode-cosi-driver",
+    namespace=os.getenv("COSI_NAMESPACE") or "linode-cosi-driver",
     set=args,
 ))
 
@@ -34,7 +34,7 @@ k8s_resource(
         "linode-cosi-driver:clusterrole",
         "linode-cosi-driver:clusterrolebinding",
         "linode-cosi-driver:secret",
-        "linode-cosi-driver:namespace",
+        "%s:namespace" % (os.getenv("COSI_NAMESPACE") or "linode-cosi-driver"),
     ],
 )
 if os.getenv("SKIP_IMAGE_BUILD", "false") != "true":
