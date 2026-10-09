@@ -17,7 +17,9 @@ permissions:
 
 jobs:
   integration:
-    environment: ${{ (github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name != github.repository) && 'prod-external' || 'prod' }}
+    environment:
+      name: ${{ (github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name != github.repository) && 'prod-external' || 'prod' }}
+      deployment: false
     runs-on: ubuntu-latest
     steps:
       - name: Harden Runner
@@ -41,7 +43,9 @@ jobs:
           mise run test-integration
 
   e2e:
-    environment: ${{ (github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name != github.repository) && 'prod-external' || 'prod' }}
+    environment:
+      name: ${{ (github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name != github.repository) && 'prod-external' || 'prod' }}
+      deployment: false
     runs-on: ubuntu-latest
     steps:
       - name: Harden Runner
