@@ -19,7 +19,7 @@ import (
 	"errors"
 	"testing"
 
-	cosi "sigs.k8s.io/container-object-storage-interface-spec"
+	cosi "sigs.k8s.io/container-object-storage-interface/proto"
 
 	"github.com/linode/linode-cosi-driver/pkg/servers/identity"
 )
@@ -80,9 +80,12 @@ func TestDriverGetInfo(t *testing.T) {
 				t.FailNow()
 			}
 
-			_, err = idSrv.DriverGetInfo(context.Background(), tc.request)
+			response, err := idSrv.DriverGetInfo(context.Background(), tc.request)
 			if err != nil {
 				t.Errorf("unexpected error in DriverGetInfo call: %v", err)
+			}
+			if len(response.GetSupportedProtocols()) != 1 || response.GetSupportedProtocols()[0].GetType() != cosi.ObjectProtocol_S3 {
+				t.Fatal("identity must advertise S3 support")
 			}
 		})
 	}

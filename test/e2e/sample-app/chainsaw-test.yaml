@@ -24,33 +24,33 @@ spec:
     try:
     - apply:
         resource:
-          apiVersion: objectstorage.k8s.io/v1alpha1
+          apiVersion: objectstorage.k8s.io/v1alpha2
           kind: BucketClass
           metadata:
             name: ($namespace)
-          driverName: objectstorage.cosi.linode.com
-          deletionPolicy: Delete
-          parameters:
-            cosi.linode.com/v1/region: us-ord
+          spec:
+            driverName: objectstorage.cosi.linode.com
+            deletionPolicy: Delete
+            parameters:
+              cosi.linode.com/v1/region: us-ord
     - assert:
         resource:
-          apiVersion: objectstorage.k8s.io/v1alpha1
+          apiVersion: objectstorage.k8s.io/v1alpha2
           kind: BucketClass
           metadata:
             name: ($namespace)
     - apply:
         resource:
-          apiVersion: objectstorage.k8s.io/v1alpha1
+          apiVersion: objectstorage.k8s.io/v1alpha2
           kind: BucketAccessClass
           metadata:
             name: ($namespace)
-          driverName: objectstorage.cosi.linode.com
-          authenticationType: Key
-          parameters:
-            cosi.linode.com/v1/permissions: read_write
+          spec:
+            driverName: objectstorage.cosi.linode.com
+            authenticationType: Key
     - assert:
         resource:
-          apiVersion: objectstorage.k8s.io/v1alpha1
+          apiVersion: objectstorage.k8s.io/v1alpha2
           kind: BucketAccessClass
           metadata:
             name: ($namespace)
@@ -59,7 +59,7 @@ spec:
     try:
     - apply:
         resource:
-          apiVersion: objectstorage.k8s.io/v1alpha1
+          apiVersion: objectstorage.k8s.io/v1alpha2
           kind: BucketClaim
           metadata:
             name: cosi-sample-app
@@ -79,14 +79,17 @@ spec:
     try:
     - apply:
         resource:
-          apiVersion: objectstorage.k8s.io/v1alpha1
+          apiVersion: objectstorage.k8s.io/v1alpha2
           kind: BucketAccess
           metadata:
             name: cosi-sample-app
           spec:
             bucketAccessClassName: ($namespace)
-            bucketClaimName: cosi-sample-app
-            credentialsSecretName: s3-credentials
+            bucketClaims:
+              - bucketClaimName: cosi-sample-app
+                accessSecretName: s3-credentials
+                accessModes:
+                  objectData: ReadWrite
             protocol: S3
     - assert:
         file: ./resources/bucketaccess-assert.yaml
@@ -97,7 +100,7 @@ spec:
           metadata:
             name: s3-credentials
 
-  - name: Build the AWS CLI configuration from the BucketInfo secret
+  - name: Build the AWS CLI configuration from the COSI Secret
     try:
     - script:
         shell: bash
@@ -105,15 +108,15 @@ spec:
           - -c
         content: |
           set -eu
-          bucketinfo="$(kubectl get secret s3-credentials \
-            --namespace "${NAMESPACE}" \
-            --output jsonpath='{.data.BucketInfo}' | base64 -d)"
-
-          endpoint="$(printf '%s' "${bucketinfo}" | yq --input-format=json '.spec.secretS3.endpoint')"
-          region="$(printf '%s' "${bucketinfo}" | yq --input-format=json '.spec.secretS3.region')"
-          access_key_id="$(printf '%s' "${bucketinfo}" | yq --input-format=json '.spec.secretS3.accessKeyID')"
-          access_secret_key="$(printf '%s' "${bucketinfo}" | yq --input-format=json '.spec.secretS3.accessSecretKey')"
-          bucket="$(printf '%s' "${bucketinfo}" | yq --input-format=json '.spec.bucketName')"
+          read_cosi_value() {
+            kubectl get secret s3-credentials --namespace "${NAMESPACE}" \
+              --output "jsonpath={.data.${1}}" | base64 -d
+          }
+          endpoint="$(read_cosi_value COSI_S3_ENDPOINT)"
+          region="$(read_cosi_value COSI_S3_REGION)"
+          access_key_id="$(read_cosi_value COSI_S3_ACCESS_KEY_ID)"
+          access_secret_key="$(read_cosi_value COSI_S3_ACCESS_SECRET_KEY)"
+          bucket="$(read_cosi_value COSI_S3_BUCKET_ID)"
 
           kubectl create secret generic aws-cli-config \
             --namespace "${NAMESPACE}" \

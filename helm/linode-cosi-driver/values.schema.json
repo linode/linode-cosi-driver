@@ -15,10 +15,7 @@
           "type": "string"
         },
         "extraVolumeMounts": {
-          "type": "array",
-          "items": {
-            "type": "object"
-          }
+          "type": "array"
         },
         "image": {
           "type": "object",
@@ -36,14 +33,11 @@
         }
       }
     },
+    "extraVolumes": {
+      "type": "array"
+    },
     "fullnameOverride": {
       "type": "string"
-    },
-    "extraVolumes": {
-      "type": "array",
-      "items": {
-        "type": "object"
-      }
     },
     "imagePullSecrets": {
       "type": "array"
@@ -197,8 +191,8 @@
             }
           }
         },
-        "logVerbosity": {
-          "type": "integer"
+        "logLevel": {
+          "type": "string"
         }
       }
     },

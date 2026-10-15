@@ -18,7 +18,7 @@ import (
 	"reflect"
 	"testing"
 
-	cosi "sigs.k8s.io/container-object-storage-interface-spec"
+	cosi "sigs.k8s.io/container-object-storage-interface/proto"
 )
 
 func TestBucketIDCleanup(t *testing.T) {
@@ -96,7 +96,7 @@ func TestCredentials(t *testing.T) {
 		label       string
 		accessKey   string
 		secretKey   string
-		expected    map[string]*cosi.CredentialDetails
+		expected    *cosi.CredentialInfo
 		shouldPanic bool
 	}{
 		"valid_credentials": {
@@ -105,16 +105,9 @@ func TestCredentials(t *testing.T) {
 			label:     "test-label",
 			accessKey: testCredentialsAccessKey,
 			secretKey: testCredentialsSecretKey,
-			expected: map[string]*cosi.CredentialDetails{
-				S3: {
-					Secrets: map[string]string{
-						S3Region:                testCredentialsRegion,
-						S3Endpoint:              testCredentialsEndpoint,
-						S3SecretAccessKeyID:     testCredentialsAccessKey,
-						S3SecretAccessSecretKey: testCredentialsSecretKey,
-					},
-				},
-			},
+			expected: &cosi.CredentialInfo{S3: &cosi.S3CredentialInfo{
+				AccessKeyId: testCredentialsAccessKey, AccessSecretKey: testCredentialsSecretKey,
+			}},
 		},
 		"missing_region": {
 			region:      "",
