@@ -40,10 +40,10 @@ sidecar:
     pullPolicy: IfNotPresent
 
     # -- Sidecar container image tag.
-    tag: "v0.2.2"
+    tag: "v20261009-controllerv0.2.0-rc1-348-g7b121df"
 
-  # -- Log verbosity level for the sidecar container.
-  logVerbosity: 4
+  # -- Zap log level for the v1alpha2 sidecar (debug, info, error).
+  logLevel: info
 
   kubeconfigSecret:
     # -- Name of an existing Secret containing a kubeconfig for the sidecar to use when watching

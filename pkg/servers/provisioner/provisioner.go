@@ -27,7 +27,7 @@ import (
 	"github.com/linode/linodego/v2"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	cosi "sigs.k8s.io/container-object-storage-interface-spec"
+	cosi "sigs.k8s.io/container-object-storage-interface/proto"
 
 	"github.com/linode/linode-cosi-driver/pkg/linodeclient"
 	"github.com/linode/linode-cosi-driver/pkg/linodeclient/cache"
@@ -36,6 +36,7 @@ import (
 
 // Server implements cosi.ProvisionerServer interface.
 type Server struct {
+	cosi.UnimplementedProvisionerServer
 	log  *slog.Logger
 	once sync.Once
 
@@ -154,10 +155,17 @@ func cleanupWithTimeout(ctx context.Context, log *slog.Logger, cleanup func(cont
 //  1. If a bucket that matches both name and parameters already exists, then OK (success) must be returned.
 //  2. If a bucket by same name, but different parameters is provided, then the appropriate error code ALREADY_EXISTS must be returned.
 func (s *Server) DriverCreateBucket(ctx context.Context, req *cosi.DriverCreateBucketRequest) (*cosi.DriverCreateBucketResponse, error) {
-	label := req.GetName()
-	region := req.GetParameters()[ParamRegion]
+	if err := validateProtocols(req.GetProtocols()); err != nil {
+		return nil, err
+	}
+	region, label, _, err := parseBucketID(req.GetBucketId())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+	if configuredRegion := req.GetParameters()[ParamRegion]; configuredRegion != "" && configuredRegion != region {
+		return nil, status.Error(codes.InvalidArgument, "bucket ID region does not match parameters")
+	}
 	cors := ParamCORSValue(req.GetParameters()[ParamCORS])
-	cleanup := ParamCleanupValue(req.GetParameters()[ParamCleanup])
 	policyTemplate := req.GetParameters()[ParamPolicy]
 
 	acl := linodego.ObjectStorageACL(req.GetParameters()[ParamACL])
@@ -172,7 +180,7 @@ func (s *Server) DriverCreateBucket(ctx context.Context, req *cosi.DriverCreateB
 
 	log.InfoContext(ctx, "Bucket creation initiated")
 
-	if region == "" {
+	if req.GetParameters()[ParamRegion] == "" {
 		log.ErrorContext(ctx, "Required parameter was not provided in the request", "error", ErrMissingRegion)
 		return nil, status.Error(codes.InvalidArgument, "region was not provided")
 	}
@@ -207,11 +215,11 @@ func (s *Server) DriverCreateBucket(ctx context.Context, req *cosi.DriverCreateB
 
 	if bucket == nil {
 		// Create the bucket if it doesn't exist, then apply policy if provided.
-		return s.createBucketAndApplyPolicy(ctx, log, region, label, endpointType, acl, cors, cleanup, policy)
+		return s.createBucketAndApplyPolicy(ctx, log, region, label, endpointType, acl, cors, policy)
 	}
 
 	// Bucket exists: validate parameters and re-apply policy for idempotency.
-	return s.ensureExistingBucket(ctx, log, bucket, region, label, endpointType, acl, cors, cleanup, policy)
+	return s.ensureExistingBucket(ctx, log, bucket, region, label, endpointType, acl, cors, policy)
 }
 
 func (s *Server) buildBucketPolicy(policyTemplate, label string) (string, error) {
@@ -248,7 +256,6 @@ func (s *Server) createBucketAndApplyPolicy(
 	endpointType linodego.ObjectStorageEndpointType,
 	acl linodego.ObjectStorageACL,
 	cors ParamCORSValue,
-	cleanup ParamCleanupValue,
 	policy string,
 ) (*cosi.DriverCreateBucketResponse, error) {
 	opts := linodego.ObjectStorageBucketCreateOptions{
@@ -284,9 +291,12 @@ func (s *Server) createBucketAndApplyPolicy(
 			return nil, status.Error(codes.Internal, fmt.Sprintf("failed to set bucket policy: %v", err))
 		}
 	}
+	endpoint, err := s.endpointForBucket(ctx, region, bucket)
+	if err != nil {
+		return nil, status.Error(codes.Internal, fmt.Sprintf("resolve bucket endpoint: %v", err))
+	}
 	return &cosi.DriverCreateBucketResponse{
-		BucketId:   bucketID(bucket.Region, bucket.Label, cleanup),
-		BucketInfo: bucketInfo(bucket.Region),
+		Protocols: bucketInfo(bucket.Region, bucket.Label, endpoint),
 	}, status.Error(codes.OK, "bucket created")
 }
 
@@ -298,7 +308,6 @@ func (s *Server) ensureExistingBucket(
 	endpointType linodego.ObjectStorageEndpointType,
 	acl linodego.ObjectStorageACL,
 	cors ParamCORSValue,
-	cleanup ParamCleanupValue,
 	policy string,
 ) (*cosi.DriverCreateBucketResponse, error) {
 	access, err := s.client.GetObjectStorageBucketAccess(ctx, region, label)
@@ -329,9 +338,12 @@ func (s *Server) ensureExistingBucket(
 	}
 	log.InfoContext(ctx, "Bucket exists")
 
+	endpoint, err := s.endpointForBucket(ctx, region, bucket)
+	if err != nil {
+		return nil, status.Error(codes.Internal, fmt.Sprintf("resolve bucket endpoint: %v", err))
+	}
 	return &cosi.DriverCreateBucketResponse{
-		BucketId:   bucketID(region, label, cleanup),
-		BucketInfo: bucketInfo(region),
+		Protocols: bucketInfo(region, label, endpoint),
 	}, status.Error(codes.OK, "bucket exists")
 }
 
@@ -585,36 +597,29 @@ func (s *Server) DriverDeleteBucket(ctx context.Context, req *cosi.DriverDeleteB
 // The account_id returned in the response will be used as the unique identifier for deleting this access when calling DriverRevokeBucketAccess.
 // The returned secret does not need to be the same each call to achieve idempotency.
 func (s *Server) DriverGrantBucketAccess(ctx context.Context, req *cosi.DriverGrantBucketAccessRequest) (*cosi.DriverGrantBucketAccessResponse, error) {
-	region, label, _, err := parseBucketID(req.GetBucketId())
+	if err := validateAccessRequest(req); err != nil {
+		return nil, err
+	}
+	accessedBucket := req.GetBuckets()[0]
+	region, label, _, err := parseBucketID(accessedBucket.GetBucketId())
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
-	name := req.GetName()
-	auth := req.GetAuthenticationType()
-	perms := ParamPermissionsValue(req.GetParameters()[ParamPermissions])
-
-	if perms == "" {
-		perms = ParamPermissionsValueReadOnly
+	name := req.GetAccountName()
+	perms, err := permissionsForAccess(accessedBucket)
+	if err != nil {
+		return nil, err
 	}
-
+	if configured := ParamPermissionsValue(req.GetParameters()[ParamPermissions]); configured != "" && configured != perms {
+		return nil, status.Error(codes.InvalidArgument, "permissions parameter conflicts with requested access modes")
+	}
 	log := s.logAttr(
-		slog.String(KeyBucketID, req.GetBucketId()),
+		slog.String(KeyBucketID, accessedBucket.GetBucketId()),
 		slog.String(KeyBucketRegion, region),
 		slog.String(KeyBucketLabel, label),
 		slog.String(KeyBucketAccessName, name),
-		slog.Any(KeyBucketAccessAuth, auth),
 		slog.Any(KeyBucketAccessPermissions, perms),
 	).WithGroup("DriverGrantBucketAccess")
-
-	if auth != cosi.AuthenticationType_Key {
-		log.ErrorContext(ctx, "Unsupported authentication type")
-
-		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("%v: %s", ErrUnsuportedAuth, auth.String()))
-	} else if perms != ParamPermissionsValueReadOnly && perms != ParamPermissionsValueReadWrite {
-		log.ErrorContext(ctx, "Unknown permissions")
-
-		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("%v: %s", ErrUnknownPermsissions, perms))
-	}
 
 	bucket, err := s.client.GetObjectStorageBucket(ctx, region, label)
 	if err != nil {
@@ -653,6 +658,10 @@ func (s *Server) DriverGrantBucketAccess(ctx context.Context, req *cosi.DriverGr
 	return &cosi.DriverGrantBucketAccessResponse{
 		AccountId:   fmt.Sprintf("%d", key.ID),
 		Credentials: credentials(region, endpoint, label, key.AccessKey, key.SecretKey),
+		Buckets: []*cosi.DriverGrantBucketAccessResponse_BucketInfo{{
+			BucketId:   accessedBucket.GetBucketId(),
+			BucketInfo: bucketInfo(region, label, endpoint),
+		}},
 	}, status.Error(codes.OK, "bucket access granted")
 }
 
@@ -660,24 +669,14 @@ func (s *Server) DriverGrantBucketAccess(ctx context.Context, req *cosi.DriverGr
 //
 // NOTE: this call needs to be idempotent.
 func (s *Server) DriverRevokeBucketAccess(ctx context.Context, req *cosi.DriverRevokeBucketAccessRequest) (*cosi.DriverRevokeBucketAccessResponse, error) {
-	region, label, _, err := parseBucketID(req.GetBucketId())
-	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
+	if err := validateProtocol(req.GetProtocol()); err != nil {
+		return nil, err
 	}
 	id, err := strconv.Atoi(req.GetAccountId())
-
-	log := s.logAttr(
-		slog.String(KeyBucketID, req.GetBucketId()),
-		slog.String(KeyBucketAccessIDRaw, req.GetBucketId()),
-		slog.String(KeyBucketRegion, region),
-		slog.String(KeyBucketLabel, label),
-		slog.Int(KeyBucketAccessID, id),
-	).WithGroup("DriverRevokeBucketAccess")
-
-	if err != nil {
-		log.ErrorContext(ctx, "Invalid account id", "error", err)
-		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("account id is invalid: %v", err))
+	if err != nil || id < 0 {
+		return nil, status.Error(codes.InvalidArgument, "account ID must be a non-negative integer")
 	}
+	log := s.logAttr(slog.Int(KeyBucketAccessID, id)).WithGroup("DriverRevokeBucketAccess")
 
 	err = s.client.DeleteObjectStorageKey(ctx, id)
 	if err == nil || errors.Is(err, ErrNotFound) {

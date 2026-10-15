@@ -1,8 +1,8 @@
-apiVersion: objectstorage.k8s.io/v1alpha1
+apiVersion: objectstorage.k8s.io/v1alpha2
 kind: BucketAccessClass
 metadata:
   name: linode-objectstorage
-driverName: objectstorage.cosi.linode.com
-authenticationType: Key
-parameters:
-  cosi.linode.com/v1/permissions: read_write
+spec:
+  driverName: objectstorage.cosi.linode.com
+  authenticationType: Key
+  multiBucketAccess: SingleBucket

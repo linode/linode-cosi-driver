@@ -34,12 +34,12 @@ spec:
         file: ../../../examples/example.BucketAccess.yaml
     - assert:
         resource:
-          apiVersion: objectstorage.k8s.io/v1alpha1
+          apiVersion: objectstorage.k8s.io/v1alpha2
           kind: BucketAccess
           metadata:
             name: example
           status:
-            accessGranted: true
+            readyToUse: true
     - assert:
         resource:
           apiVersion: v1
@@ -69,8 +69,8 @@ spec:
               secret:
                 secretName: s3-credentials
                 items:
-                - key: BucketInfo
-                  path: BucketInfo.json
+                - key: COSI_PROTOCOL
+                  path: protocol
     - assert:
         resource:
           apiVersion: v1
@@ -84,21 +84,21 @@ spec:
         - name: NAMESPACE
           value: ($namespace)
         entrypoint: kubectl
-        args: [ exec, -n, "$NAMESPACE", bucket-test, --, head, -c12, /conf/BucketInfo.json ]
+        args: [ exec, -n, "$NAMESPACE", bucket-test, --, cat, /conf/protocol ]
         check:
           ($error): ~
-          (starts_with($stdout, '{"metadata"')): true
+          ($stdout): S3
 
   - name: Delete BucketAccess
     try:
       - delete:
           ref:
-            apiVersion: objectstorage.k8s.io/v1alpha1
+            apiVersion: objectstorage.k8s.io/v1alpha2
             kind: BucketAccess
             name: example
       - error:
           resource:
-            apiVersion: objectstorage.k8s.io/v1alpha1
+            apiVersion: objectstorage.k8s.io/v1alpha2
             kind: BucketAccess
             metadata:
               name: example
