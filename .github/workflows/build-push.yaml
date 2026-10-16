@@ -6,6 +6,11 @@ on:
     tags:
       - "v*.*.*"
   workflow_dispatch:
+    inputs:
+      ref:
+        description: Branch or tag to build (defaults to the selected workflow branch)
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -24,8 +29,32 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ inputs.ref || github.ref }}
           fetch-depth: 0
           persist-credentials: false
+
+      - name: Set image metadata
+        id: image
+        shell: bash
+        env:
+          BUILD_REF: ${{ inputs.ref || github.ref_name }}
+          RELEASE_PUSH: ${{ github.event_name == 'push' && github.ref_type == 'tag' }}
+        run: |
+          set -euo pipefail
+          commit_sha=$(git rev-parse HEAD)
+          if [[ "$RELEASE_PUSH" == "true" ]]; then
+            image_version="$BUILD_REF"
+            image_tags="$BUILD_REF,latest"
+          else
+            branch_tag=$(printf '%s' "$BUILD_REF" \
+              | LC_ALL=C tr '[:upper:]' '[:lower:]' \
+              | sed -E 's/[^a-z0-9_.-]+/-/g; s/^[.-]+//; s/[.-]+$//' \
+              | cut -c1-80)
+            branch_tag=${branch_tag:-dev}
+            image_version="${branch_tag}-${commit_sha}"
+            image_tags="${branch_tag},${image_version}"
+          fi
+          printf 'version=%s\ntags=%s\n' "$image_version" "$image_tags" >> "$GITHUB_OUTPUT"
 
       - name: Set up Mise
         uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4.2.5
@@ -40,6 +69,13 @@ jobs:
       - name: Publish image with ko
         env:
           KO_DOCKER_REPO: docker.io/linode/linode-cosi-driver
-          IMAGE_VERSION: ${{ github.ref_name == 'main' && format('main-{0}', github.sha) || github.ref_name }}
-          IMAGE_TAGS: ${{ startsWith(github.ref, 'refs/tags/') && format('{0},latest', github.ref_name) || format('{0},{0}-{1}', github.ref_name, github.sha) }}
+          IMAGE_VERSION: ${{ steps.image.outputs.version }}
+          IMAGE_TAGS: ${{ steps.image.outputs.tags }}
         run: mise run ko-publish
+
+      - name: Show published image
+        env:
+          IMAGE_VERSION: ${{ steps.image.outputs.version }}
+        run: |
+          printf 'Published driver image: `docker.io/linode/linode-cosi-driver:%s`\n' \
+            "$IMAGE_VERSION" >> "$GITHUB_STEP_SUMMARY"

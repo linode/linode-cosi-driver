@@ -26,7 +26,7 @@ import (
 	"github.com/linode/linodego/v2"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
-	cosi "sigs.k8s.io/container-object-storage-interface-spec"
+	cosi "sigs.k8s.io/container-object-storage-interface/proto"
 
 	"github.com/linode/linode-cosi-driver/pkg/envflag"
 	"github.com/linode/linode-cosi-driver/pkg/linodeclient"
@@ -149,7 +149,7 @@ func TestBucketScopedKeyIsolation(t *testing.T) {
 
 	createBucket := func(name string) {
 		req := &cosi.DriverCreateBucketRequest{
-			Name: name,
+			BucketId: fmt.Sprintf("%s/%s", region, name),
 			Parameters: map[string]string{
 				provisioner.ParamRegion: region,
 				provisioner.ParamACL:    "private",
@@ -175,12 +175,14 @@ func TestBucketScopedKeyIsolation(t *testing.T) {
 	defer deleteBucket(bucketB)
 
 	grantReq := &cosi.DriverGrantBucketAccessRequest{
-		BucketId:           fmt.Sprintf("%s/%s", region, bucketA),
-		Name:               "integration-access",
-		AuthenticationType: cosi.AuthenticationType_Key,
+		Buckets:            []*cosi.DriverGrantBucketAccessRequest_AccessedBucket{{BucketId: fmt.Sprintf("%s/%s", region, bucketA), ObjectDataAccessMode: &cosi.AccessMode{Mode: cosi.AccessMode_READ_WRITE}}},
+		AccountName:        "integration-access",
+		AuthenticationType: &cosi.AuthenticationType{Type: cosi.AuthenticationType_KEY},
 		Parameters: map[string]string{
 			provisioner.ParamPermissions: string(provisioner.ParamPermissionsValueReadWrite),
 		},
+
+		Protocol: &cosi.ObjectProtocol{Type: cosi.ObjectProtocol_S3},
 	}
 
 	grantRes, err := srv.DriverGrantBucketAccess(ctx, grantReq)
@@ -189,24 +191,26 @@ func TestBucketScopedKeyIsolation(t *testing.T) {
 	}
 	defer func() {
 		revokeReq := &cosi.DriverRevokeBucketAccessRequest{
-			BucketId:  fmt.Sprintf("%s/%s", region, bucketA),
+			Buckets:   []*cosi.DriverRevokeBucketAccessRequest_AccessedBucket{{BucketId: fmt.Sprintf("%s/%s", region, bucketA)}},
 			AccountId: grantRes.GetAccountId(),
+
+			Protocol: &cosi.ObjectProtocol{Type: cosi.ObjectProtocol_S3},
 		}
 		if _, err := srv.DriverRevokeBucketAccess(ctx, revokeReq); err != nil {
 			t.Errorf("failed to revoke bucket access: %v", err)
 		}
 	}()
 
-	creds := grantRes.GetCredentials()[provisioner.S3]
+	creds := grantRes.GetCredentials().GetS3()
 	if creds == nil {
 		t.Fatalf("missing s3 credentials in response")
 	}
-	endpoint := creds.Secrets[provisioner.S3Endpoint]
+	endpoint := grantRes.GetBuckets()[0].GetBucketInfo().GetS3().GetEndpoint()
 	if endpoint == "" {
 		t.Fatalf("missing endpoint in response")
 	}
-	accessKey := creds.Secrets[provisioner.S3SecretAccessKeyID]
-	secretKey := creds.Secrets[provisioner.S3SecretAccessSecretKey]
+	accessKey := creds.GetAccessKeyId()
+	secretKey := creds.GetAccessSecretKey()
 	if accessKey == "" || secretKey == "" {
 		t.Fatalf("missing access credentials in response")
 	}
@@ -336,8 +340,15 @@ func (s *suite) DriverCreateBucket(t *testing.T) {
 	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 	defer cancel()
 
+	generated, err := s.server.DriverGenerateBucketId(ctx, &cosi.DriverGenerateBucketIdRequest{
+		Name: s.bucketName, Parameters: map[string]string{provisioner.ParamRegion: s.region},
+	})
+	if err != nil {
+		t.Fatalf("generate bucket ID: %v", err)
+	}
+	s.bucketID = generated.GetBucketId()
 	req := &cosi.DriverCreateBucketRequest{
-		Name: s.bucketName,
+		BucketId: s.bucketID,
 		Parameters: map[string]string{
 			provisioner.ParamRegion: s.region,
 			provisioner.ParamACL:    "private",
@@ -346,11 +357,11 @@ func (s *suite) DriverCreateBucket(t *testing.T) {
 		},
 	}
 
-	res, err := s.server.DriverCreateBucket(ctx, req)
+	_, err = s.server.DriverCreateBucket(ctx, req)
 	if err != nil {
 		t.Errorf("failed to create bucket: %v", err)
 	} else {
-		s.bucketID = res.GetBucketId()
+		s.bucketID = req.GetBucketId()
 		s.finishedCreateBucket = true
 	}
 }
@@ -384,12 +395,14 @@ func (s *suite) DriverGrantBucketAccess(t *testing.T) {
 	}
 
 	req := &cosi.DriverGrantBucketAccessRequest{
-		BucketId:           s.bucketID,
-		Name:               s.accessName,
-		AuthenticationType: cosi.AuthenticationType_Key,
+		Buckets:            []*cosi.DriverGrantBucketAccessRequest_AccessedBucket{{BucketId: s.bucketID, ObjectDataAccessMode: &cosi.AccessMode{Mode: cosi.AccessMode_READ_WRITE}}},
+		AccountName:        s.accessName,
+		AuthenticationType: &cosi.AuthenticationType{Type: cosi.AuthenticationType_KEY},
 		Parameters: map[string]string{
 			provisioner.ParamPermissions: string(provisioner.ParamPermissionsValueReadWrite),
 		},
+
+		Protocol: &cosi.ObjectProtocol{Type: cosi.ObjectProtocol_S3},
 	}
 
 	res, err := s.server.DriverGrantBucketAccess(ctx, req)
@@ -411,8 +424,10 @@ func (s *suite) DriverRevokeBucketAccess(t *testing.T) {
 	}
 
 	req := &cosi.DriverRevokeBucketAccessRequest{
-		BucketId:  s.bucketID,
+		Buckets:   []*cosi.DriverRevokeBucketAccessRequest_AccessedBucket{{BucketId: s.bucketID}},
 		AccountId: s.accountID,
+
+		Protocol: &cosi.ObjectProtocol{Type: cosi.ObjectProtocol_S3},
 	}
 
 	_, err := s.server.DriverRevokeBucketAccess(ctx, req)

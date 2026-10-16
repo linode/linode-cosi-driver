@@ -22,31 +22,31 @@ spec:
     try:
     - apply:
         resource:
-          apiVersion: objectstorage.k8s.io/v1alpha1
+          apiVersion: objectstorage.k8s.io/v1alpha2
           kind: BucketClass
           metadata:
             name: ($namespace)
-          driverName: objectstorage.cosi.linode.com
-          deletionPolicy: Delete
-          parameters:
-            cosi.linode.com/v1/region: us-ord
-            cosi.linode.com/v1/acl: private
-            cosi.linode.com/v1/cors: disabled
+          spec:
+            driverName: objectstorage.cosi.linode.com
+            deletionPolicy: Delete
+            parameters:
+              cosi.linode.com/v1/region: us-ord
+              cosi.linode.com/v1/acl: private
+              cosi.linode.com/v1/cors: disabled
     - apply:
         resource:
-          apiVersion: objectstorage.k8s.io/v1alpha1
+          apiVersion: objectstorage.k8s.io/v1alpha2
           kind: BucketAccessClass
           metadata:
             name: ($namespace)
-          driverName: objectstorage.cosi.linode.com
-          authenticationType: Key
-          parameters:
-            cosi.linode.com/v1/permissions: read_only
+          spec:
+            driverName: objectstorage.cosi.linode.com
+            authenticationType: Key
   - name: Create BucketClaim
     try:
     - apply:
         resource:
-          apiVersion: objectstorage.k8s.io/v1alpha1
+          apiVersion: objectstorage.k8s.io/v1alpha2
           kind: BucketClaim
           metadata:
             name: ($namespace)
@@ -59,36 +59,39 @@ spec:
     try:
     - assert:
         resource:
-          apiVersion: objectstorage.k8s.io/v1alpha1
+          apiVersion: objectstorage.k8s.io/v1alpha2
           kind: BucketClaim
           metadata:
             name: ($namespace)
           status:
-            bucketReady: true
+            readyToUse: true
   - name: Create BucketAccess
     try:
     - apply:
         resource:
-          apiVersion: objectstorage.k8s.io/v1alpha1
+          apiVersion: objectstorage.k8s.io/v1alpha2
           kind: BucketAccess
           metadata:
             name: ($namespace)
           spec:
-            bucketClaimName: ($namespace)
+            bucketClaims:
+              - bucketClaimName: ($namespace)
+                accessSecretName: ($namespace)
+                accessModes:
+                  objectData: ReadOnly
             protocol: S3
             bucketAccessClassName: ($namespace)
-            credentialsSecretName: ($namespace)
             serviceAccountName: ($namespace)
   - name: Check if BucketAccess is granted
     try:
     - assert:
         resource:
-          apiVersion: objectstorage.k8s.io/v1alpha1
+          apiVersion: objectstorage.k8s.io/v1alpha2
           kind: BucketAccess
           metadata:
             name: ($namespace)
           status:
-            accessGranted: true
+            readyToUse: true
   - name: Check if Secret exists
     try:
     - assert:
@@ -97,15 +100,14 @@ spec:
           kind: Secret
           metadata:
             name: ($namespace)
-  - name: Validate the BucketInfo secret against its schema
+  - name: Validate the v1alpha2 Secret entries
     try:
     - script:
         env:
         - name: SECRET
           value: ($namespace)
         content: |
-          kubectl get secret "${SECRET}" \
-            --namespace "${NAMESPACE}" \
-            --output jsonpath='{.data.BucketInfo}' \
-            | base64 -d \
-            | check-jsonschema --schemafile bucketinfo.schema.json -
+          for key in COSI_PROTOCOL COSI_S3_BUCKET_ID COSI_S3_ENDPOINT COSI_S3_REGION COSI_S3_ADDRESSING_STYLE COSI_S3_ACCESS_KEY_ID COSI_S3_ACCESS_SECRET_KEY; do
+            value="$(kubectl get secret "${SECRET}" --namespace "${NAMESPACE}" --output "jsonpath={.data.${key}}")"
+            test -n "${value}" || { echo "missing COSI Secret entry: ${key}" >&2; exit 1; }
+          done

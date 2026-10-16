@@ -79,10 +79,12 @@ spec:
           image: {{ include "linode-cosi-driver.provisionerSidecarImageName" . }}
           imagePullPolicy: {{ .Values.sidecar.image.pullPolicy }}
           args:
-            - "-v={{ include "linode-cosi-driver.provisionerSidecarVerbosity" . }}"
-            {{- if .Values.sidecar.kubeconfigSecret.ref }}
-            - "--kubeconfig=/etc/cosi/remote-kubeconfig/{{ .Values.sidecar.kubeconfigSecret.key }}"
-            {{- end }}
+            - "--zap-log-level={{ .Values.sidecar.logLevel }}"
+          {{- if .Values.sidecar.kubeconfigSecret.ref }}
+          env:
+            - name: KUBECONFIG
+              value: "/etc/cosi/remote-kubeconfig/{{ .Values.sidecar.kubeconfigSecret.key }}"
+          {{- end }}
           {{- with .Values.securityContext }}
           securityContext:
             {{- toYaml . | nindent 12 }}
