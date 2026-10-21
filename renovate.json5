@@ -20,6 +20,9 @@
   },
   "osvVulnerabilityAlerts": true,
   "platformAutomerge": true,
+  "lockFileMaintenance": {
+    "enabled": true
+  },
   "customManagers": [
     {
       "customType": "regex",
