@@ -98,6 +98,9 @@ func TestHappyPath(t *testing.T) {
 		accessName: fmt.Sprintf("integration-access-%d", suffix),
 	}
 
+	// Revokes the access key if a failure leaves it granted.
+	t.Cleanup(func() { suite.cleanupAccess(t) })
+
 	idempotentRun(t, iterations, "DriverCreateBucket", suite.DriverCreateBucket)
 	idempotentRun(t, iterations, "DriverGrantBucketAccess", suite.DriverGrantBucketAccess)
 	idempotentRun(t, iterations, "DriverRevokeBucketAccess", suite.DriverRevokeBucketAccess)
@@ -329,7 +332,7 @@ type suite struct {
 	bucketName string
 	accessName string
 	bucketID   string
-	accountID  string
+	accountIDs []string
 }
 
 func (s *suite) DriverCreateBucket(t *testing.T) {
@@ -396,7 +399,7 @@ func (s *suite) DriverGrantBucketAccess(t *testing.T) {
 	if err != nil {
 		t.Errorf("failed to grant bucket access: %v", err)
 	} else {
-		s.accountID = res.GetAccountId()
+		s.accountIDs = append(s.accountIDs, res.GetAccountId())
 		s.finishedGrantBucketAccess = true
 	}
 }
@@ -410,13 +413,36 @@ func (s *suite) DriverRevokeBucketAccess(t *testing.T) {
 		return
 	}
 
-	req := &cosi.DriverRevokeBucketAccessRequest{
-		BucketId:  s.bucketID,
-		AccountId: s.accountID,
+	s.revokeAll(ctx, t)
+}
+
+// revokeAll revokes every key granted so far; grant is not idempotent, so each iteration creates a new key.
+func (s *suite) revokeAll(ctx context.Context, t *testing.T) {
+	remaining := s.accountIDs[:0]
+
+	for _, id := range s.accountIDs {
+		req := &cosi.DriverRevokeBucketAccessRequest{
+			BucketId:  s.bucketID,
+			AccountId: id,
+		}
+
+		if _, err := s.server.DriverRevokeBucketAccess(ctx, req); err != nil {
+			t.Errorf("failed to revoke bucket access %s: %v", id, err)
+			remaining = append(remaining, id)
+		}
 	}
 
-	_, err := s.server.DriverRevokeBucketAccess(ctx, req)
-	if err != nil {
-		t.Errorf("failed to revoke bucket access: %v", err)
+	s.accountIDs = remaining
+}
+
+// cleanupAccess revokes any keys that were granted but not revoked.
+func (s *suite) cleanupAccess(t *testing.T) {
+	if len(s.accountIDs) == 0 {
+		return
 	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+
+	s.revokeAll(ctx, t)
 }
