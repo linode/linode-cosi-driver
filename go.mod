@@ -2,7 +2,7 @@ module github.com/linode/linode-cosi-driver
 
 go 1.26.0
 
-toolchain go1.26.7
+toolchain go1.26.10
 
 require (
 	github.com/go-resty/resty/v2 v2.17.2

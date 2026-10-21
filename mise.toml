@@ -4,7 +4,7 @@
 minimum_release_age = "7d"
 
 [tools]
-go = "1.26.7"
+go = "1.27.3"
 
 
 # Build, test, lint, and generation tools.
