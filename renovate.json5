@@ -20,6 +20,9 @@
   },
   "osvVulnerabilityAlerts": true,
   "platformAutomerge": true,
+  "lockFileMaintenance": {
+    "enabled": true
+  },
   "customManagers": [
     {
       "customType": "regex",
@@ -59,15 +62,6 @@
       "groupName": "mise tools",
     },
     {
-      // Keeps the Go toolchain in mise.toml and go.mod moving together. Listed after
-      // the mise rule so a Go bump lands here rather than in the "mise tools" PR.
-      "groupName": "go Version",
-      "groupSlug": "go-version",
-      "matchDatasources": [
-        "golang-version"
-      ]
-    },
-    {
       "groupName": "kubernetes",
       "groupSlug": "kubernetes-go",
       "matchDatasources": [
@@ -79,9 +73,9 @@
       ]
     },
     {
-      "description": "Keep the Go version in sync between go.mod and mise.toml.",
+      "description": "Group Go version and golangci-lint which needs to update with Go version bumps",
       "matchManagers": ["mise", "gomod"],
-      "matchDepNames": ["go"],
+      "matchDepNames": ["go", "golangci-lint"],
       "groupName": "go version",
       "groupSlug": "go-version",
     }
