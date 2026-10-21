@@ -109,3 +109,16 @@ spec:
             --output jsonpath='{.data.BucketInfo}' \
             | base64 -d \
             | check-jsonschema --schemafile bucketinfo.schema.json -
+  - name: Delete BucketAccess
+    try:
+      - delete:
+          ref:
+            apiVersion: objectstorage.k8s.io/v1alpha1
+            kind: BucketAccess
+            name: ($namespace)
+      - error:
+          resource:
+            apiVersion: objectstorage.k8s.io/v1alpha1
+            kind: BucketAccess
+            metadata:
+              name: ($namespace)

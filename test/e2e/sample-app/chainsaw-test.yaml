@@ -134,3 +134,17 @@ spec:
     catch:
       - podLogs:
           selector: job-name=cosi-sample-upload
+
+  - name: Delete BucketAccess
+    try:
+      - delete:
+          ref:
+            apiVersion: objectstorage.k8s.io/v1alpha1
+            kind: BucketAccess
+            name: cosi-sample-app
+      - error:
+          resource:
+            apiVersion: objectstorage.k8s.io/v1alpha1
+            kind: BucketAccess
+            metadata:
+              name: cosi-sample-app

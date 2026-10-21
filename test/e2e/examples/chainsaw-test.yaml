@@ -46,6 +46,7 @@ spec:
           kind: Secret
           metadata:
             name: s3-credentials
+
   - name: Run bucket-test pod
     try:
     - create:
@@ -87,3 +88,17 @@ spec:
         check:
           ($error): ~
           (starts_with($stdout, '{"metadata"')): true
+
+  - name: Delete BucketAccess
+    try:
+      - delete:
+          ref:
+            apiVersion: objectstorage.k8s.io/v1alpha1
+            kind: BucketAccess
+            name: example
+      - error:
+          resource:
+            apiVersion: objectstorage.k8s.io/v1alpha1
+            kind: BucketAccess
+            metadata:
+              name: example
