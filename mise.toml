@@ -9,7 +9,7 @@ go = "1.27.3"
 
 # Build, test, lint, and generation tools.
 just = "1.58.0"
-golangci-lint = "2.12.2"
+golangci-lint = "2.15.0"
 ko = "0.18.1"
 "go:go.uber.org/mock/mockgen" = "0.6.0"
 "github:norwoodj/helm-docs" = "1.14.2"
