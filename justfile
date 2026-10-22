@@ -56,6 +56,10 @@ ko_labels := "--image-label org.opencontainers.image.title=linode-cosi-driver" +
 # Versions of COSI dependencies
 cosi_version := "7ddc93baaa3f08c9c8990a17c7b958955d93c044"
 
+# COSI release whose CRDs are vendored into the Helm chart's crds/ directory.
+# Keep in step with the chart's sidecar.image.tag.
+cosi_crds_version := "v0.2.2"
+
 # Documentation site preview; the pages tag carries the same gem set GitHub
 # Pages builds with, so a local build matches what the site serves.
 docs_image := env('DOCS_IMAGE', 'jekyll/jekyll:pages')
@@ -106,6 +110,17 @@ generate-schemas:
         --indent=2 \
         --values=helm/linode-cosi-driver/values.yaml \
         --output=helm/linode-cosi-driver/values.schema.json
+
+# Vendor the COSI CRDs into the Helm chart. Rendered through kustomize so the
+# upstream commonAnnotations (including api-approved.kubernetes.io, which the API
+# server requires for *.k8s.io groups) are kept.
+[group('Development')]
+generate-crds:
+    rm -f helm/linode-cosi-driver/crds/*.yml
+    mkdir -p helm/linode-cosi-driver/crds
+    kubectl kustomize 'github.com/kubernetes-sigs/container-object-storage-interface/?ref={{ cosi_crds_version }}' \
+        | yq eval 'select(.kind == "CustomResourceDefinition")' \
+            --split-exp '"helm/linode-cosi-driver/crds/" + .metadata.name' -
 
 # Generate the gomock doubles used by the tests.
 [group('Development')]
