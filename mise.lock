@@ -417,18 +417,22 @@ version = "0.7.1"
 backend = "aqua:stackrox/kube-linter"
 
 [tools.kube-linter."platforms.linux-arm64"]
+checksum = "sha256:415a0d439eeb3495fcee8cc47d0a15c6a3b5982b79a607b024f53947b8d2e289"
 url = "https://github.com/stackrox/kube-linter/releases/download/v0.7.1/kube-linter-linux_arm64"
 url_api = "https://api.github.com/repos/stackrox/kube-linter/releases/assets/204757626"
 
 [tools.kube-linter."platforms.linux-arm64-musl"]
+checksum = "sha256:415a0d439eeb3495fcee8cc47d0a15c6a3b5982b79a607b024f53947b8d2e289"
 url = "https://github.com/stackrox/kube-linter/releases/download/v0.7.1/kube-linter-linux_arm64"
 url_api = "https://api.github.com/repos/stackrox/kube-linter/releases/assets/204757626"
 
 [tools.kube-linter."platforms.linux-x64"]
+checksum = "sha256:754b1a6d7e8adade1f357241fe0af31915eabb92fdd203018bbe9cedd968f95c"
 url = "https://github.com/stackrox/kube-linter/releases/download/v0.7.1/kube-linter-linux"
 url_api = "https://api.github.com/repos/stackrox/kube-linter/releases/assets/204757611"
 
 [tools.kube-linter."platforms.linux-x64-musl"]
+checksum = "sha256:754b1a6d7e8adade1f357241fe0af31915eabb92fdd203018bbe9cedd968f95c"
 url = "https://github.com/stackrox/kube-linter/releases/download/v0.7.1/kube-linter-linux"
 url_api = "https://api.github.com/repos/stackrox/kube-linter/releases/assets/204757611"
 
@@ -437,10 +441,12 @@ checksum = "blake3:7e0295a2028d2339bc49315c2881220d1df260747b2335b16c8f54942b8d2
 url = "https://github.com/stackrox/kube-linter/releases/download/v0.7.1/kube-linter-darwin_arm64"
 
 [tools.kube-linter."platforms.macos-x64"]
+checksum = "sha256:2793198e4ed9044983df7bdd492ced91253951de45f3fbe20d71bdecb3f86978"
 url = "https://github.com/stackrox/kube-linter/releases/download/v0.7.1/kube-linter-darwin"
 url_api = "https://api.github.com/repos/stackrox/kube-linter/releases/assets/204757612"
 
 [tools.kube-linter."platforms.windows-x64"]
+checksum = "sha256:bdff414d6d6ad9cca19666124ff7107cea6958ea8202b4c6ec6938d5c8a2599e"
 url = "https://github.com/stackrox/kube-linter/releases/download/v0.7.1/kube-linter.exe"
 url_api = "https://api.github.com/repos/stackrox/kube-linter/releases/assets/204757613"
 
