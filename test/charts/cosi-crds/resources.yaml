@@ -1,0 +1,46 @@
+apiVersion: objectstorage.k8s.io/v1alpha1
+kind: BucketClass
+metadata:
+  name: lifecycle-bucketclass
+driverName: lifecycle.example.com
+deletionPolicy: Retain
+---
+apiVersion: objectstorage.k8s.io/v1alpha1
+kind: BucketAccessClass
+metadata:
+  name: lifecycle-accessclass
+driverName: lifecycle.example.com
+authenticationType: Key
+---
+apiVersion: objectstorage.k8s.io/v1alpha1
+kind: BucketClaim
+metadata:
+  name: lifecycle-claim
+  namespace: cosi-crds-test
+spec:
+  bucketClassName: lifecycle-bucketclass
+  protocols: [S3]
+---
+apiVersion: objectstorage.k8s.io/v1alpha1
+kind: Bucket
+metadata:
+  name: lifecycle-bucket
+spec:
+  driverName: lifecycle.example.com
+  bucketClassName: lifecycle-bucketclass
+  bucketClaim:
+    name: lifecycle-claim
+    namespace: cosi-crds-test
+  protocols: [S3]
+  deletionPolicy: Retain
+---
+apiVersion: objectstorage.k8s.io/v1alpha1
+kind: BucketAccess
+metadata:
+  name: lifecycle-access
+  namespace: cosi-crds-test
+spec:
+  bucketClaimName: lifecycle-claim
+  bucketAccessClassName: lifecycle-accessclass
+  credentialsSecretName: lifecycle-credentials
+  protocol: S3

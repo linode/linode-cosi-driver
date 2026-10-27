@@ -20,11 +20,18 @@ The Linode COSI Driver is an implementation of the Kubernetes [Container Object 
 Follow these steps to get started with Linode COSI Driver:
 
 1. **Prerequisites:**
-    1. Install COSI Custom Resource Definitions.
+    1. Install the COSI CRDs and controller. On a fresh cluster, install the
+       separate CRD chart from this checkout, then the matching controller:
 
     ```sh
-    kubectl create -k 'github.com/kubernetes-sigs/container-object-storage-interface/?ref=v0.2.1'
+    just deploy-crds
+    just deploy-controller
     ```
+
+    See the [COSI CRD chart documentation](helm/cosi-crds/README.md) for schema
+    upgrades, retention on uninstall, and existing-installation ownership.
+    The driver chart does not install or manage CRDs. Existing installations can
+    continue managing the upstream CRDs separately; do not install a second owner.
 
 2. **Installation:**
     1. Create new API token in [Akamai Cloud Manager](https://cloud.linode.com/profile/tokens). The token must be configured with the following permissions:

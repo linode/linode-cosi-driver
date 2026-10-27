@@ -1,0 +1,11 @@
+apiVersion: v2
+name: cosi-crds
+description: Shared COSI CRDs with explicit Helm upgrades and retention on uninstall
+type: application
+version: 0.1.0
+appVersion: "v0.2.2"
+home: https://github.com/linode/linode-cosi-driver
+sources:
+  - https://github.com/kubernetes-sigs/container-object-storage-interface
+maintainers:
+  - name: linode
