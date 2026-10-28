@@ -1,0 +1,89 @@
+{{ template "chart.header" . }}
+{{ template "chart.description" . }}
+
+This chart installs the five cluster-wide COSI APIs: Bucket, BucketClaim,
+BucketClass, BucketAccess, and BucketAccessClass. It installs no controller,
+driver, credentials, or custom resource instances. Install it once per cluster,
+independently of driver releases.
+
+## Compatibility
+
+`appVersion` pins the upstream source used by `just generate-crds`. This chart
+currently contains COSI **v0.2.2 / v1alpha1** definitions, matching this branch's
+controller overlay and default sidecar. Chart versions are independent of driver
+release versions. Bump this chart's `version` whenever changing its packaged resources.
+
+Do not use these definitions with v1alpha2 components. Replacing v1alpha1 schemas
+with v1alpha2 is not an in-place migration: existing resources and stored API
+versions require an explicit migration plan. A Helm upgrade does not provide API
+conversion or migrate stored objects.
+
+## Install
+
+From a checkout containing this chart:
+
+```sh
+helm upgrade --install cosi-crds ./helm/cosi-crds \
+  --namespace container-object-storage-system --create-namespace --wait
+helm template cosi-crds ./helm/cosi-crds \
+  | kubectl wait --for=condition=Established --timeout=60s -f -
+
+# Install the upstream controller without applying a second copy of its CRDs.
+just deploy-controller
+```
+
+Then install the matching Linode driver chart as described in the root README.
+This chart is not a dependency of the driver chart. After publication, it can
+also be installed as `linode-cosi-driver/cosi-crds` from the Helm repository.
+
+## Upgrades and retention
+
+The definitions are rendered through `templates/`, rather than Helm's
+install-only `crds/` directory. `helm upgrade cosi-crds ./helm/cosi-crds` therefore
+applies schema changes. Review the rendered diff and compatibility with existing
+objects before upgrading, and update the CRDs before deploying components that
+require the new schema. Workload rollback does not roll back this separate
+release, and schema rollback may be incompatible with stored resources.
+
+Each CRD has `helm.sh/resource-policy: keep`. Helm retains the CRDs and their
+instances when this release is uninstalled or a CRD is removed from its rendered
+manifest. Uninstall does not delete the release namespace. Explicit CRD deletion
+with Kubernetes tools still deletes its custom resource instances; the annotation
+is a Helm policy, not an API-server protection mechanism.
+
+After uninstall, retained CRDs are no longer managed by an active Helm release.
+Reinstall using the same release name and namespace; different ownership metadata
+requires a deliberate handoff. Install only one CRD release per cluster.
+
+## Existing installations
+
+Helm will reject existing CRDs owned by another release or lacking its ownership
+metadata. Keep externally managed CRDs under their current management, or plan an
+ownership handoff before installing this chart. Do not delete CRDs to resolve an
+ownership conflict, and do not use forced resource replacement for schema upgrades.
+
+The existing Tilt workflow continues to apply the upstream kustomization directly;
+it does not use this chart's Helm release lifecycle. Avoid reconciling the same
+CRDs through both Tilt/kustomize and this Helm release.
+
+For controller removal in this Helm-managed setup, use `just undeploy-controller`;
+it leaves the CRDs and release namespace intact. The legacy `just undeploy-deps`
+command explicitly deletes upstream CRDs and is not an uninstall path for this setup.
+
+## Development and validation
+
+```sh
+just generate-crds       # regenerate from the source pinned in Chart.yaml
+just generate-docs       # regenerate this README
+just test-crds-chart     # disposable KIND cluster; no Linode credentials needed
+```
+
+The lifecycle test checks fresh installation, a compatible schema upgrade,
+retention when a CRD is omitted by an upgrade, retention of all five CRDs and
+their instances on uninstall, and reinstallation.
+The upgrade fixture adds an optional field to a temporary chart copy; generated
+upstream definitions in the repository are not modified by the test.
+
+The release workflow publishes this chart under its own chart version and a
+`cosi-crds-<version>` GitHub release name. Driver chart releases retain their
+existing `helm-v<version>` naming.
