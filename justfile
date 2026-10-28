@@ -106,6 +106,16 @@ generate-schemas:
         --values=helm/linode-cosi-driver/values.yaml \
         --output=helm/linode-cosi-driver/values.schema.json
 
+# Regenerate the shared COSI API schemas from the CRD chart's pinned upstream appVersion.
+[group('Development')]
+generate-crds:
+    bash hack/generate-cosi-crds.sh
+
+# Check CRD installation, schema upgrades and uninstall retention in a disposable KIND cluster.
+[group('Development')]
+test-crds-chart:
+    bash hack/test-cosi-crds.sh
+
 # Generate the gomock doubles used by the tests.
 [group('Development')]
 generate-mocks:
@@ -244,6 +254,28 @@ cluster-reset:
 [group('Deployment')]
 deploy-deps:
     kubectl apply -k hack/container-object-storage-controller
+
+# Install the shared CRDs as a separate Helm release on clusters without existing COSI CRDs.
+[group('Deployment')]
+deploy-crds:
+    helm upgrade --install cosi-crds ./helm/cosi-crds \
+        --namespace container-object-storage-system --create-namespace --wait
+    helm template cosi-crds ./helm/cosi-crds \
+        | kubectl wait --for=condition=Established --timeout=60s -f -
+
+# Deploy the matching controller without reconciling CRDs managed by the separate chart.
+[group('Deployment')]
+deploy-controller:
+    kubectl kustomize hack/container-object-storage-controller \
+        | yq eval 'select(.kind != "CustomResourceDefinition")' - \
+        | kubectl apply -f -
+
+# Remove only the controller; leave the separately managed CRDs and their instances intact.
+[group('Deployment')]
+undeploy-controller:
+    kubectl kustomize hack/container-object-storage-controller \
+        | yq eval 'select(.kind != "CustomResourceDefinition" and .kind != "Namespace")' - \
+        | kubectl delete --ignore-not-found -f -
 
 # Undeploy all dependencies of Linode COSI Driver. This step removes CRDs and Controller.
 [group('Deployment')]
