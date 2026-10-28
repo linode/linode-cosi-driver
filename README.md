@@ -98,6 +98,11 @@ This branch uses unmodified upstream COSI commit
 image tag `v20261009-controllerv0.2.0-rc1-348-g7b121df`. The latest tagged COSI
 release, `v0.2.2`, serves v1alpha1 and cannot be used with this driver.
 
+Renovate updates are disabled for the upstream COSI Go modules, CRD source, and
+controller/sidecar images to preserve this compatible baseline. Keep these pins
+aligned when updating them manually. Once an official release supports v1alpha2,
+move them together to that release and remove the COSI-specific Renovate exclusion.
+
 The driver implements only the v1alpha2 gRPC service. Deploy matching CRDs,
 controller, sidecar, and application resources together in a fresh development
 cluster. This is not an in-place conversion of existing v1alpha1 resources.
@@ -139,9 +144,12 @@ Here’s the updated table with descriptions added:
 |----------------------------------|-------------|---------------------------|-------------------------------------------------------------------------------------------------------------------------|
 | `cosi.linode.com/v1/endpoint-type` | first available | `E0`, `E1`, `E2`, `E3` | Selects which Object Storage endpoint type to return in generated bucket credentials.                                   |
 | `cosi.linode.com/v1/endpoint-type-preference` | first available | Comma-separated `E0`, `E1`, `E2`, `E3` values, for example `E3,E1` | Selects the first available Object Storage endpoint type for generated bucket credentials in preference order. Ignored when `endpoint-type` is set. |
+
 Request ReadOnly or ReadWrite permissions through the BucketAccess
-`spec.bucketClaims[].accessModes` fields. The legacy
-`cosi.linode.com/v1/permissions` class parameter is no longer used.
+`spec.bucketClaims[].accessModes` fields. Permissions are derived from these
+access modes. The legacy `cosi.linode.com/v1/permissions` class parameter is
+accepted only when it matches the derived permissions; conflicting values are
+rejected with `InvalidArgument`.
 
 ## Testing
 
