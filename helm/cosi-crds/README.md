@@ -26,12 +26,8 @@ From a checkout containing this chart:
 ```sh
 helm upgrade --install cosi-crds ./helm/cosi-crds \
   --namespace container-object-storage-system --create-namespace --wait
-kubectl wait --for=condition=Established --timeout=60s \
-  crd/buckets.objectstorage.k8s.io \
-  crd/bucketclaims.objectstorage.k8s.io \
-  crd/bucketclasses.objectstorage.k8s.io \
-  crd/bucketaccesses.objectstorage.k8s.io \
-  crd/bucketaccessclasses.objectstorage.k8s.io
+helm template cosi-crds ./helm/cosi-crds \
+  | kubectl wait --for=condition=Established --timeout=60s -f -
 
 # Install the upstream controller without applying a second copy of its CRDs.
 just deploy-controller
