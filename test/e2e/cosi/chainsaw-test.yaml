@@ -109,7 +109,7 @@ spec:
           value: ($namespace)
         content: |
           set -eu
-          for key in COSI_PROTOCOL COSI_S3_BUCKET_ID COSI_S3_ENDPOINT COSI_S3_REGION COSI_S3_ADDRESSING_STYLE COSI_S3_ACCESS_KEY_ID COSI_S3_ACCESS_SECRET_KEY; do
+          for key in COSI_S3_BUCKET_ID COSI_S3_ENDPOINT COSI_S3_REGION COSI_S3_ADDRESSING_STYLE COSI_S3_ACCESS_KEY_ID COSI_S3_ACCESS_SECRET_KEY; do
             value="$(kubectl get secret "${SECRET}" --namespace "${NAMESPACE}" --output "jsonpath={.data.${key}}")"
             test -n "${value}" || { echo "missing COSI Secret entry: ${key}" >&2; exit 1; }
           done

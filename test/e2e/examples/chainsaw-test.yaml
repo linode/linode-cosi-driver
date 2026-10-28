@@ -69,8 +69,8 @@ spec:
               secret:
                 secretName: s3-credentials
                 items:
-                - key: COSI_PROTOCOL
-                  path: protocol
+                - key: COSI_S3_REGION
+                  path: region
     - assert:
         resource:
           apiVersion: v1
@@ -84,10 +84,10 @@ spec:
         - name: NAMESPACE
           value: ($namespace)
         entrypoint: kubectl
-        args: [ exec, -n, "$NAMESPACE", bucket-test, --, cat, /conf/protocol ]
+        args: [ exec, -n, "$NAMESPACE", bucket-test, --, cat, /conf/region ]
         check:
           ($error): ~
-          ($stdout): S3
+          ($stdout): us-ord
 
   - name: Delete BucketAccess
     try:

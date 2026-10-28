@@ -84,7 +84,7 @@ Follow these steps to get started with Linode COSI Driver:
                 name: s3-credentials
     ```
 
-    The v1alpha2 Secret contains `COSI_PROTOCOL`, `COSI_S3_BUCKET_ID`,
+    The v1alpha2 Secret contains `COSI_S3_BUCKET_ID`,
     `COSI_S3_ENDPOINT`, `COSI_S3_REGION`, `COSI_S3_ADDRESSING_STYLE`,
     `COSI_S3_ACCESS_KEY_ID`, and `COSI_S3_ACCESS_SECRET_KEY`.
 
