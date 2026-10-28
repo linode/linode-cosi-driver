@@ -76,24 +76,6 @@ namespace's default ServiceAccount when one isn't created or explicitly named.
   {{- end }}
 {{- end }}
 
-{{/*
-# COSI provisioner sidecar log level.
-# Values are set to the integer value, higher value means more verbose logging.
-# Possible values: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
-# Default value: 4
-*/}}
-{{- define "linode-cosi-driver.provisionerSidecarVerbosity" }}
-  {{- if (kindIs "int64" .Values.sidecar.logVerbosity) }}
-    {{- if (or (ge .Values.sidecar.logVerbosity 0) (le .Values.sidecar.logVerbosity 10)) }}
-      {{- .Values.sidecar.logVerbosity }}
-    {{- else }}
-      {{- 4 }}
-    {{- end }}
-  {{- else }}
-    {{- 4 }}
-  {{- end }}
-{{- end }}
-
 {{- define "linode-cosi-driver.otelExporterConfigMap" }}
   {{- required "value 'otelExporter.configMap.ref' required" .Values.otelExporter.configMap.ref }}
 {{- end }}

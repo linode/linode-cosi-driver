@@ -53,8 +53,7 @@ ko_labels := "--image-label org.opencontainers.image.title=linode-cosi-driver" +
     " --image-label org.opencontainers.image.source=https://github.com/linode/linode-cosi-driver" + \
     " --image-label org.opencontainers.image.documentation=https://github.com/linode/linode-cosi-driver"
 
-# Versions of COSI dependencies
-cosi_version := "7ddc93baaa3f08c9c8990a17c7b958955d93c044"
+# COSI source/image pins are in hack/container-object-storage-controller/kustomization.yaml.
 
 # Documentation site preview; the pages tag carries the same gem set GitHub
 # Pages builds with, so a local build matches what the site serves.
@@ -254,7 +253,7 @@ cluster-reset:
 # Deploy all dependencies of Linode COSI Driver. This step installs CRDs and Controller.
 [group('Deployment')]
 deploy-deps:
-    kubectl apply -k github.com/kubernetes-sigs/container-object-storage-interface/?ref={{ cosi_version }}
+    kubectl apply -k hack/container-object-storage-controller
 
 # Install the shared CRDs as a separate Helm release on clusters without existing COSI CRDs.
 [group('Deployment')]
@@ -281,7 +280,7 @@ undeploy-controller:
 # Undeploy all dependencies of Linode COSI Driver. This step removes CRDs and Controller.
 [group('Deployment')]
 undeploy-deps:
-    kubectl delete -k github.com/kubernetes-sigs/container-object-storage-interface/?ref={{ cosi_version }}
+    kubectl delete -k hack/container-object-storage-controller
 
 # Deploy driver to the K8s cluster specified in ~/.kube/config.
 [group('Deployment')]

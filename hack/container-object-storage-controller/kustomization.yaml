@@ -3,4 +3,9 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 resources:
-  - github.com/kubernetes-sigs/container-object-storage-interface/?ref=v0.2.2
+  - github.com/kubernetes-sigs/container-object-storage-interface/?ref=7b121df3e445b9f326d98ce7906205f0ce41c2e7
+
+# The upstream manifest defaults to an older image; keep it aligned with the CRDs.
+images:
+  - name: gcr.io/k8s-staging-sig-storage/objectstorage-controller
+    newTag: v20261009-controllerv0.2.0-rc1-348-g7b121df

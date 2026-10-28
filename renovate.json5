@@ -39,6 +39,21 @@
   ],
   "packageRules": [
     {
+      // No upstream release supports this v1alpha2 baseline yet. Update the
+      // Go modules, CRD source, controller and sidecar together by hand until
+      // we can move all four to a compatible official release.
+      "description": "Keep the unreleased COSI v1alpha2 baseline pinned together.",
+      "matchPackageNames": [
+        "sigs.k8s.io/container-object-storage-interface",
+        "sigs.k8s.io/container-object-storage-interface/**",
+        "github.com/kubernetes-sigs/container-object-storage-interface",
+        "kubernetes-sigs/container-object-storage-interface",
+        "gcr.io/k8s-staging-sig-storage/objectstorage-controller",
+        "gcr.io/k8s-staging-sig-storage/objectstorage-sidecar",
+      ],
+      "enabled": false,
+    },
+    {
       "description": "Ship security fixes as soon as they land, outside the normal schedule.",
       "matchCategories": ["security"],
       "schedule": ["at any time"],

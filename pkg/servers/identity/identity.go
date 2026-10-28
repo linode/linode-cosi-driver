@@ -18,13 +18,14 @@ import (
 	"context"
 	"errors"
 
-	cosi "sigs.k8s.io/container-object-storage-interface-spec"
+	cosi "sigs.k8s.io/container-object-storage-interface/proto"
 )
 
 var ErrNameEmpty = errors.New("driver name is empty")
 
 // Server implements cosi.IdentityServer interface.
 type Server struct {
+	cosi.UnimplementedIdentityServer
 	name string
 }
 
@@ -47,6 +48,7 @@ func New(driverName string) (*Server, error) {
 // DriverGetInfo call is meant to retrieve the unique provisioner Identity.
 func (s *Server) DriverGetInfo(_ context.Context, _ *cosi.DriverGetInfoRequest) (*cosi.DriverGetInfoResponse, error) {
 	return &cosi.DriverGetInfoResponse{
-		Name: s.name,
+		Name:               s.name,
+		SupportedProtocols: []*cosi.ObjectProtocol{{Type: cosi.ObjectProtocol_S3}},
 	}, nil
 }
