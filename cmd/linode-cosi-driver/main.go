@@ -31,7 +31,7 @@ import (
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/recovery"
 	"go.uber.org/automaxprocs/maxprocs"
 	"google.golang.org/grpc"
-	cosi "sigs.k8s.io/container-object-storage-interface-spec"
+	cosi "sigs.k8s.io/container-object-storage-interface/proto"
 
 	"github.com/linode/linode-cosi-driver/pkg/envflag"
 	grpchandlers "github.com/linode/linode-cosi-driver/pkg/grpc"

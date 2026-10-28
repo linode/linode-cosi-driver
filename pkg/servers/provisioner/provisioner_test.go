@@ -17,7 +17,6 @@ package provisioner_test
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"reflect"
@@ -27,7 +26,7 @@ import (
 	"go.uber.org/mock/gomock"
 	grpccodes "google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	cosi "sigs.k8s.io/container-object-storage-interface-spec"
+	cosi "sigs.k8s.io/container-object-storage-interface/proto"
 
 	"github.com/linode/linode-cosi-driver/pkg/linodeclient"
 	"github.com/linode/linode-cosi-driver/pkg/linodeclient/cache"
@@ -123,37 +122,15 @@ var (
 		EndpointType: linodego.ObjectStorageEndpointE3,
 	}
 
-	defaultBucketInfo = &cosi.Protocol{
-		Type: &cosi.Protocol_S3{
-			S3: &cosi.S3{
-				Region:           testRegion,
-				SignatureVersion: cosi.S3SignatureVersion_S3V4,
-			},
-		},
-	}
-	defaultCredentials = map[string]*cosi.CredentialDetails{
-		provisioner.S3: {
-			Secrets: map[string]string{
-				provisioner.S3Region:                testRegion,
-				provisioner.S3Endpoint:              testEndpoint,
-				provisioner.S3SecretAccessKeyID:     testAccessKey,
-				provisioner.S3SecretAccessSecretKey: testSecretKey,
-			},
-		},
-	}
+	defaultBucketInfo  = testBucketInfo(testEndpoint)
+	defaultCredentials = &cosi.CredentialInfo{S3: &cosi.S3CredentialInfo{AccessKeyId: testAccessKey, AccessSecretKey: testSecretKey}}
 )
 
-func credentialsWithEndpoint(endpoint string) map[string]*cosi.CredentialDetails {
-	return map[string]*cosi.CredentialDetails{
-		provisioner.S3: {
-			Secrets: map[string]string{
-				provisioner.S3Region:                testRegion,
-				provisioner.S3Endpoint:              endpoint,
-				provisioner.S3SecretAccessKeyID:     testAccessKey,
-				provisioner.S3SecretAccessSecretKey: testSecretKey,
-			},
-		},
-	}
+func testBucketInfo(endpoint string) *cosi.ObjectProtocolAndBucketInfo {
+	return &cosi.ObjectProtocolAndBucketInfo{S3: &cosi.S3BucketInfo{
+		BucketId: testBucketName, Endpoint: endpoint, Region: testRegion,
+		AddressingStyle: &cosi.S3AddressingStyle{Style: cosi.S3AddressingStyle_VIRTUAL},
+	}}
 }
 
 func expectGetBucket(t *testing.T, mockLinode *mock.MockLinodeClient, endpointType linodego.ObjectStorageEndpointType) {
@@ -247,7 +224,7 @@ func TestDriverCreateBucket(t *testing.T) {
 		{
 			testName: "encodes forced cleanup in bucket ID",
 			request: &cosi.DriverCreateBucketRequest{
-				Name: testBucketName,
+				BucketId: testBucketID,
 				Parameters: map[string]string{
 					provisioner.ParamRegion:  testRegion,
 					provisioner.ParamACL:     string(linodego.ACLPrivate),
@@ -256,8 +233,7 @@ func TestDriverCreateBucket(t *testing.T) {
 				},
 			},
 			expectedResponse: &cosi.DriverCreateBucketResponse{
-				BucketId:   testBucketID + "/force",
-				BucketInfo: defaultBucketInfo,
+				Protocols: defaultBucketInfo,
 			},
 			setupMockS3: func(t *testing.T) s3.Client {
 				t.Helper()
@@ -297,15 +273,14 @@ func TestDriverCreateBucket(t *testing.T) {
 		{
 			testName: "with endpoint type",
 			request: &cosi.DriverCreateBucketRequest{
-				Name: testBucketName,
+				BucketId: testBucketID,
 				Parameters: map[string]string{
 					provisioner.ParamRegion:       testRegion,
 					provisioner.ParamEndpointType: string(linodego.ObjectStorageEndpointE1),
 				},
 			},
 			expectedResponse: &cosi.DriverCreateBucketResponse{
-				BucketId:   testBucketID,
-				BucketInfo: defaultBucketInfo,
+				Protocols: testBucketInfo(testEndpointE1),
 			},
 			setupMockS3: func(t *testing.T) s3.Client {
 				t.Helper()
@@ -346,7 +321,7 @@ func TestDriverCreateBucket(t *testing.T) {
 		{
 			testName: "with endpoint type preference and CORS skips unsupported endpoint",
 			request: &cosi.DriverCreateBucketRequest{
-				Name: testBucketName,
+				BucketId: testBucketID,
 				Parameters: map[string]string{
 					provisioner.ParamRegion:                 testRegion,
 					provisioner.ParamCORS:                   string(provisioner.ParamCORSValueEnabled),
@@ -354,8 +329,7 @@ func TestDriverCreateBucket(t *testing.T) {
 				},
 			},
 			expectedResponse: &cosi.DriverCreateBucketResponse{
-				BucketId:   testBucketID,
-				BucketInfo: defaultBucketInfo,
+				Protocols: testBucketInfo(testEndpointE1),
 			},
 			setupMockS3: func(t *testing.T) s3.Client {
 				t.Helper()
@@ -404,7 +378,7 @@ func TestDriverCreateBucket(t *testing.T) {
 		{
 			testName: "with explicit CORS unsupported endpoint type",
 			request: &cosi.DriverCreateBucketRequest{
-				Name: testBucketName,
+				BucketId: testBucketID,
 				Parameters: map[string]string{
 					provisioner.ParamRegion:       testRegion,
 					provisioner.ParamCORS:         string(provisioner.ParamCORSValueEnabled),
@@ -436,12 +410,11 @@ func TestDriverCreateBucket(t *testing.T) {
 		{
 			testName: "bucket exists",
 			request: &cosi.DriverCreateBucketRequest{
-				Name:       testBucketName,
+				BucketId:   testBucketID,
 				Parameters: defaultBucketParameters,
 			},
 			expectedResponse: &cosi.DriverCreateBucketResponse{
-				BucketId:   testBucketID,
-				BucketInfo: defaultBucketInfo,
+				Protocols: defaultBucketInfo,
 			},
 			setupMockS3: func(t *testing.T) s3.Client {
 				t.Helper()
@@ -475,7 +448,7 @@ func TestDriverCreateBucket(t *testing.T) {
 		{
 			testName: "with policy template",
 			request: &cosi.DriverCreateBucketRequest{
-				Name: testBucketName,
+				BucketId: testBucketID,
 				Parameters: map[string]string{
 					provisioner.ParamRegion: testRegion,
 					provisioner.ParamACL:    string(linodego.ACLPublicRead),
@@ -483,8 +456,7 @@ func TestDriverCreateBucket(t *testing.T) {
 				},
 			},
 			expectedResponse: &cosi.DriverCreateBucketResponse{
-				BucketId:   testBucketID,
-				BucketInfo: defaultBucketInfo,
+				Protocols: defaultBucketInfo,
 			},
 			setupMockS3: func(t *testing.T) s3.Client {
 				t.Helper()
@@ -532,7 +504,7 @@ func TestDriverCreateBucket(t *testing.T) {
 		{
 			testName: "with policy template and public-read-write ACL, bucket exists",
 			request: &cosi.DriverCreateBucketRequest{
-				Name: testBucketName,
+				BucketId: testBucketID,
 				Parameters: map[string]string{
 					provisioner.ParamRegion: testRegion,
 					provisioner.ParamACL:    string(linodego.ACLPublicReadWrite),
@@ -540,8 +512,7 @@ func TestDriverCreateBucket(t *testing.T) {
 				},
 			},
 			expectedResponse: &cosi.DriverCreateBucketResponse{
-				BucketId:   testBucketID,
-				BucketInfo: defaultBucketInfo,
+				Protocols: defaultBucketInfo,
 			},
 			setupMockS3: func(t *testing.T) s3.Client {
 				t.Helper()
@@ -579,7 +550,7 @@ func TestDriverCreateBucket(t *testing.T) {
 		{
 			testName: "SetBucketPolicy fails",
 			request: &cosi.DriverCreateBucketRequest{
-				Name: testBucketName,
+				BucketId: testBucketID,
 				Parameters: map[string]string{
 					provisioner.ParamRegion: testRegion,
 					provisioner.ParamACL:    string(linodego.ACLPublicRead),
@@ -634,7 +605,7 @@ func TestDriverCreateBucket(t *testing.T) {
 		{
 			testName: "rejects wildcard principal with default private ACL",
 			request: &cosi.DriverCreateBucketRequest{
-				Name: testBucketName,
+				BucketId: testBucketID,
 				Parameters: map[string]string{
 					provisioner.ParamRegion: testRegion,
 					provisioner.ParamPolicy: testPolicyTemplate,
@@ -658,7 +629,7 @@ func TestDriverCreateBucket(t *testing.T) {
 		{
 			testName: "rejects wildcard principal with authenticated-read ACL",
 			request: &cosi.DriverCreateBucketRequest{
-				Name: testBucketName,
+				BucketId: testBucketID,
 				Parameters: map[string]string{
 					provisioner.ParamRegion: testRegion,
 					provisioner.ParamACL:    string(linodego.ACLAuthenticatedRead),
@@ -683,7 +654,7 @@ func TestDriverCreateBucket(t *testing.T) {
 		{
 			testName: "empty map",
 			request: &cosi.DriverCreateBucketRequest{
-				Name:       testBucketName,
+				BucketId:   testBucketID,
 				Parameters: map[string]string{},
 			},
 			expectedError: status.Error(grpccodes.InvalidArgument, provisioner.ErrMissingRegion.Error()),
@@ -710,7 +681,7 @@ func TestDriverCreateBucket(t *testing.T) {
 		{
 			testName: "nil map",
 			request: &cosi.DriverCreateBucketRequest{
-				Name: testBucketName,
+				BucketId: testBucketID,
 			},
 			expectedError: status.Error(grpccodes.InvalidArgument, provisioner.ErrMissingRegion.Error()),
 			setupMockS3: func(t *testing.T) s3.Client {
@@ -847,7 +818,7 @@ func TestDriverCreateBucketWithPolicyTemplate(t *testing.T) {
 	}
 
 	req := &cosi.DriverCreateBucketRequest{
-		Name: testBucketName,
+		BucketId: testBucketID,
 		Parameters: map[string]string{
 			provisioner.ParamRegion: testRegion,
 			provisioner.ParamACL:    string(linodego.ACLPublicRead),
@@ -856,8 +827,7 @@ func TestDriverCreateBucketWithPolicyTemplate(t *testing.T) {
 	}
 
 	expected := &cosi.DriverCreateBucketResponse{
-		BucketId:   testBucketID,
-		BucketInfo: defaultBucketInfo,
+		Protocols: defaultBucketInfo,
 	}
 
 	// Run twice to test idempotency
@@ -1043,14 +1013,19 @@ func TestDriverGrantBucketAccess(t *testing.T) {
 		{
 			testName: "base",
 			request: &cosi.DriverGrantBucketAccessRequest{
-				BucketId:           testBucketID,
-				Name:               testBucketAccessName,
-				AuthenticationType: cosi.AuthenticationType_Key,
+
+				AccountName:        testBucketAccessName,
+				AuthenticationType: &cosi.AuthenticationType{Type: cosi.AuthenticationType_KEY},
 				Parameters:         defaultBucketAccessParameters,
+
+				Protocol: &cosi.ObjectProtocol{Type: cosi.ObjectProtocol_S3},
+				Buckets:  []*cosi.DriverGrantBucketAccessRequest_AccessedBucket{{BucketId: testBucketID, ObjectDataAccessMode: &cosi.AccessMode{Mode: cosi.AccessMode_READ_ONLY}}},
 			},
 			expectedResponse: &cosi.DriverGrantBucketAccessResponse{
 				AccountId:   testBucketAccessID,
 				Credentials: defaultCredentials,
+
+				Buckets: []*cosi.DriverGrantBucketAccessResponse_BucketInfo{{BucketId: testBucketID, BucketInfo: testBucketInfo(testEndpoint)}},
 			},
 			setupMockS3: func(t *testing.T) s3.Client {
 				t.Helper()
@@ -1084,17 +1059,22 @@ func TestDriverGrantBucketAccess(t *testing.T) {
 		{
 			testName: "uses bucket endpoint type despite access endpoint type parameter",
 			request: &cosi.DriverGrantBucketAccessRequest{
-				BucketId:           testBucketID,
-				Name:               testBucketAccessName,
-				AuthenticationType: cosi.AuthenticationType_Key,
+
+				AccountName:        testBucketAccessName,
+				AuthenticationType: &cosi.AuthenticationType{Type: cosi.AuthenticationType_KEY},
 				Parameters: map[string]string{
 					provisioner.ParamPermissions:  string(provisioner.ParamPermissionsValueReadOnly),
 					provisioner.ParamEndpointType: string(linodego.ObjectStorageEndpointE1),
 				},
+
+				Protocol: &cosi.ObjectProtocol{Type: cosi.ObjectProtocol_S3},
+				Buckets:  []*cosi.DriverGrantBucketAccessRequest_AccessedBucket{{BucketId: testBucketID, ObjectDataAccessMode: &cosi.AccessMode{Mode: cosi.AccessMode_READ_ONLY}}},
 			},
 			expectedResponse: &cosi.DriverGrantBucketAccessResponse{
 				AccountId:   testBucketAccessID,
 				Credentials: defaultCredentials,
+
+				Buckets: []*cosi.DriverGrantBucketAccessResponse_BucketInfo{{BucketId: testBucketID, BucketInfo: testBucketInfo(testEndpoint)}},
 			},
 			setupMockS3: func(t *testing.T) s3.Client {
 				t.Helper()
@@ -1126,17 +1106,22 @@ func TestDriverGrantBucketAccess(t *testing.T) {
 		{
 			testName: "with endpoint type preference fallback",
 			request: &cosi.DriverGrantBucketAccessRequest{
-				BucketId:           testBucketID,
-				Name:               testBucketAccessName,
-				AuthenticationType: cosi.AuthenticationType_Key,
+
+				AccountName:        testBucketAccessName,
+				AuthenticationType: &cosi.AuthenticationType{Type: cosi.AuthenticationType_KEY},
 				Parameters: map[string]string{
 					provisioner.ParamPermissions:            string(provisioner.ParamPermissionsValueReadOnly),
 					provisioner.ParamEndpointTypePreference: string(linodego.ObjectStorageEndpointE3) + "," + string(linodego.ObjectStorageEndpointE1),
 				},
+
+				Protocol: &cosi.ObjectProtocol{Type: cosi.ObjectProtocol_S3},
+				Buckets:  []*cosi.DriverGrantBucketAccessRequest_AccessedBucket{{BucketId: testBucketID, ObjectDataAccessMode: &cosi.AccessMode{Mode: cosi.AccessMode_READ_ONLY}}},
 			},
 			expectedResponse: &cosi.DriverGrantBucketAccessResponse{
 				AccountId:   testBucketAccessID,
-				Credentials: credentialsWithEndpoint(testEndpointE1),
+				Credentials: defaultCredentials,
+
+				Buckets: []*cosi.DriverGrantBucketAccessResponse_BucketInfo{{BucketId: testBucketID, BucketInfo: testBucketInfo(testEndpointE1)}},
 			},
 			setupMockS3: func(t *testing.T) s3.Client {
 				t.Helper()
@@ -1168,17 +1153,22 @@ func TestDriverGrantBucketAccess(t *testing.T) {
 		{
 			testName: "uses bucket endpoint type despite unavailable access preference",
 			request: &cosi.DriverGrantBucketAccessRequest{
-				BucketId:           testBucketID,
-				Name:               testBucketAccessName,
-				AuthenticationType: cosi.AuthenticationType_Key,
+
+				AccountName:        testBucketAccessName,
+				AuthenticationType: &cosi.AuthenticationType{Type: cosi.AuthenticationType_KEY},
 				Parameters: map[string]string{
 					provisioner.ParamPermissions:            string(provisioner.ParamPermissionsValueReadOnly),
 					provisioner.ParamEndpointTypePreference: string(linodego.ObjectStorageEndpointE3),
 				},
+
+				Protocol: &cosi.ObjectProtocol{Type: cosi.ObjectProtocol_S3},
+				Buckets:  []*cosi.DriverGrantBucketAccessRequest_AccessedBucket{{BucketId: testBucketID, ObjectDataAccessMode: &cosi.AccessMode{Mode: cosi.AccessMode_READ_ONLY}}},
 			},
 			expectedResponse: &cosi.DriverGrantBucketAccessResponse{
 				AccountId:   testBucketAccessID,
 				Credentials: defaultCredentials,
+
+				Buckets: []*cosi.DriverGrantBucketAccessResponse_BucketInfo{{BucketId: testBucketID, BucketInfo: testBucketInfo(testEndpoint)}},
 			},
 			setupMockS3: func(t *testing.T) s3.Client {
 				t.Helper()
@@ -1210,14 +1200,19 @@ func TestDriverGrantBucketAccess(t *testing.T) {
 		{
 			testName: "default endpoint type from endpoints list",
 			request: &cosi.DriverGrantBucketAccessRequest{
-				BucketId:           testBucketID,
-				Name:               testBucketAccessName,
-				AuthenticationType: cosi.AuthenticationType_Key,
+
+				AccountName:        testBucketAccessName,
+				AuthenticationType: &cosi.AuthenticationType{Type: cosi.AuthenticationType_KEY},
 				Parameters:         defaultBucketAccessParameters,
+
+				Protocol: &cosi.ObjectProtocol{Type: cosi.ObjectProtocol_S3},
+				Buckets:  []*cosi.DriverGrantBucketAccessRequest_AccessedBucket{{BucketId: testBucketID, ObjectDataAccessMode: &cosi.AccessMode{Mode: cosi.AccessMode_READ_ONLY}}},
 			},
 			expectedResponse: &cosi.DriverGrantBucketAccessResponse{
 				AccountId:   testBucketAccessID,
-				Credentials: credentialsWithEndpoint(testEndpointE1),
+				Credentials: defaultCredentials,
+
+				Buckets: []*cosi.DriverGrantBucketAccessResponse_BucketInfo{{BucketId: testBucketID, BucketInfo: testBucketInfo(testEndpointE1)}},
 			},
 			setupMockS3: func(t *testing.T) s3.Client {
 				t.Helper()
@@ -1249,14 +1244,17 @@ func TestDriverGrantBucketAccess(t *testing.T) {
 		{
 			testName: "IAM Auth",
 			request: &cosi.DriverGrantBucketAccessRequest{
-				BucketId:           testBucketID,
-				Name:               testBucketAccessName,
-				AuthenticationType: cosi.AuthenticationType_IAM,
+
+				AccountName:        testBucketAccessName,
+				AuthenticationType: &cosi.AuthenticationType{Type: cosi.AuthenticationType_SERVICE_ACCOUNT},
 				Parameters:         defaultBucketAccessParameters,
+
+				Protocol: &cosi.ObjectProtocol{Type: cosi.ObjectProtocol_S3},
+				Buckets:  []*cosi.DriverGrantBucketAccessRequest_AccessedBucket{{BucketId: testBucketID, ObjectDataAccessMode: &cosi.AccessMode{Mode: cosi.AccessMode_READ_ONLY}}},
 			},
 			expectedError: status.Error(
 				grpccodes.InvalidArgument,
-				fmt.Errorf("%w: %s", provisioner.ErrUnsuportedAuth, cosi.AuthenticationType_IAM).Error(),
+				"only Key authentication is supported",
 			),
 			setupMockS3: func(t *testing.T) s3.Client {
 				t.Helper()
@@ -1281,16 +1279,19 @@ func TestDriverGrantBucketAccess(t *testing.T) {
 		{
 			testName: "invalid permissions",
 			request: &cosi.DriverGrantBucketAccessRequest{
-				BucketId:           testBucketID,
-				Name:               testBucketAccessName,
-				AuthenticationType: cosi.AuthenticationType_Key,
+
+				AccountName:        testBucketAccessName,
+				AuthenticationType: &cosi.AuthenticationType{Type: cosi.AuthenticationType_KEY},
 				Parameters: map[string]string{
 					provisioner.ParamPermissions: "invalid",
 				},
+
+				Protocol: &cosi.ObjectProtocol{Type: cosi.ObjectProtocol_S3},
+				Buckets:  []*cosi.DriverGrantBucketAccessRequest_AccessedBucket{{BucketId: testBucketID, ObjectDataAccessMode: &cosi.AccessMode{Mode: cosi.AccessMode_READ_ONLY}}},
 			},
 			expectedError: status.Error(
 				grpccodes.InvalidArgument,
-				fmt.Errorf("%w: %s", provisioner.ErrUnknownPermsissions, "invalid").Error(),
+				"permissions parameter conflicts with requested access modes",
 			),
 			setupMockS3: func(t *testing.T) s3.Client {
 				t.Helper()
@@ -1364,7 +1365,7 @@ func TestDriverRevokeBucketAccess(t *testing.T) {
 		{
 			testName: "base",
 			request: &cosi.DriverRevokeBucketAccessRequest{
-				BucketId:  testBucketID,
+				Protocol:  &cosi.ObjectProtocol{Type: cosi.ObjectProtocol_S3},
 				AccountId: testBucketAccessID,
 			},
 			setupMockS3: func(t *testing.T) s3.Client {

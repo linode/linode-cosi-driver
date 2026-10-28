@@ -23,8 +23,8 @@ A Kubernetes Container Object Storage Interface (COSI) Driver for Linode
 | driver.image.pullPolicy | string | `"IfNotPresent"` | Driver container image pull policy. |
 | driver.image.repository | string | `"docker.io/linode/linode-cosi-driver"` | Driver container image repository. |
 | driver.image.tag | string | `""` | Overrides the image tag whose default is the chart appVersion. |
-| fullnameOverride | string | `""` | Overrides the full chart name. |
 | extraVolumes | list | `[]` | Additional volumes to add to the pod. |
+| fullnameOverride | string | `""` | Overrides the full chart name. |
 | imagePullSecrets | list | `[]` | List of Docker registry secret names to pull images. |
 | linodeApiUrl | string | `""` | Linode API URL, leave empty for default. |
 | linodeApiVersion | string | `""` | Linode API version, leave empty for default. |
@@ -53,10 +53,10 @@ A Kubernetes Container Object Storage Interface (COSI) Driver for Linode
 | serviceAccount.name | string | `""` | The name of the service account to use. If not set, a name is generated using the fullname template. If serviceAccount.create is false and this is left unset, the pod uses the namespace's default ServiceAccount. |
 | sidecar.image.pullPolicy | string | `"IfNotPresent"` | Sidecar container image pull policy. |
 | sidecar.image.repository | string | `"gcr.io/k8s-staging-sig-storage/objectstorage-sidecar"` | Sidecar container image repository. |
-| sidecar.image.tag | string | `"v0.2.2"` | Sidecar container image tag. |
+| sidecar.image.tag | string | `"v20261009-controllerv0.2.0-rc1-348-g7b121df"` | Sidecar container image tag. |
 | sidecar.kubeconfigSecret.key | string | `"kubeconfig"` | Key within the secret whose value is the kubeconfig file. |
 | sidecar.kubeconfigSecret.ref | string | `""` | Name of an existing Secret containing a kubeconfig for the sidecar to use when watching BucketClaims/BucketAccesses, instead of the cluster the driver is running in. Leave empty to use in-cluster credentials. |
-| sidecar.logVerbosity | int | `4` | Log verbosity level for the sidecar container. |
+| sidecar.logLevel | string | `"info"` | Zap log level for the v1alpha2 sidecar (debug, info, error). |
 | tolerations | list | `[]` | Tolerations for pod assignment. |
 
 ----------------------------------------------

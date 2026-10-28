@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"strings"
 
-	cosi "sigs.k8s.io/container-object-storage-interface-spec"
+	cosi "sigs.k8s.io/container-object-storage-interface/proto"
 )
 
 const bucketIDParts = 3
@@ -49,42 +49,20 @@ func bucketID(region, label string, cleanup ParamCleanupValue) string {
 	return id
 }
 
-func bucketInfo(region string) *cosi.Protocol {
-	return &cosi.Protocol{
-		Type: &cosi.Protocol_S3{
-			S3: &cosi.S3{
-				Region:           region,
-				SignatureVersion: cosi.S3SignatureVersion_S3V4,
-			},
+func bucketInfo(region, label, endpoint string) *cosi.ObjectProtocolAndBucketInfo {
+	return &cosi.ObjectProtocolAndBucketInfo{
+		S3: &cosi.S3BucketInfo{
+			BucketId:        label,
+			Region:          region,
+			Endpoint:        endpoint,
+			AddressingStyle: &cosi.S3AddressingStyle{Style: cosi.S3AddressingStyle_VIRTUAL},
 		},
 	}
 }
 
-func credentials(region, endpoint, label, accessKey, secretKey string) map[string]*cosi.CredentialDetails {
-	if region == "" {
-		panic("region cannot be empty")
+func credentials(region, endpoint, label, accessKey, secretKey string) *cosi.CredentialInfo {
+	if region == "" || endpoint == "" || label == "" || accessKey == "" || secretKey == "" {
+		panic("credential values cannot be empty")
 	}
-
-	if endpoint == "" {
-		panic("endpoint cannot be empty")
-	}
-
-	if label == "" {
-		panic("label cannot be empty")
-	}
-
-	if accessKey == "" || secretKey == "" {
-		panic("accessKey or secretKey cannot be empty")
-	}
-
-	return map[string]*cosi.CredentialDetails{
-		S3: {
-			Secrets: map[string]string{
-				S3Region:                region,
-				S3Endpoint:              endpoint,
-				S3SecretAccessKeyID:     accessKey,
-				S3SecretAccessSecretKey: secretKey,
-			},
-		},
-	}
+	return &cosi.CredentialInfo{S3: &cosi.S3CredentialInfo{AccessKeyId: accessKey, AccessSecretKey: secretKey}}
 }

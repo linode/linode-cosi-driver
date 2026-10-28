@@ -13,13 +13,12 @@ require (
 	go.uber.org/automaxprocs v1.6.0
 	go.uber.org/mock v0.6.0
 	google.golang.org/grpc v1.83.2
-	sigs.k8s.io/container-object-storage-interface-spec v0.1.0
+	sigs.k8s.io/container-object-storage-interface/proto v0.0.0-20260924183817-7b121df3e445
 )
 
 require (
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/go-ini/ini v1.67.0 // indirect
-	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/go-querystring v1.2.0 // indirect
 	github.com/klauspost/compress v1.18.7 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.11 // indirect

@@ -44,11 +44,14 @@ rules:
       - "" # default API group
     resources:
       - secrets # secrets are created by COSI Provisioner Sidecar as a part of access granting
-    verbs: # CRUD
+    # The sidecar's controller-runtime Secret cache needs list/watch as well as CRUD.
+    verbs:
       - create
       - get
       - update
       - delete
+      - list
+      - watch
   - apiGroups:
       - "" # default API group
     resources:
