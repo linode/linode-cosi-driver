@@ -7,7 +7,7 @@ toolchain go1.27.3
 require (
 	github.com/go-resty/resty/v2 v2.17.2
 	github.com/google/uuid v1.6.0
-	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.3.3
+	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.3.4
 	github.com/linode/linodego/v2 v2.4.1
 	github.com/minio/minio-go/v7 v7.0.98
 	go.uber.org/automaxprocs v1.6.0
