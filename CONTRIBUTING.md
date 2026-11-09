@@ -146,3 +146,9 @@ To run specific tests only, pass a label selector through the `CHAINSAW_ARGS` en
 ```bash
 CHAINSAW_ARGS='--selector name=examples' mise run test-e2e
 ```
+
+Before running E2E, you can validate the Chainsaw configuration and every test manifest without a cluster:
+
+```bash
+mise run chainsaw-lint
+```
