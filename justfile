@@ -154,6 +154,12 @@ test-integration:
 test-e2e: local-deploy
     chainsaw test {{ chainsaw_args }}
 
+
+# Validate the Chainsaw configuration and all E2E test manifests.
+[group('Development')]
+chainsaw-lint:
+    chainsaw lint configuration --file .chainsaw.yaml
+    find test/e2e -type f -name 'chainsaw-test.yaml' -print0 | xargs -0 -n 1 chainsaw lint test --file
 # Run golangci-lint linter.
 [group('Development')]
 lint:
